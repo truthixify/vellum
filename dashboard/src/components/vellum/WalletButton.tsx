@@ -72,12 +72,6 @@ export function WalletButton() {
             <div className="mono-caps text-muted-foreground">Network</div>
             <div className="text-sm font-mono">{network.toUpperCase()}</div>
           </div>
-          <div className="px-4 py-3 border-b border-hairline">
-            <div className="mono-caps text-muted-foreground mb-1">Address</div>
-            <div className="text-xs font-mono break-all">
-              {address ?? "Loading…"}
-            </div>
-          </div>
           <button
             onClick={() => {
               if (address) void copy(address);
