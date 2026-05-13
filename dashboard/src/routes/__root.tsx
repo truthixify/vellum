@@ -5,6 +5,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import { WalletButton } from "@/components/vellum/WalletButton";
@@ -83,8 +84,18 @@ function VellumGlyph({ className }: { className?: string }) {
 }
 
 function TopNav() {
+  // On mobile docs pages, the docs tabs take the top:0 slot. The top nav
+  // becomes redundant chrome there, so we hide it on small screens. Desktop
+  // keeps it because the docs layout has a dedicated sidebar instead of tabs.
+  const onDocs = useRouterState({
+    select: (s) => s.location.pathname.startsWith("/docs"),
+  });
   return (
-    <nav className="sticky top-0 z-40 bg-paper border-b border-ink">
+    <nav
+      className={`sticky top-0 z-40 bg-paper border-b border-ink ${
+        onDocs ? "hidden lg:block" : ""
+      }`}
+    >
       <div className="max-w-[1320px] mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
           <VellumGlyph className="w-5 h-5 text-ink" />

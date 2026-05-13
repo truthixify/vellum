@@ -49,9 +49,10 @@ function DocsLayout() {
   return (
     <>
       <MobileTabs />
-      {/* Mobile gets pt-14 (56px) to clear the fixed tabs bar (h-11 + border).
-          Desktop drops back to the regular pt-16 visual breathing room. */}
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pt-14 pb-8 lg:pt-16 lg:pb-16">
+      {/* Mobile gets pt-16 (64px) to clear the fixed tabs bar (h-12 + border)
+          which now sits at top:0 because the global top nav is hidden on
+          mobile docs. Desktop drops back to the regular lg:pt-16. */}
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pt-16 pb-8 lg:pt-16 lg:pb-16">
         <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16">
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <SidebarNav />
@@ -70,14 +71,17 @@ function SidebarNav() {
   return (
     <>
       <div className="mono-caps text-muted-foreground mb-4">DOCUMENTATION</div>
-      <ul className="space-y-2.5 mb-10">
+      <ul className="space-y-1 mb-10">
         {INTERNAL.map((item) => (
           <li key={item.to}>
             <Link
               to={item.to}
               activeOptions={{ exact: true }}
-              className="mono-caps text-ink hover:text-cobalt block"
-              activeProps={{ className: "mono-caps text-cobalt block" }}
+              className="mono-caps text-ink hover:text-cobalt block px-3 py-1.5 -mx-3 transition-colors"
+              activeProps={{
+                className:
+                  "mono-caps bg-verdant text-paper block px-3 py-1.5 -mx-3 transition-colors",
+              }}
             >
               {item.label}
             </Link>
@@ -85,14 +89,14 @@ function SidebarNav() {
         ))}
       </ul>
       <div className="mono-caps text-muted-foreground mb-4">REFERENCES</div>
-      <ul className="space-y-2.5">
+      <ul className="space-y-1">
         {EXTERNAL.map((item) => (
           <li key={item.href}>
             <a
               href={item.href}
               target="_blank"
               rel="noreferrer"
-              className="mono-caps text-ink hover:text-cobalt block"
+              className="mono-caps text-ink hover:text-cobalt block px-3 py-1.5 -mx-3 transition-colors"
             >
               {item.label} <span aria-hidden>↗</span>
             </a>
@@ -103,14 +107,14 @@ function SidebarNav() {
   );
 }
 
-// Mobile: a horizontal tab strip fixed to the viewport directly under the top
-// nav, always visible regardless of scroll position or any ancestor overflow
-// constraint. Scrolls horizontally inside itself if labels don't fit.
+// Mobile: a horizontal tab strip fixed at the very top of the viewport. The
+// global top nav is hidden on mobile docs (see __root.tsx) so this strip is
+// the only chrome at the top, touching the viewport edge with no gap.
 function MobileTabs() {
   return (
     <nav
       aria-label="Documentation pages"
-      className="lg:hidden fixed top-16 inset-x-0 z-30 bg-paper border-b border-ink"
+      className="lg:hidden fixed top-0 inset-x-0 z-40 bg-paper border-b border-ink"
     >
       <div className="overflow-x-auto">
         <ul className="flex items-stretch gap-0 min-w-max">
@@ -119,10 +123,10 @@ function MobileTabs() {
               <Link
                 to={item.to}
                 activeOptions={{ exact: true }}
-                className="mono-caps text-ink px-4 h-11 inline-flex items-center border-r border-hairline hover:bg-ink hover:text-paper transition-colors"
+                className="mono-caps text-ink px-4 h-12 inline-flex items-center border-r border-hairline hover:bg-ink hover:text-paper transition-colors"
                 activeProps={{
                   className:
-                    "mono-caps bg-verdant text-paper px-4 h-11 inline-flex items-center border-r border-hairline",
+                    "mono-caps bg-verdant text-paper px-4 h-12 inline-flex items-center border-r border-hairline",
                 }}
               >
                 {item.label}
