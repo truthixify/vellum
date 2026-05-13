@@ -1,0 +1,134 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-verdant: var(--verdant);
+  --color-verdant-hover: var(--verdant-hover);
+  --color-verdant-press: var(--verdant-press);
+  --color-cobalt: var(--cobalt);
+  --color-amber: var(--amber);
+  --color-alarm: var(--alarm);
+  --color-muted-ink: var(--muted-ink);
+  --color-hairline: var(--hairline);
+
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --color-card: var(--paper);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--paper);
+  --color-popover-foreground: var(--ink);
+  --color-primary: var(--ink);
+  --color-primary-foreground: var(--paper);
+  --color-secondary: var(--paper);
+  --color-secondary-foreground: var(--ink);
+  --color-muted: var(--paper);
+  --color-muted-foreground: var(--muted-ink);
+  --color-accent: var(--verdant);
+  --color-accent-foreground: var(--paper);
+  --color-destructive: var(--alarm);
+  --color-destructive-foreground: var(--paper);
+  --color-border: var(--ink);
+  --color-input: var(--ink);
+  --color-ring: var(--verdant);
+
+  --font-sans: "Inter", "Inter Display", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+}
+
+:root {
+  --paper: #FBF8EE;
+  --ink: #0E0E0C;
+  --verdant: #1A6E4A;
+  --verdant-hover: #1F805A;
+  --verdant-press: #155A3C;
+  --cobalt: #1F3DCB;
+  --amber: #D08A1A;
+  --alarm: #C53B2E;
+  --muted-ink: #6F6A5C;
+  --hairline: #E6DFC9;
+}
+
+@layer base {
+  * {
+    border-color: var(--hairline);
+  }
+  html, body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .font-mono { font-family: var(--font-mono); }
+  .mono-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .mono-caps {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .mono-inline {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .hairline { border-color: var(--hairline); }
+  .ink-border { border-color: var(--ink); }
+
+  .pulse-dot {
+    animation: pulse-opacity 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse-opacity {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .sweep::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--ink) 50%, transparent);
+    opacity: 0.15;
+    animation: sweep 1.4s linear infinite;
+  }
+  @keyframes sweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .stamp-flash {
+    animation: stamp-flash 400ms ease-out;
+  }
+  @keyframes stamp-flash {
+    0% { background-color: var(--ink); }
+    100% {}
+  }
+  @keyframes count-up {
+    0% { opacity: 0; transform: translateY(4px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in-up { animation: count-up 280ms ease-out; }
+}
