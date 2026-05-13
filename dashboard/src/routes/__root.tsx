@@ -7,6 +7,8 @@ import {
   useRouter,
 } from "@tanstack/react-router";
 
+import { WalletButton } from "@/components/vellum/WalletButton";
+
 function NotFoundComponent() {
   return (
     <div className="min-h-screen bg-paper flex items-center justify-center px-6">
@@ -100,9 +102,7 @@ function TopNav() {
           >
             My DID
           </Link>
-          <button className="mono-caps bg-verdant text-paper px-4 py-2 hover:bg-[var(--verdant-hover)]">
-            Connect wallet
-          </button>
+          <WalletButton />
         </div>
       </div>
     </nav>
