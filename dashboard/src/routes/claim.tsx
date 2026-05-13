@@ -14,6 +14,7 @@ import { VButton } from "@/components/vellum/VButton";
 
 import { buildCreateTx } from "@/lib/did-ckb";
 import type { CreateTxResult } from "@/lib/did-ckb";
+import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/claim")({
   component: ClaimPage,
@@ -41,7 +42,7 @@ function ClaimPage() {
     blockNumber?: bigint;
     status: "pending" | "committed";
   } | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopy();
 
   const networkLabel =
     client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
@@ -113,15 +114,9 @@ function ClaimPage() {
     };
   }, [txHash, client, confirmation?.status]);
 
-  async function copyDid() {
+  function copyDid() {
     if (!built) return;
-    try {
-      await navigator.clipboard.writeText(built.did);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch (err) {
-      console.warn("Clipboard write failed", err);
-    }
+    void copy(built.did);
   }
 
   return (

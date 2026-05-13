@@ -14,6 +14,7 @@ import {
 import { VButton } from "@/components/vellum/VButton";
 
 import { listDidsByLock, PROFILE_SERVICE_KEY, type DidRecord } from "@/lib/did-ckb";
+import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/my")({
   component: MyDid,
@@ -204,14 +205,7 @@ function DidHero({ record, networkLabel }: { record: DidRecord; networkLabel: st
   const services = Object.entries(record.document.services ?? {}).filter(
     ([k]) => k !== PROFILE_SERVICE_KEY,
   );
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(record.did);
-    } catch (err) {
-      console.warn("Clipboard write failed", err);
-    }
-  }
+  const { copied, copy } = useCopy();
 
   return (
     <div className="pt-4 pl-4">
@@ -251,8 +245,8 @@ function DidHero({ record, networkLabel }: { record: DidRecord; networkLabel: st
           ]}
         />
         <div className="px-6 py-5 flex flex-wrap gap-3 justify-end">
-          <VButton variant="secondary" onClick={copy}>
-            Copy DID
+          <VButton variant="secondary" onClick={() => copy(record.did)}>
+            {copied ? "Copied" : "Copy DID"}
           </VButton>
           <a href="#history">
             <VButton variant="ghost">View history →</VButton>
