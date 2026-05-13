@@ -11,10 +11,6 @@ import {
   FieldRow,
 } from "@/components/vellum/Manifest";
 import { Avatar } from "@/components/vellum/Avatar";
-import {
-  AvatarUploader,
-  dataUrlByteSize,
-} from "@/components/vellum/AvatarUploader";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -337,7 +333,7 @@ function EditPage() {
                     placeholder="Your name"
                   />
                 </Field>
-                <Field label="Avatar">
+                <Field label="Avatar URL">
                   <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
                     <Avatar
                       url={avatar.trim() || defaultAvatarUrl(record.did)}
@@ -346,7 +342,7 @@ function EditPage() {
                         .toUpperCase()}
                       size="md"
                     />
-                    <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex-1 min-w-0">
                       <input
                         value={avatar}
                         onChange={(e) => setAvatar(e.target.value)}
@@ -355,34 +351,13 @@ function EditPage() {
                         }`}
                         placeholder="Leave empty for the DID-seeded pixel-art default"
                       />
-                      <div className="flex gap-2 items-center">
-                        <AvatarUploader onUpload={setAvatar} size={96} />
-                        {avatar.startsWith("data:image/") && (
-                          <button
-                            type="button"
-                            onClick={() => setAvatar("")}
-                            className="mono-caps text-alarm hover:underline"
-                          >
-                            × Clear
-                          </button>
-                        )}
-                      </div>
                       {avatarError ? (
-                        <p className="text-xs text-alarm">{avatarError}</p>
-                      ) : avatar.startsWith("data:image/") ? (
-                        <p className="text-xs text-muted-foreground">
-                          Embedded image ·{" "}
-                          {formatBytes(dataUrlByteSize(avatar))}. Adds about{" "}
-                          {formatBytes(dataUrlByteSize(avatar))} of capacity
-                          rent to the cell.
-                        </p>
+                        <p className="text-xs text-alarm mt-1.5">{avatarError}</p>
                       ) : (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-1.5">
                           Leave empty for the DID-seeded pixel-art default.
-                          Paste a URL, or upload from your device (resized
-                          to 96×96 and embedded on chain so you don't need
-                          external hosting). ipfs:// goes through a public
-                          gateway.
+                          Paste any image URL to override. ipfs:// goes
+                          through a public gateway.
                         </p>
                       )}
                     </div>
@@ -791,10 +766,4 @@ function Status({ children }: { children: React.ReactNode }) {
   return (
     <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24">{children}</div>
   );
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
