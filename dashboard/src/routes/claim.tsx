@@ -15,6 +15,10 @@ import { VButton } from "@/components/vellum/VButton";
 import { buildCreateTx } from "@/lib/did-ckb";
 import type { CreateTxResult } from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
+import {
+  AvatarUploader,
+  dataUrlByteSize,
+} from "@/components/vellum/AvatarUploader";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
@@ -246,26 +250,46 @@ function ClaimPage() {
                   />
                 </div>
               </Field>
-              <Field label="Avatar URL">
-                <div className="flex items-start gap-4">
+              <Field label="Avatar">
+                <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
                   <Avatar
                     url={avatar}
                     fallback={(name || "??").slice(0, 2).toUpperCase()}
                     size="md"
                   />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 space-y-2">
                     <input
                       value={avatar}
                       onChange={(e) => setAvatar(e.target.value)}
                       placeholder="Leave empty for the DID-seeded pixel-art default"
                       className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
                     />
-                    <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
-                      Leave empty and we'll generate a pixel-art avatar
-                      from your new DID after the transaction is built.
-                      Paste any image URL to override. ipfs:// goes through
-                      a public gateway.
-                    </p>
+                    <div className="flex gap-2 items-center">
+                      <AvatarUploader onUpload={setAvatar} size={96} />
+                      {avatar.startsWith("data:image/") && (
+                        <button
+                          type="button"
+                          onClick={() => setAvatar("")}
+                          className="mono-caps text-alarm hover:underline"
+                        >
+                          × Clear
+                        </button>
+                      )}
+                    </div>
+                    {avatar.startsWith("data:image/") ? (
+                      <p className="text-xs text-muted-foreground">
+                        Embedded image · {formatBytes(dataUrlByteSize(avatar))}.
+                        Adds about {formatBytes(dataUrlByteSize(avatar))} of
+                        capacity rent to the cell.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Leave empty for a pixel-art default seeded on your
+                        new DID. Paste any image URL, or upload from your
+                        device (resized to 96×96 and embedded on chain so
+                        you don't need external hosting).
+                      </p>
+                    )}
                   </div>
                 </div>
               </Field>
@@ -472,4 +496,10 @@ function Field({
 function truncate(hex: string, head = 8, tail = 6): string {
   if (hex.length <= head + tail + 1) return hex;
   return `${hex.slice(0, head)}…${hex.slice(-tail)}`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
