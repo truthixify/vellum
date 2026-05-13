@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RotateRouteImport } from './routes/rotate'
 import { Route as ResolveRouteImport } from './routes/resolve'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as MigrateRouteImport } from './routes/migrate'
@@ -23,6 +24,11 @@ import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
 import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
 import { Route as DocsCellModelRouteImport } from './routes/docs/cell-model'
 
+const RotateRoute = RotateRouteImport.update({
+  id: '/rotate',
+  path: '/rotate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResolveRoute = ResolveRouteImport.update({
   id: '/resolve',
   path: '/resolve',
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
+    | '/rotate'
     | '/docs/cell-model'
     | '/docs/did-ckb'
     | '/docs/migration'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
+    | '/rotate'
     | '/docs/cell-model'
     | '/docs/did-ckb'
     | '/docs/migration'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
+    | '/rotate'
     | '/docs/cell-model'
     | '/docs/did-ckb'
     | '/docs/migration'
@@ -190,10 +202,18 @@ export interface RootRouteChildren {
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
+  RotateRoute: typeof RotateRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/rotate': {
+      id: '/rotate'
+      path: '/rotate'
+      fullPath: '/rotate'
+      preLoaderRoute: typeof RotateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/resolve': {
       id: '/resolve'
       path: '/resolve'
@@ -315,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,
+  RotateRoute: RotateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
