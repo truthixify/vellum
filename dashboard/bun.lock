@@ -7,7 +7,7 @@
       "dependencies": {
         "@ckb-ccc/connector-react": "^1.0.34",
         "@ckb-ccc/core": "^1.12.5",
-        "@ckb-ccc/identity": "https://github.com/truthixify/ccc/releases/download/v0.0.1-identity/ckb-ccc-identity-0.0.1.tgz",
+        "@ckb-ccc/identity": "https://github.com/truthixify/ccc/releases/download/v0.0.2-identity/ckb-ccc-identity-0.0.2.tgz",
         "@hookform/resolvers": "^5.2.2",
         "@ipld/dag-cbor": "^10.0.0",
         "@radix-ui/react-accordion": "^1.2.12",
@@ -138,7 +138,7 @@
 
     "@ckb-ccc/eip6963": ["@ckb-ccc/eip6963@1.0.32", "", { "dependencies": { "@ckb-ccc/core": "1.12.5" } }, "sha512-vOpZrL69Z2WVcuXgSpcc/4aAJp0K8KklrkgQmUxMI0UtWkUWgdF40Uv/MsfJiR87vXArkeP6UYtO30dmdq31uQ=="],
 
-    "@ckb-ccc/identity": ["@ckb-ccc/identity@https://github.com/truthixify/ccc/releases/download/v0.0.1-identity/ckb-ccc-identity-0.0.1.tgz", { "dependencies": { "@ckb-ccc/core": "1.12.5", "@ipld/dag-cbor": "^9.2.3", "@noble/curves": "^1.9.7" } }],
+    "@ckb-ccc/identity": ["@ckb-ccc/identity@https://github.com/truthixify/ccc/releases/download/v0.0.2-identity/ckb-ccc-identity-0.0.2.tgz", { "dependencies": { "@ckb-ccc/core": "1.12.5", "@ipld/dag-cbor": "^9.2.3", "@noble/curves": "^1.9.7" } }],
 
     "@ckb-ccc/joy-id": ["@ckb-ccc/joy-id@1.0.32", "", { "dependencies": { "@ckb-ccc/core": "1.12.5", "@joyid/ckb": "^1.1.2", "@joyid/common": "^0.2.1" } }, "sha512-7yBU7qnQVCeR8jRZLpxtUqRRcBHw8FwEiAwwdpeYWN50BRZjBtSck+N+rC2qkI+XeKxtluVjpLpObzWJ2XhKbA=="],
 
