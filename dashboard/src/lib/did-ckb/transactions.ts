@@ -15,6 +15,25 @@ import { findDidCell } from "./resolver";
 
 const PLACEHOLDER_ARGS = ("0x" + "00".repeat(20)) as ccc.Hex;
 
+// Extra CKBytes locked on top of the absolute minimum cell capacity. Lets the
+// holder grow the document (add handles, services, longer bio) on a future
+// update without having to top up the cell. 200 bytes is enough for a few
+// extra handles or one richer service entry.
+const CAPACITY_RESERVE_CKB = "200";
+
+// Compute the capacity (in shannons) required to mint a DID Metadata Cell of
+// the given lock + type + data, plus the reserve. CCC's CellOutput.from()
+// with an outputData argument auto-fills capacity = (occupiedSize +
+// data.length) * 10^8 when capacity is 0; we then bump by the reserve.
+function requiredCapacity(
+  lock: ccc.ScriptLike,
+  type: ccc.ScriptLike,
+  data: ccc.Hex,
+): bigint {
+  const minOutput = ccc.CellOutput.from({ capacity: 0, lock, type }, data);
+  return BigInt(minOutput.capacity) + BigInt(ccc.fixedPointFrom(CAPACITY_RESERVE_CKB));
+}
+
 export type CreateTxResult = {
   tx: ccc.Transaction;
   did: string;
@@ -62,15 +81,17 @@ export async function buildCreateTx(
     services: input.services,
   });
   const cellData = encodeCellData(document, null);
+  const typeScript = didCkbTypeScript(deployment, PLACEHOLDER_ARGS);
+  const capacity = requiredCapacity(lock, typeScript, cellData);
 
   const tx = ccc.Transaction.from({
     cellDeps: [didCkbCellDep(deployment)],
     inputs: [],
     outputs: [
       {
-        capacity: 0,
+        capacity,
         lock,
-        type: didCkbTypeScript(deployment, PLACEHOLDER_ARGS),
+        type: typeScript,
       },
     ],
     outputsData: [cellData],
@@ -122,6 +143,14 @@ export async function buildUpdateTx(
   const cellData = encodeCellData(input.document, localIdString);
 
   const newLock = input.newLock ?? prior.cell.cellOutput.lock;
+  const typeScript = didCkbTypeScript(deployment, args);
+  // Keep at least the prior capacity so the cell never shrinks below the
+  // already-funded value; bump if the new data needs more.
+  const minCapacity = requiredCapacity(newLock, typeScript, cellData);
+  const capacity =
+    BigInt(prior.cell.cellOutput.capacity) > minCapacity
+      ? BigInt(prior.cell.cellOutput.capacity)
+      : minCapacity;
 
   const tx = ccc.Transaction.from({
     cellDeps: [didCkbCellDep(deployment)],
@@ -133,9 +162,9 @@ export async function buildUpdateTx(
     ],
     outputs: [
       {
-        capacity: 0,
+        capacity,
         lock: newLock,
-        type: didCkbTypeScript(deployment, args),
+        type: typeScript,
       },
     ],
     outputsData: [cellData],
