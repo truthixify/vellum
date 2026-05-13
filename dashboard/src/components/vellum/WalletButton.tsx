@@ -1,6 +1,6 @@
 import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useCopy } from "@/hooks/use-copy";
@@ -21,7 +21,31 @@ export function WalletButton() {
   const [address, setAddress] = useState<string | null>(null);
   const [lock, setLock] = useState<ccc.Script | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const { copied, copy } = useCopy();
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(e: MouseEvent | TouchEvent) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -80,7 +104,7 @@ export function WalletButton() {
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapperRef}>
       <button
         onClick={() => setMenuOpen((v) => !v)}
         className="border border-ink h-10 px-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
