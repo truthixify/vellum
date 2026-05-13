@@ -4,12 +4,6 @@ import { Manifest, IdTab, Brackets, MetaStrip } from "@/components/vellum/Manife
 import { VButton } from "@/components/vellum/VButton";
 
 export const Route = createFileRoute("/deactivate")({
-  head: () => ({
-    meta: [
-      { title: "Deactivate DID — Vellum" },
-      { name: "description", content: "Permanently deactivate your did:ckb. The Cell is burned, capacity returns, the document becomes unresolvable." },
-    ],
-  }),
   component: DeactivatePage,
 });
 

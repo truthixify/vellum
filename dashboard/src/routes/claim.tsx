@@ -4,12 +4,6 @@ import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/component
 import { VButton } from "@/components/vellum/VButton";
 
 export const Route = createFileRoute("/claim")({
-  head: () => ({
-    meta: [
-      { title: "Claim a DID — Vellum" },
-      { name: "description", content: "Mint a new did:ckb. A four-step wizard: confirm cost, write the document, sign, confirm." },
-    ],
-  }),
   component: ClaimPage,
 });
 

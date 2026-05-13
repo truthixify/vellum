@@ -4,13 +4,6 @@ import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/component
 import { VButton } from "@/components/vellum/VButton";
 
 export const Route = createFileRoute("/resolve")({
-  head: () => ({
-    meta: [
-      { title: "Resolve a DID — Vellum" },
-      { name: "description", content: "Look up any did:ckb identifier and view its on-chain document." },
-      { property: "og:title", content: "Resolve a DID — Vellum" },
-    ],
-  }),
   component: ResolvePage,
 });
 

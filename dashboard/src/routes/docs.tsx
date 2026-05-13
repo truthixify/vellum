@@ -1,12 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/docs")({
-  head: () => ({
-    meta: [
-      { title: "Docs — Vellum" },
-      { name: "description", content: "How did:ckb works: Cells, capacity, key rotation, migration windows, resolver behavior." },
-    ],
-  }),
   component: DocsPage,
 });
 

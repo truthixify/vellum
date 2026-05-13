@@ -3,12 +3,6 @@ import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/component
 import { VButton } from "@/components/vellum/VButton";
 
 export const Route = createFileRoute("/migrate")({
-  head: () => ({
-    meta: [
-      { title: "Migrate from did:plc — Vellum" },
-      { name: "description", content: "Move an existing did:plc identity onto CKB. 72-hour migration window with rotation-key authorization." },
-    ],
-  }),
   component: MigratePage,
 });
 

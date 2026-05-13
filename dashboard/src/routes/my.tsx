@@ -3,12 +3,6 @@ import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/component
 import { VButton } from "@/components/vellum/VButton";
 
 export const Route = createFileRoute("/my")({
-  head: () => ({
-    meta: [
-      { title: "My DID — Vellum" },
-      { name: "description", content: "Manage your did:ckb. Edit your document, rotate the Lock Script, view operation history." },
-    ],
-  }),
   component: MyDid,
 });
 
