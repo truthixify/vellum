@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResolveRouteImport } from './routes/resolve'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as MigrateRouteImport } from './routes/migrate'
+import { Route as EditRouteImport } from './routes/edit'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as DeactivateRouteImport } from './routes/deactivate'
 import { Route as ClaimRouteImport } from './routes/claim'
@@ -35,6 +36,11 @@ const MyRoute = MyRouteImport.update({
 const MigrateRoute = MigrateRouteImport.update({
   id: '/migrate',
   path: '/migrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditRoute = EditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
   '/docs': typeof DocsRouteWithChildren
+  '/edit': typeof EditRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
+  '/edit': typeof EditRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
   '/docs': typeof DocsRouteWithChildren
+  '/edit': typeof EditRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/deactivate'
     | '/docs'
+    | '/edit'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/'
     | '/claim'
     | '/deactivate'
+    | '/edit'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/claim'
     | '/deactivate'
     | '/docs'
+    | '/edit'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -174,6 +186,7 @@ export interface RootRouteChildren {
   ClaimRoute: typeof ClaimRoute
   DeactivateRoute: typeof DeactivateRoute
   DocsRoute: typeof DocsRouteWithChildren
+  EditRoute: typeof EditRoute
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/migrate'
       fullPath: '/migrate'
       preLoaderRoute: typeof MigrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edit': {
+      id: '/edit'
+      path: '/edit'
+      fullPath: '/edit'
+      preLoaderRoute: typeof EditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -291,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   ClaimRoute: ClaimRoute,
   DeactivateRoute: DeactivateRoute,
   DocsRoute: DocsRouteWithChildren,
+  EditRoute: EditRoute,
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,
