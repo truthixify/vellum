@@ -51,3 +51,9 @@ export {
   resolveDid,
   type DidRecord,
 } from "./resolver";
+
+export {
+  getDidHistory,
+  type HistoryAction,
+  type HistoryEntry,
+} from "./history";
