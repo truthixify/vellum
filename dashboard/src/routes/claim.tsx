@@ -1,7 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
+import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+
+import {
+  Manifest,
+  IdTab,
+  Brackets,
+  MetaStrip,
+  FieldRow,
+  Tag,
+} from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
+
+import { buildCreateTx } from "@/lib/did-ckb";
+import type { CreateTxResult } from "@/lib/did-ckb";
 
 export const Route = createFileRoute("/claim")({
   component: ClaimPage,
@@ -9,29 +21,138 @@ export const Route = createFileRoute("/claim")({
 
 const STEPS = ["CONFIRM COST", "COMPOSE DOCUMENT", "SIGN AND SUBMIT", "CONFIRMATION"];
 
+type Stage = 0 | 1 | 2 | 3;
+
 function ClaimPage() {
-  const [step, setStep] = useState(0);
+  const signer = useSigner();
+  const { client, open } = useCcc();
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState<Stage>(0);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [handle, setHandle] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [built, setBuilt] = useState<CreateTxResult | null>(null);
+  const [txHash, setTxHash] = useState<ccc.Hex | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    blockNumber?: bigint;
+    status: "pending" | "committed";
+  } | null>(null);
+
+  const networkLabel =
+    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+
+  async function handleStage() {
+    if (!signer) {
+      setError("Connect a wallet first.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await buildCreateTx(signer, {
+        profile: {
+          displayName: name.trim() || undefined,
+          bio: bio.trim() || undefined,
+        },
+        alsoKnownAs: handle.trim() ? [handle.trim()] : undefined,
+      });
+      setBuilt(result);
+      setStep(2);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSign() {
+    if (!signer || !built) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const hash = await signer.sendTransaction(built.tx);
+      setTxHash(hash);
+      setConfirmation({ status: "pending" });
+      setStep(3);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!txHash || !client || confirmation?.status === "committed") return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const onChain = await client.getTransaction(txHash);
+        if (!onChain || cancelled) return;
+        if (onChain.status === "committed") {
+          setConfirmation({
+            status: "committed",
+            blockNumber: onChain.blockNumber ?? undefined,
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Polling tx failed", err);
+      }
+      if (!cancelled) setTimeout(poll, 3000);
+    };
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [txHash, client, confirmation?.status]);
+
+  async function copyDid() {
+    if (!built) return;
+    try {
+      await navigator.clipboard.writeText(built.did);
+    } catch (err) {
+      console.warn("Clipboard write failed", err);
+    }
+  }
 
   return (
     <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-16">
-      <div className="mono-caps text-muted-foreground mb-3">REGISTRY · ENROLMENT</div>
+      <div className="mono-caps text-muted-foreground mb-3">
+        REGISTRY · ENROLMENT · {networkLabel}
+      </div>
       <h1 className="text-4xl md:text-5xl font-medium mb-4">Claim a did:ckb.</h1>
       <p className="text-muted-foreground mb-12 max-w-[58ch]">
         Four steps. Your wallet signs once at the end. Storage is locked, not spent.
       </p>
 
-      {/* Progress strip */}
       <div className="grid grid-cols-4 mb-12">
         {STEPS.map((label, i) => (
-          <div key={label} className={`px-3 py-3 border-t-2 ${i <= step ? "border-verdant" : "border-hairline"}`}>
-            <div className="mono-caps text-muted-foreground">STEP {String(i + 1).padStart(2, "0")} / 04</div>
+          <div
+            key={label}
+            className={`px-3 py-3 border-t-2 ${
+              i <= step ? "border-verdant" : "border-hairline"
+            }`}
+          >
+            <div className="mono-caps text-muted-foreground">
+              STEP {String(i + 1).padStart(2, "0")} / 04
+            </div>
             <div className="mono-caps mt-1 text-ink hidden md:block">{label}</div>
           </div>
         ))}
       </div>
+
+      {error ? (
+        <div className="mb-8 border-2 border-alarm bg-paper px-4 py-3">
+          <div className="mono-caps text-alarm mb-1">ERROR</div>
+          <p className="text-sm font-mono break-all">{error}</p>
+        </div>
+      ) : null}
 
       <div className="pt-4 pl-4">
         {step === 0 && (
@@ -44,23 +165,35 @@ function ClaimPage() {
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">TOTAL CAPACITY LOCKED</div>
+              <div className="mono-caps text-muted-foreground mb-3">
+                TOTAL CAPACITY LOCKED
+              </div>
               <Brackets className="block">
-                <div className="font-mono text-[48px] md:text-[64px] leading-none">614.00 CKB</div>
+                <div className="font-mono text-[48px] md:text-[64px] leading-none">
+                  ~614 CKB
+                </div>
               </Brackets>
             </div>
-            <MetaStrip items={[
-              { label: "Base capacity", value: "590.00 CKB" },
-              { label: "Padding", value: "24.00 CKB" },
-              { label: "Network fee", value: "< 0.01 CKB" },
-              { label: "Recoverable", value: "YES" },
-            ]} />
+            <MetaStrip
+              items={[
+                { label: "Base capacity", value: "~590 CKB" },
+                { label: "Padding", value: "~24 CKB" },
+                { label: "Network fee", value: "< 0.01 CKB" },
+                { label: "Recoverable", value: "YES" },
+              ]}
+            />
             <div className="px-6 py-6 text-sm text-muted-foreground">
-              The capacity is locked on chain in your DID Cell. Deactivate any time to recover it in full.
+              The capacity is locked on chain in your DID Cell. Deactivate any time
+              to recover it in full. Actual figures depend on the document size and
+              your lock script.
             </div>
             <div className="px-6 pb-6 flex justify-end gap-3">
-              <Link to="/"><VButton variant="secondary">Cancel</VButton></Link>
-              <VButton variant="verdant" onClick={() => setStep(1)}>Continue</VButton>
+              <Link to="/">
+                <VButton variant="secondary">Cancel</VButton>
+              </Link>
+              <VButton variant="verdant" onClick={() => setStep(1)}>
+                Continue
+              </VButton>
             </div>
           </Manifest>
         )}
@@ -75,16 +208,34 @@ function ClaimPage() {
           >
             <div className="px-6 py-6 space-y-6">
               <Field label="Display name" required>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-11 bg-paper border border-ink px-3" />
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 bg-paper border border-ink px-3"
+                  placeholder="Margot Weil"
+                />
               </Field>
               <Field label="Bio">
-                <textarea value={bio} onChange={(e) => setBio(e.target.value.slice(0, 240))} rows={3} className="w-full bg-paper border border-ink px-3 py-2 resize-none" />
-                <div className="mono-caps text-muted-foreground mt-1.5">{bio.length} / 240</div>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value.slice(0, 240))}
+                  rows={3}
+                  className="w-full bg-paper border border-ink px-3 py-2 resize-none"
+                  placeholder="Up to 240 characters."
+                />
+                <div className="mono-caps text-muted-foreground mt-1.5">
+                  {bio.length} / 240
+                </div>
               </Field>
               <Field label="Handle">
                 <div className="flex gap-2 items-center">
-                  <Tag>AT PROTOCOL</Tag>
-                  <input value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="@you.bsky.social" className="flex-1 h-11 bg-paper border border-ink px-3 font-mono text-sm" />
+                  <Tag>HANDLE</Tag>
+                  <input
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value)}
+                    placeholder="at://you.bsky.social"
+                    className="flex-1 h-11 bg-paper border border-ink px-3 font-mono text-sm"
+                  />
                 </div>
               </Field>
               <Field label="Avatar">
@@ -93,18 +244,36 @@ function ClaimPage() {
                   <span className="absolute top-1 right-1 w-3 h-3 border-t border-r border-verdant" />
                   <span className="absolute bottom-1 left-1 w-3 h-3 border-b border-l border-verdant" />
                   <span className="absolute bottom-1 right-1 w-3 h-3 border-b border-r border-verdant" />
-                  <div className="mono-caps text-muted-foreground text-center px-4">DROP IMAGE<br/>OR CLICK</div>
+                  <div className="mono-caps text-muted-foreground text-center px-4">
+                    AVATAR UPLOAD
+                    <br />
+                    SOON
+                  </div>
                 </div>
               </Field>
             </div>
             <div className="px-6 pb-6 flex justify-between">
-              <VButton variant="ghost" onClick={() => setStep(0)}>← Back</VButton>
-              <VButton variant="verdant" onClick={() => setStep(2)} disabled={!name}>Stage for signing</VButton>
+              <VButton variant="ghost" onClick={() => setStep(0)}>
+                ← Back
+              </VButton>
+              {signer ? (
+                <VButton
+                  variant="verdant"
+                  onClick={handleStage}
+                  disabled={!name || busy}
+                >
+                  {busy ? "Preparing transaction…" : "Stage for signing"}
+                </VButton>
+              ) : (
+                <VButton variant="verdant" onClick={() => open()}>
+                  Connect wallet
+                </VButton>
+              )}
             </div>
           </Manifest>
         )}
 
-        {step === 2 && (
+        {step === 2 && built && (
           <Manifest
             idTab={<IdTab>STEP 03 / 04 · SIGN</IdTab>}
             state="PENDING"
@@ -114,48 +283,111 @@ function ClaimPage() {
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">PROPOSED IDENTIFIER (PRELIMINARY)</div>
+              <div className="mono-caps text-muted-foreground mb-3">
+                IDENTIFIER (PREVIEW)
+              </div>
               <Brackets className="block">
-                <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">did:ckb:qq2m72yfxs8wn3v0c46aaxzhe6up4u4nba</div>
+                <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">
+                  {built.did}
+                </div>
               </Brackets>
             </div>
             <div>
-              <FieldRow label="Display name" value={<span className="text-xl font-medium">{name || "—"}</span>} />
-              <FieldRow label="Bio" value={bio || <span className="text-muted-foreground">—</span>} />
-              <FieldRow label="Handle" mono value={handle || <span className="text-muted-foreground font-sans">—</span>} />
-              <FieldRow label="Capacity" mono value="614.00 CKB" />
-              <FieldRow label="Network fee" mono value="< 0.01 CKB" />
+              <FieldRow
+                label="Display name"
+                value={
+                  <span className="text-xl font-medium">{name || "(unset)"}</span>
+                }
+              />
+              <FieldRow
+                label="Bio"
+                value={bio || <span className="text-muted-foreground">(unset)</span>}
+              />
+              <FieldRow
+                label="Handle"
+                mono
+                value={
+                  handle || (
+                    <span className="text-muted-foreground font-sans">(unset)</span>
+                  )
+                }
+              />
+              <FieldRow
+                label="Inputs"
+                mono
+                value={String(built.tx.inputs.length)}
+              />
+              <FieldRow
+                label="Outputs"
+                mono
+                value={String(built.tx.outputs.length)}
+              />
+              <FieldRow label="Network" mono value={networkLabel} />
             </div>
             <div className="px-6 py-6 flex justify-between">
-              <VButton variant="ghost" onClick={() => setStep(1)}>← Back</VButton>
-              <VButton variant="verdant" onClick={() => setStep(3)}>Sign and submit</VButton>
+              <VButton variant="ghost" onClick={() => setStep(1)}>
+                ← Back
+              </VButton>
+              <VButton variant="verdant" onClick={handleSign} disabled={busy}>
+                {busy ? "Waiting for wallet…" : "Sign and submit"}
+              </VButton>
             </div>
           </Manifest>
         )}
 
-        {step === 3 && (
+        {step === 3 && built && (
           <Manifest
-            idTab={<IdTab>STEP 04 / 04 · CONFIRMED</IdTab>}
-            state="ACTIVE"
+            idTab={<IdTab>STEP 04 / 04 · CONFIRMATION</IdTab>}
+            state={confirmation?.status === "committed" ? "ACTIVE" : "PENDING"}
+            stateLabel={
+              confirmation?.status === "committed"
+                ? "ACTIVE · ON CHAIN"
+                : "PENDING · WAITING FOR BLOCK"
+            }
             offset
-            footerLeft="VELLUM · STAMPED · BLOCK 17,314,192"
+            footerLeft={
+              confirmation?.blockNumber
+                ? `VELLUM · STAMPED · BLOCK ${confirmation.blockNumber.toString()}`
+                : "VELLUM · TRANSACTION SUBMITTED"
+            }
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">YOUR IDENTIFIER</div>
+              <div className="mono-caps text-muted-foreground mb-3">
+                YOUR IDENTIFIER
+              </div>
               <Brackets className="block">
-                <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">did:ckb:qq2m72yfxs8wn3v0c46aaxzhe6up4u4nba</div>
+                <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">
+                  {built.did}
+                </div>
               </Brackets>
             </div>
-            <MetaStrip items={[
-              { label: "Block", value: "17,314,192" },
-              { label: "Tx hash", value: "0x4c8a...e91f" },
-              { label: "Capacity", value: "614.00 CKB" },
-              { label: "Status", value: "ACTIVE" },
-            ]} />
+            <MetaStrip
+              items={[
+                {
+                  label: "Status",
+                  value: confirmation?.status === "committed" ? "ACTIVE" : "PENDING",
+                },
+                {
+                  label: "Block",
+                  value: confirmation?.blockNumber
+                    ? confirmation.blockNumber.toString()
+                    : "…",
+                },
+                {
+                  label: "Tx hash",
+                  value: txHash ? truncate(txHash) : "…",
+                },
+                { label: "Network", value: networkLabel },
+              ]}
+            />
             <div className="px-6 py-6 flex flex-wrap gap-3 justify-end">
-              <VButton variant="secondary">Copy DID</VButton>
-              <Link to="/my"><VButton variant="verdant">View my DID</VButton></Link>
+              <VButton variant="secondary" onClick={copyDid}>
+                Copy DID
+              </VButton>
+              <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
+                View my DID
+              </VButton>
             </div>
           </Manifest>
         )}
@@ -164,7 +396,15 @@ function ClaimPage() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <div className="mono-label text-muted-foreground mb-2 flex items-center gap-2">
@@ -173,4 +413,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
       {children}
     </div>
   );
+}
+
+function truncate(hex: string, head = 8, tail = 6): string {
+  if (hex.length <= head + tail + 1) return hex;
+  return `${hex.slice(0, head)}…${hex.slice(-tail)}`;
 }
