@@ -396,16 +396,13 @@ function LockScriptCard({ record }: { record: DidRecord }) {
       </div>
       <div className="px-6 pb-6">
         <div className="text-xs text-muted-foreground mb-3 max-w-[40ch]">
-          Lock script rotation moves control of this DID to a new key
-          without changing the identifier. The SDK already supports it via{" "}
-          <span className="font-mono">buildUpdateTx</span> with a{" "}
-          <span className="font-mono">newLock</span>; the UI for picking the
-          target lock lands in a follow-up.
+          Rotation moves control of this DID to a new key without changing
+          the identifier. The current Lock signs the rotation transaction.
         </div>
         <div className="flex justify-end">
-          <VButton variant="ghost" disabled>
-            Rotate (next release)
-          </VButton>
+          <Link to="/rotate" search={{ did: record.did }}>
+            <VButton variant="ghost">Rotate →</VButton>
+          </Link>
         </div>
       </div>
     </Manifest>
