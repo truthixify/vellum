@@ -255,13 +255,14 @@ function ClaimPage() {
                     <input
                       value={avatar}
                       onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="https://example.com/avatar.png or ipfs://..."
+                      placeholder="Leave empty for the DID-seeded pixel-art default"
                       className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
-                      Paste a URL pointing to an image. Live preview on the
-                      left. ipfs:// goes through a public gateway. Direct
-                      uploads land in a later release.
+                      Leave empty and we'll generate a pixel-art avatar
+                      from your new DID after the transaction is built.
+                      Paste any image URL to override. ipfs:// goes through
+                      a public gateway.
                     </p>
                   </div>
                 </div>

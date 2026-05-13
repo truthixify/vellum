@@ -17,6 +17,7 @@ import { useCopy } from "@/hooks/use-copy";
 import {
   buildDocument,
   buildUpdateTx,
+  defaultAvatarUrl,
   PROFILE_SERVICE_KEY,
   resolveDid,
   type DidRecord,
@@ -225,10 +226,13 @@ function EditPage() {
             { type: s.type.trim(), endpoint: s.endpoint.trim() },
           ]),
       );
+      const trimmedAvatar = avatar.trim();
       const document = buildDocument(
         {
           displayName: displayName.trim() || undefined,
-          avatar: avatar.trim() || undefined,
+          // Empty field falls back to the DiceBear default seeded on the DID,
+          // matching the convention used on first claim.
+          avatar: trimmedAvatar || defaultAvatarUrl(did!),
           bio: bio.trim() || undefined,
         },
         {
@@ -321,7 +325,7 @@ function EditPage() {
                 <Field label="Avatar URL">
                   <div className="flex items-start gap-4">
                     <Avatar
-                      url={avatar}
+                      url={avatar.trim() || defaultAvatarUrl(record.did)}
                       fallback={(displayName || record.did.slice(-2))
                         .slice(0, 2)
                         .toUpperCase()}
@@ -332,10 +336,12 @@ function EditPage() {
                         value={avatar}
                         onChange={(e) => setAvatar(e.target.value)}
                         className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                        placeholder="https://example.com/avatar.png or ipfs://..."
+                        placeholder="Leave empty for the DID-seeded pixel-art default"
                       />
                       <p className="text-xs text-muted-foreground mt-1.5">
-                        Live preview on the left. ipfs:// goes through a public gateway.
+                        Leave empty and we'll generate a pixel-art avatar
+                        from your DID. Paste a URL to override. ipfs:// goes
+                        through a public gateway.
                       </p>
                     </div>
                   </div>
