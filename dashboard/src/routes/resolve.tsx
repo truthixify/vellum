@@ -18,6 +18,7 @@ import {
   PROFILE_SERVICE_KEY,
   type DidRecord,
 } from "@/lib/did-ckb";
+import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/resolve")({
@@ -193,16 +194,24 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
           {profile.avatar && (
             <FieldRow
               label="Avatar"
-              mono
               value={
-                <a
-                  href={profile.avatar}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-cobalt underline break-all"
-                >
-                  {profile.avatar}
-                </a>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <Avatar
+                    url={profile.avatar}
+                    fallback={(profile.displayName ?? record.did.slice(-2))
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    size="lg"
+                  />
+                  <a
+                    href={profile.avatar}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-xs text-muted-foreground hover:text-cobalt underline break-all"
+                  >
+                    {profile.avatar}
+                  </a>
+                </div>
               }
             />
           )}

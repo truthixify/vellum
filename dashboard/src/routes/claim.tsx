@@ -14,6 +14,7 @@ import { VButton } from "@/components/vellum/VButton";
 
 import { buildCreateTx } from "@/lib/did-ckb";
 import type { CreateTxResult } from "@/lib/did-ckb";
+import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/claim")({
@@ -244,17 +245,26 @@ function ClaimPage() {
                 </div>
               </Field>
               <Field label="Avatar URL">
-                <input
-                  value={avatar}
-                  onChange={(e) => setAvatar(e.target.value)}
-                  placeholder="https://example.com/avatar.png or ipfs://..."
-                  className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
-                  Paste a URL pointing to an image. Apps that render your DID
-                  will fetch it from there. Direct uploads land in a later
-                  release.
-                </p>
+                <div className="flex items-start gap-4">
+                  <Avatar
+                    url={avatar}
+                    fallback={(name || "??").slice(0, 2).toUpperCase()}
+                    size="md"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <input
+                      value={avatar}
+                      onChange={(e) => setAvatar(e.target.value)}
+                      placeholder="https://example.com/avatar.png or ipfs://..."
+                      className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
+                      Paste a URL pointing to an image. Live preview on the
+                      left. ipfs:// goes through a public gateway. Direct
+                      uploads land in a later release.
+                    </p>
+                  </div>
+                </div>
               </Field>
             </div>
             <div className="px-6 pb-6 flex justify-between">

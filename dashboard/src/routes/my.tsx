@@ -14,6 +14,7 @@ import {
 import { VButton } from "@/components/vellum/VButton";
 
 import { listDidsByLock, PROFILE_SERVICE_KEY, type DidRecord } from "@/lib/did-ckb";
+import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/my")({
@@ -223,10 +224,23 @@ function DidHero({ record, networkLabel }: { record: DidRecord; networkLabel: st
               {record.did}
             </div>
           </Brackets>
-          {record.profile.displayName && (
-            <div className="mt-6 text-3xl font-medium">{record.profile.displayName}</div>
+          {(record.profile.displayName || record.profile.avatar) && (
+            <div className="mt-6 flex items-center gap-5">
+              <Avatar
+                url={record.profile.avatar}
+                fallback={(record.profile.displayName ?? record.did.slice(-2))
+                  .slice(0, 2)
+                  .toUpperCase()}
+                size="lg"
+              />
+              {record.profile.displayName && (
+                <div className="text-3xl font-medium break-words min-w-0">
+                  {record.profile.displayName}
+                </div>
+              )}
+            </div>
           )}
-          <div className="mono-caps text-muted-foreground mt-2">
+          <div className="mono-caps text-muted-foreground mt-4">
             TX {truncate(record.cell.outPoint.txHash, 10, 8)} · CAPACITY {capacityCkb} CKB
           </div>
         </div>
@@ -289,22 +303,7 @@ function DocumentBody({ record }: { record: DidRecord }) {
       />
       <FieldRow
         label="Avatar"
-        value={
-          profile.avatar ? (
-            <a
-              href={profile.avatar}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-sm break-all text-cobalt underline"
-            >
-              {profile.avatar}
-            </a>
-          ) : (
-            <div className="w-16 h-16 border border-ink bg-paper flex items-center justify-center font-mono font-medium">
-              {monogramSource}
-            </div>
-          )
-        }
+        value={<Avatar url={profile.avatar} fallback={monogramSource} size="md" />}
       />
       <FieldRow
         label="Bio"

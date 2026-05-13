@@ -10,6 +10,7 @@ import {
   Brackets,
   FieldRow,
 } from "@/components/vellum/Manifest";
+import { Avatar } from "@/components/vellum/Avatar";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 
@@ -317,12 +318,26 @@ function EditPage() {
                   />
                 </Field>
                 <Field label="Avatar URL">
-                  <input
-                    value={avatar}
-                    onChange={(e) => setAvatar(e.target.value)}
-                    className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                    placeholder="https://example.com/avatar.png or ipfs://..."
-                  />
+                  <div className="flex items-start gap-4">
+                    <Avatar
+                      url={avatar}
+                      fallback={(displayName || record.did.slice(-2))
+                        .slice(0, 2)
+                        .toUpperCase()}
+                      size="md"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <input
+                        value={avatar}
+                        onChange={(e) => setAvatar(e.target.value)}
+                        className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
+                        placeholder="https://example.com/avatar.png or ipfs://..."
+                      />
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Live preview on the left. ipfs:// goes through a public gateway.
+                      </p>
+                    </div>
+                  </div>
                 </Field>
                 <Field label="Bio">
                   <textarea
