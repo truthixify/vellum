@@ -26,8 +26,11 @@ export {
 export {
   buildDocument,
   decodeDocument,
+  defaultAvatarUrl,
+  DEFAULT_AVATAR_BASE,
   encodeDocument,
   extractProfile,
+  isDefaultAvatar,
   PROFILE_SERVICE_KEY,
   PROFILE_SERVICE_TYPE,
   type DidDocument,

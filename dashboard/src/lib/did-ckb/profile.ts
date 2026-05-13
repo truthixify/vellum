@@ -26,6 +26,21 @@ export type VellumProfile = {
 export const PROFILE_SERVICE_KEY = "profile";
 export const PROFILE_SERVICE_TYPE = "VellumProfile";
 
+// DiceBear pixel-art avatar derived from the DID. Used as the default when the
+// holder doesn't supply a custom URL. Stored verbatim in the on-chain document
+// so any resolver picks it up, not just Vellum.
+export const DEFAULT_AVATAR_BASE =
+  "https://api.dicebear.com/9.x/pixel-art/png?seed=";
+
+export function defaultAvatarUrl(did: string): string {
+  return `${DEFAULT_AVATAR_BASE}${did}`;
+}
+
+export function isDefaultAvatar(url: string | undefined): boolean {
+  if (!url) return false;
+  return url.startsWith(DEFAULT_AVATAR_BASE);
+}
+
 export function buildDocument(
   profile: VellumProfile,
   extra?: {
