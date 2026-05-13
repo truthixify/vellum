@@ -11,7 +11,7 @@ import {
 } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
-import { buildDeactivateTx } from "@/lib/did-ckb";
+import { buildDeactivateTx } from "@ckb-ccc/identity";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const searchSchema = z.object({

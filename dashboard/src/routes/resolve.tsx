@@ -17,7 +17,7 @@ import {
   resolveDid,
   PROFILE_SERVICE_KEY,
   type DidRecord,
-} from "@/lib/did-ckb";
+} from "@ckb-ccc/identity";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";

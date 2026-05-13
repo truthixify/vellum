@@ -15,14 +15,14 @@ import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
+import { buildMigrationTx } from "@ckb-ccc/identity";
 import {
-  buildMigrationTx,
   fetchPlcLog,
   getGenesisOperation,
   getRotationKeys,
   type PlcOperation,
   type PlcRotationKey,
-} from "@/lib/did-ckb";
+} from "@ckb-ccc/identity/plc";
 
 export const Route = createFileRoute("/migrate")({
   component: MigratePage,

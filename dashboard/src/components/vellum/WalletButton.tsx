@@ -2,7 +2,7 @@ import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
+import { listDidsByLock, type DidRecord } from "@ckb-ccc/identity";
 import { useCopy } from "@/hooks/use-copy";
 import { Avatar } from "./Avatar";
 

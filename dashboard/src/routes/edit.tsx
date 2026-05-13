@@ -22,7 +22,7 @@ import {
   PROFILE_SERVICE_KEY,
   resolveDid,
   type DidRecord,
-} from "@/lib/did-ckb";
+} from "@ckb-ccc/identity";
 import {
   validateHandle,
   validateServiceName,

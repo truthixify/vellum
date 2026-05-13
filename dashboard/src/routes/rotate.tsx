@@ -14,7 +14,7 @@ import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-import { buildUpdateTx, resolveDid, type DidRecord } from "@/lib/did-ckb";
+import { buildUpdateTx, resolveDid, type DidRecord } from "@ckb-ccc/identity";
 
 const searchSchema = z.object({
   did: z.string().optional(),

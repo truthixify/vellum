@@ -4,7 +4,7 @@ A reference dashboard for [`did:ckb`](https://github.com/web5fans/web5-wips/blob
 
 Claim a DID, write a profile to it, rotate the keys that control it, look up any DID on the network, migrate an existing `did:plc` identity onto CKB, and deactivate when you're done.
 
-The dashboard is one consumer of an underlying SDK module at `dashboard/src/lib/did-ckb/`. The same module is the seed of a general-purpose npm package; CKBoost and `@ckb-ccc/identity` will consume it the same way the dashboard does.
+The SDK now lives in the `@ckb-ccc/identity` package on a fork of [ckb-devrel/ccc](https://github.com/ckb-devrel/ccc), and the dashboard consumes it as a regular dependency. Source for the package: [`truthixify/ccc` `feat/identity-package` branch](https://github.com/truthixify/ccc/tree/feat/identity-package/packages/identity). Releases are published as GitHub Release assets on the fork; the dashboard pins one of those tarball URLs in its `package.json`.
 
 ## Status
 
@@ -84,16 +84,9 @@ The project deploys cleanly as a Vercel Static Site.
 │   │   ├── lib/
 │   │   │   ├── ccc-provider.tsx
 │   │   │   ├── utils.ts
-│   │   │   └── did-ckb/      the SDK module
-│   │   │       ├── deployment.ts    mainnet + testnet code hashes
-│   │   │       ├── base32.ts        RFC 4648 lowercase no-padding
-│   │   │       ├── molecule.ts      DidCkbData, PlcAuthorization schemas
-│   │   │       ├── identifier.ts    computeDidArgs, argsToDid, didToArgs
-│   │   │       ├── profile.ts       DAG-CBOR document, defaultAvatarUrl
-│   │   │       ├── transactions.ts  buildCreateTx, buildUpdateTx, buildDeactivateTx
-│   │   │       ├── resolver.ts      findDidCell, resolveDid, listDidsByLock
-│   │   │       ├── history.ts       getDidHistory (walks back through tx inputs)
-│   │   │       └── index.ts         public barrel export
+│   │   │   └── validation.ts
+│   │   │   # the did:ckb SDK lives upstream in @ckb-ccc/identity; see
+│   │   │   # https://github.com/truthixify/ccc/tree/feat/identity-package/packages/identity
 │   │   ├── routes/           TanStack Router file routes
 │   │   └── main.tsx          SPA entry, router + CCC provider
 │   ├── public/               static assets (favicon, og image, robots.txt)
