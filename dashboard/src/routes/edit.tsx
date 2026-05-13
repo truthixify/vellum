@@ -23,6 +23,14 @@ import {
   resolveDid,
   type DidRecord,
 } from "@/lib/did-ckb";
+import {
+  validateHandle,
+  validateServiceName,
+  validateServiceType,
+  validateUrl,
+  validateVerificationKey,
+  validateVerificationName,
+} from "@/lib/validation";
 
 const searchSchema = z.object({
   did: z.string().optional(),
@@ -83,6 +91,7 @@ function EditPage() {
   const [blockNumber, setBlockNumber] = useState<bigint | null>(null);
 
   const { copied, copy } = useCopy();
+  const avatarError = validateUrl(avatar);
 
   useEffect(() => {
     if (!record) return;
@@ -337,14 +346,20 @@ function EditPage() {
                       <input
                         value={avatar}
                         onChange={(e) => setAvatar(e.target.value)}
-                        className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
+                        className={`w-full h-11 bg-paper border px-3 font-mono text-sm ${
+                          avatarError ? "border-alarm" : "border-ink"
+                        }`}
                         placeholder="Leave empty for the DID-seeded pixel-art default"
                       />
-                      <p className="text-xs text-muted-foreground mt-1.5">
-                        Leave empty and we'll generate a pixel-art avatar
-                        from your DID. Paste a URL to override. ipfs:// goes
-                        through a public gateway.
-                      </p>
+                      {avatarError ? (
+                        <p className="text-xs text-alarm mt-1.5">{avatarError}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          Leave empty and we'll generate a pixel-art avatar
+                          from your DID. Paste a URL to override. ipfs://
+                          goes through a public gateway.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </Field>
@@ -367,18 +382,30 @@ function EditPage() {
                 subtitle="Other identifiers you want to claim, like at://you.bsky.social or nostr://you@example.com."
               >
                 {handles.length === 0 ? null : (
-                  <div className="space-y-2">
-                    {handles.map((h) => (
-                      <div key={h.id} className="flex gap-2 items-center">
-                        <input
-                          value={h.value}
-                          onChange={(e) => updateHandle(h.id, e.target.value)}
-                          placeholder="at://you.bsky.social"
-                          className="flex-1 h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                        />
-                        <RemoveButton onClick={() => removeHandle(h.id)} />
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {handles.map((h) => {
+                      const error = validateHandle(h.value);
+                      return (
+                        <div key={h.id}>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              value={h.value}
+                              onChange={(e) => updateHandle(h.id, e.target.value)}
+                              placeholder="at://you.bsky.social"
+                              className={`flex-1 h-11 bg-paper border px-3 font-mono text-sm ${
+                                error ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <RemoveButton onClick={() => removeHandle(h.id)} />
+                          </div>
+                          {error && (
+                            <p className="text-xs text-alarm mt-1.5 ml-1">
+                              {error}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <AddRow onClick={addHandle} label="+ Add handle" />
@@ -389,24 +416,40 @@ function EditPage() {
                 subtitle="Named public keys this DID is bound to. Used by the AT Protocol, Nostr, and custom integrations."
               >
                 {vms.length === 0 ? null : (
-                  <div className="space-y-2">
-                    {vms.map((vm) => (
-                      <div key={vm.id} className="grid grid-cols-1 sm:grid-cols-[160px_minmax(0,1fr)_auto] gap-2 items-center">
-                        <input
-                          value={vm.key}
-                          onChange={(e) => updateVm(vm.id, { key: e.target.value })}
-                          placeholder="atproto"
-                          className="h-11 bg-paper border border-ink px-3 mono-caps"
-                        />
-                        <input
-                          value={vm.value}
-                          onChange={(e) => updateVm(vm.id, { value: e.target.value })}
-                          placeholder="did:key:..."
-                          className="h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                        />
-                        <RemoveButton onClick={() => removeVm(vm.id)} />
-                      </div>
-                    ))}
+                  <div className="space-y-3">
+                    {vms.map((vm) => {
+                      const keyError = validateVerificationName(vm.key);
+                      const valueError = validateVerificationKey(vm.value);
+                      return (
+                        <div key={vm.id}>
+                          <div className="grid grid-cols-1 sm:grid-cols-[160px_minmax(0,1fr)_auto] gap-2 items-center">
+                            <input
+                              value={vm.key}
+                              onChange={(e) => updateVm(vm.id, { key: e.target.value })}
+                              placeholder="atproto"
+                              className={`h-11 bg-paper border px-3 mono-caps ${
+                                keyError ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <input
+                              value={vm.value}
+                              onChange={(e) => updateVm(vm.id, { value: e.target.value })}
+                              placeholder="did:key:..."
+                              className={`h-11 bg-paper border px-3 font-mono text-sm ${
+                                valueError ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <RemoveButton onClick={() => removeVm(vm.id)} />
+                          </div>
+                          {(keyError || valueError) && (
+                            <div className="text-xs text-alarm mt-1.5 ml-1 space-y-1">
+                              {keyError && <div>Name: {keyError}</div>}
+                              {valueError && <div>Key: {valueError}</div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <AddRow onClick={addVm} label="+ Add verification method" />
@@ -417,33 +460,50 @@ function EditPage() {
                 subtitle="Endpoints other apps should look at for this DID. The profile service is managed for you and not listed here."
               >
                 {services.length === 0 ? null : (
-                  <div className="space-y-2">
-                    {services.map((s) => (
-                      <div
-                        key={s.id}
-                        className="grid grid-cols-1 sm:grid-cols-[160px_160px_minmax(0,1fr)_auto] gap-2 items-center"
-                      >
-                        <input
-                          value={s.key}
-                          onChange={(e) => updateService(s.id, { key: e.target.value })}
-                          placeholder="atproto_pds"
-                          className="h-11 bg-paper border border-ink px-3 mono-caps"
-                        />
-                        <input
-                          value={s.type}
-                          onChange={(e) => updateService(s.id, { type: e.target.value })}
-                          placeholder="AtprotoPersonalDataServer"
-                          className="h-11 bg-paper border border-ink px-3 mono-caps"
-                        />
-                        <input
-                          value={s.endpoint}
-                          onChange={(e) => updateService(s.id, { endpoint: e.target.value })}
-                          placeholder="https://example.com"
-                          className="h-11 bg-paper border border-ink px-3 font-mono text-sm"
-                        />
-                        <RemoveButton onClick={() => removeService(s.id)} />
-                      </div>
-                    ))}
+                  <div className="space-y-4">
+                    {services.map((s) => {
+                      const keyError = validateServiceName(s.key);
+                      const typeError = validateServiceType(s.type);
+                      const endpointError = validateUrl(s.endpoint);
+                      return (
+                        <div key={s.id}>
+                          <div className="grid grid-cols-1 md:grid-cols-[160px_160px_minmax(0,1fr)_auto] gap-2 items-center">
+                            <input
+                              value={s.key}
+                              onChange={(e) => updateService(s.id, { key: e.target.value })}
+                              placeholder="atproto_pds"
+                              className={`h-11 bg-paper border px-3 mono-caps ${
+                                keyError ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <input
+                              value={s.type}
+                              onChange={(e) => updateService(s.id, { type: e.target.value })}
+                              placeholder="AtprotoPersonalDataServer"
+                              className={`h-11 bg-paper border px-3 mono-caps ${
+                                typeError ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <input
+                              value={s.endpoint}
+                              onChange={(e) => updateService(s.id, { endpoint: e.target.value })}
+                              placeholder="https://example.com"
+                              className={`h-11 bg-paper border px-3 font-mono text-sm ${
+                                endpointError ? "border-alarm" : "border-ink"
+                              }`}
+                            />
+                            <RemoveButton onClick={() => removeService(s.id)} />
+                          </div>
+                          {(keyError || typeError || endpointError) && (
+                            <div className="text-xs text-alarm mt-1.5 ml-1 space-y-1">
+                              {keyError && <div>Name: {keyError}</div>}
+                              {typeError && <div>Type: {typeError}</div>}
+                              {endpointError && <div>Endpoint: {endpointError}</div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <AddRow onClick={addService} label="+ Add service" />
