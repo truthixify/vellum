@@ -15,6 +15,15 @@ function MigratePage() {
         Move an existing did:plc identity onto CKB. Authorize with a rotation key, then wait the 72-hour window for finality.
       </p>
 
+      <div className="mb-12 border-2 border-cobalt bg-paper px-6 py-4">
+        <div className="mono-caps text-cobalt mb-1">PREVIEW</div>
+        <p className="text-sm text-ink max-w-[78ch]">
+          The migration UI is a visual preview. The on-chain logic (PLC operation history validation,
+          witness construction, rotation-key signature over the CKB tx hash) lands in the next
+          iteration. The illustration below shows the source and target shape you will see when it ships.
+        </p>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-8 mb-16 relative">
         <div className="pt-4 pl-4">
           <Manifest
