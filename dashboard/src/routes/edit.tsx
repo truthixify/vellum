@@ -121,6 +121,7 @@ function EditPage() {
           setStage("done");
           queryClient.invalidateQueries({ queryKey: ["did", did] });
           queryClient.invalidateQueries({ queryKey: ["my-dids"] });
+          queryClient.invalidateQueries({ queryKey: ["did-history"] });
           return;
         }
       } catch (err) {

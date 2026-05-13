@@ -13,7 +13,13 @@ import {
 } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
-import { listDidsByLock, PROFILE_SERVICE_KEY, type DidRecord } from "@/lib/did-ckb";
+import {
+  getDidHistory,
+  listDidsByLock,
+  PROFILE_SERVICE_KEY,
+  type DidRecord,
+  type HistoryEntry,
+} from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 
@@ -161,18 +167,7 @@ function MyDid() {
       <div id="history" className="mt-20">
         <div className="mono-caps text-muted-foreground mb-3">SECTION · ACTIVITY</div>
         <h2 className="text-3xl font-medium mb-8">Operation history.</h2>
-        <div className="border-t border-ink">
-          <ActivityEntry
-            action="LIVE"
-            color="verdant"
-            body={["Current state at"]}
-            hash={active.cell.outPoint.txHash}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground mt-3">
-          Full historical operations (UPDATE, ROTATE, MIGRATE) are derived from past
-          transactions and will surface in a later iteration.
-        </p>
+        <ActivityFeed record={active} />
       </div>
 
       <div className="mt-24 border-2 border-alarm">
@@ -415,38 +410,149 @@ function LockScriptCard({ record }: { record: DidRecord }) {
   );
 }
 
+const ACTION_COLOR: Record<HistoryEntry["action"], string> = {
+  CREATE: "bg-verdant",
+  UPDATE: "bg-ink",
+  MIGRATE: "bg-cobalt",
+};
+
+const ACTION_BODY: Record<HistoryEntry["action"], string> = {
+  CREATE: "Minted DID Metadata Cell",
+  UPDATE: "Updated document",
+  MIGRATE: "Migrated from did:plc",
+};
+
+function ActivityFeed({ record }: { record: DidRecord }) {
+  const { client } = useCcc();
+  const isMainnet = client instanceof ccc.ClientPublicMainnet;
+  const networkLabel = isMainnet ? "mainnet" : "testnet";
+  const {
+    data: history,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: [
+      "did-history",
+      record.args,
+      record.cell.outPoint.txHash,
+      networkLabel,
+    ],
+    queryFn: () => getDidHistory(client, record.args, record.cell),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-ink py-6 px-2 mono-caps text-muted-foreground">
+        INDEXING TRANSACTION CHAIN…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="border-t border-ink py-6 px-2">
+        <div className="mono-caps text-alarm mb-1">ERROR</div>
+        <p className="text-sm font-mono break-all">
+          {error instanceof Error ? error.message : String(error)}
+        </p>
+      </div>
+    );
+  }
+
+  if (!history || history.length === 0) {
+    return (
+      <div className="border-t border-ink py-6 px-2 mono-caps text-muted-foreground">
+        NO OPERATIONS FOUND
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="border-t border-ink">
+        {history.map((entry, index) => (
+          <ActivityEntry
+            key={`${entry.txHash}-${entry.outputIndex}`}
+            entry={entry}
+            isLatest={index === 0}
+            isMainnet={isMainnet}
+          />
+        ))}
+      </div>
+      {history.length === 50 && (
+        <p className="text-xs text-muted-foreground mt-3">
+          History walk capped at 50 operations.
+        </p>
+      )}
+    </>
+  );
+}
+
 function ActivityEntry({
-  action,
-  color,
-  body,
-  hash,
+  entry,
+  isLatest,
+  isMainnet,
 }: {
-  action: string;
-  color: "verdant" | "ink";
-  body: string[];
-  hash: string;
+  entry: HistoryEntry;
+  isLatest: boolean;
+  isMainnet: boolean;
 }) {
+  const explorerHref = explorerLinkForTx(entry.txHash, isMainnet);
   return (
     <div className="py-5 border-b border-hairline px-2">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-1">
         <span
-          className={`inline-block w-2 h-2 rounded-full ${
-            color === "verdant" ? "bg-verdant" : "bg-ink"
+          className={`inline-block w-2 h-2 ${ACTION_COLOR[entry.action]} ${
+            isLatest ? "pulse-dot" : ""
           }`}
         />
-        <span className="mono-caps">{action}</span>
-        <span className="font-mono text-xs text-muted-foreground">LIVE</span>
-      </div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 pl-5">
-        <div className="text-base break-words">
-          {body[0]} <span className="font-mono text-sm break-all">{body[1] ?? ""}</span>
-        </div>
-        <span className="font-mono text-xs break-all text-muted-foreground">
-          {truncate(hash, 10, 8)}
+        <span className="mono-caps">{entry.action}</span>
+        <span className="font-mono text-xs text-muted-foreground">
+          {entry.blockNumber
+            ? `BLOCK ${entry.blockNumber.toString()}`
+            : "PENDING"}
         </span>
+        {isLatest && (
+          <span className="mono-caps text-verdant text-[10px] tracking-[0.16em]">
+            CURRENT
+          </span>
+        )}
+      </div>
+      <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2 pl-5">
+        <div className="text-base break-words">
+          {ACTION_BODY[entry.action]}
+          <span className="text-muted-foreground">
+            {" "}
+            · capacity{" "}
+            <span className="font-mono">
+              {ccc.fixedPointToString(entry.capacity, 8)} CKB
+            </span>
+          </span>
+        </div>
+        {explorerHref ? (
+          <a
+            href={explorerHref}
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-xs break-all text-cobalt hover:underline shrink-0"
+          >
+            {truncate(entry.txHash, 10, 8)} ↗
+          </a>
+        ) : (
+          <span className="font-mono text-xs break-all text-muted-foreground">
+            {truncate(entry.txHash, 10, 8)}
+          </span>
+        )}
       </div>
     </div>
   );
+}
+
+function explorerLinkForTx(txHash: ccc.Hex, isMainnet: boolean): string {
+  const base = isMainnet
+    ? "https://explorer.nervos.org/transaction/"
+    : "https://pudge.explorer.nervos.org/transaction/";
+  return `${base}${txHash}`;
 }
 
 function truncate(hex: string, head = 8, tail = 6): string {
