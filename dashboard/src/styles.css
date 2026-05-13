@@ -74,6 +74,18 @@
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
+  /* Tailwind v4 no longer ships `cursor: pointer` on buttons by default
+     (https://tailwindcss.com/docs/upgrade-guide#buttons-use-the-default-cursor).
+     We want clickable affordances back across the app. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
