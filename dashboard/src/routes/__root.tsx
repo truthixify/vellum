@@ -109,6 +109,65 @@ function TopNav() {
   );
 }
 
+type FooterLink =
+  | { label: string; href: InternalFooterPath; external?: false }
+  | { label: string; href: string; external: true };
+
+type InternalFooterPath =
+  | "/"
+  | "/claim"
+  | "/resolve"
+  | "/migrate"
+  | "/my"
+  | "/deactivate"
+  | "/docs"
+  | "/docs/did-ckb"
+  | "/docs/cell-model"
+  | "/docs/resolution"
+  | "/docs/migration";
+
+const FOOTER_COLUMNS: Array<{ title: string; links: FooterLink[] }> = [
+  {
+    title: "Product",
+    links: [
+      { label: "Claim", href: "/claim" },
+      { label: "My DID", href: "/my" },
+      { label: "Resolve", href: "/resolve" },
+      { label: "Migrate", href: "/migrate" },
+    ],
+  },
+  {
+    title: "Spec",
+    links: [
+      { label: "did:ckb method", href: "/docs/did-ckb" },
+      { label: "Cell model", href: "/docs/cell-model" },
+      { label: "Resolution", href: "/docs/resolution" },
+      { label: "Migration", href: "/docs/migration" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "Docs", href: "/docs" },
+      {
+        label: "GitHub",
+        href: "https://github.com/truthixify/vellum",
+        external: true,
+      },
+      {
+        label: "WIPs",
+        href: "https://github.com/web5fans/web5-wips",
+        external: true,
+      },
+      {
+        label: "Report an issue",
+        href: "https://github.com/truthixify/vellum/issues",
+        external: true,
+      },
+    ],
+  },
+];
+
 function Footer() {
   return (
     <footer className="border-t-2 border-ink bg-paper mt-32">
@@ -123,43 +182,29 @@ function Footer() {
               A reference dashboard for did:ckb on Nervos CKB.
             </p>
           </div>
-          {[
-            {
-              title: "Product",
-              links: [
-                ["Resolve", "/resolve"],
-                ["Migrate", "/migrate"],
-                ["My DID", "/my"],
-              ],
-            },
-            {
-              title: "Spec",
-              links: [
-                ["did:ckb", "/docs"],
-                ["Cell model", "/docs"],
-                ["Migration", "/docs"],
-              ],
-            },
-            {
-              title: "Resources",
-              links: [
-                ["Docs", "/docs"],
-                ["GitHub", "#"],
-                ["Contact", "#"],
-              ],
-            },
-          ].map((col) => (
+          {FOOTER_COLUMNS.map((col) => (
             <div key={col.title}>
               <div className="mono-caps text-muted-foreground mb-4">{col.title}</div>
               <ul className="space-y-2.5">
-                {col.links.map(([label, href]) => (
-                  <li key={label}>
-                    <Link
-                      to={href}
-                      className="text-sm hover:text-cobalt hover:underline"
-                    >
-                      {label}
-                    </Link>
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm hover:text-cobalt hover:underline"
+                      >
+                        {link.label} <span aria-hidden>↗</span>
+                      </a>
+                    ) : (
+                      <Link
+                        to={link.href}
+                        className="text-sm hover:text-cobalt hover:underline"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
