@@ -16,6 +16,11 @@ import { Route as DocsRouteImport } from './routes/docs'
 import { Route as DeactivateRouteImport } from './routes/deactivate'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DocsIndexRouteImport } from './routes/docs/index'
+import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
+import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
+import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
+import { Route as DocsCellModelRouteImport } from './routes/docs/cell-model'
 
 const ResolveRoute = ResolveRouteImport.update({
   id: '/resolve',
@@ -52,34 +57,73 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsIndexRoute = DocsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsResolutionRoute = DocsResolutionRouteImport.update({
+  id: '/resolution',
+  path: '/resolution',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsMigrationRoute = DocsMigrationRouteImport.update({
+  id: '/migration',
+  path: '/migration',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsDidCkbRoute = DocsDidCkbRouteImport.update({
+  id: '/did-ckb',
+  path: '/did-ckb',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsCellModelRoute = DocsCellModelRouteImport.update({
+  id: '/cell-model',
+  path: '/cell-model',
+  getParentRoute: () => DocsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
-  '/docs': typeof DocsRoute
+  '/docs': typeof DocsRouteWithChildren
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/docs/cell-model': typeof DocsCellModelRoute
+  '/docs/did-ckb': typeof DocsDidCkbRoute
+  '/docs/migration': typeof DocsMigrationRoute
+  '/docs/resolution': typeof DocsResolutionRoute
+  '/docs/': typeof DocsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
-  '/docs': typeof DocsRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/docs/cell-model': typeof DocsCellModelRoute
+  '/docs/did-ckb': typeof DocsDidCkbRoute
+  '/docs/migration': typeof DocsMigrationRoute
+  '/docs/resolution': typeof DocsResolutionRoute
+  '/docs': typeof DocsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
-  '/docs': typeof DocsRoute
+  '/docs': typeof DocsRouteWithChildren
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
+  '/docs/cell-model': typeof DocsCellModelRoute
+  '/docs/did-ckb': typeof DocsDidCkbRoute
+  '/docs/migration': typeof DocsMigrationRoute
+  '/docs/resolution': typeof DocsResolutionRoute
+  '/docs/': typeof DocsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,8 +135,24 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
+    | '/docs/cell-model'
+    | '/docs/did-ckb'
+    | '/docs/migration'
+    | '/docs/resolution'
+    | '/docs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/claim' | '/deactivate' | '/docs' | '/migrate' | '/my' | '/resolve'
+  to:
+    | '/'
+    | '/claim'
+    | '/deactivate'
+    | '/migrate'
+    | '/my'
+    | '/resolve'
+    | '/docs/cell-model'
+    | '/docs/did-ckb'
+    | '/docs/migration'
+    | '/docs/resolution'
+    | '/docs'
   id:
     | '__root__'
     | '/'
@@ -102,13 +162,18 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
+    | '/docs/cell-model'
+    | '/docs/did-ckb'
+    | '/docs/migration'
+    | '/docs/resolution'
+    | '/docs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClaimRoute: typeof ClaimRoute
   DeactivateRoute: typeof DeactivateRoute
-  DocsRoute: typeof DocsRoute
+  DocsRoute: typeof DocsRouteWithChildren
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
@@ -165,14 +230,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/': {
+      id: '/docs/'
+      path: '/'
+      fullPath: '/docs/'
+      preLoaderRoute: typeof DocsIndexRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/resolution': {
+      id: '/docs/resolution'
+      path: '/resolution'
+      fullPath: '/docs/resolution'
+      preLoaderRoute: typeof DocsResolutionRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/migration': {
+      id: '/docs/migration'
+      path: '/migration'
+      fullPath: '/docs/migration'
+      preLoaderRoute: typeof DocsMigrationRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/did-ckb': {
+      id: '/docs/did-ckb'
+      path: '/did-ckb'
+      fullPath: '/docs/did-ckb'
+      preLoaderRoute: typeof DocsDidCkbRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/cell-model': {
+      id: '/docs/cell-model'
+      path: '/cell-model'
+      fullPath: '/docs/cell-model'
+      preLoaderRoute: typeof DocsCellModelRouteImport
+      parentRoute: typeof DocsRoute
+    }
   }
 }
+
+interface DocsRouteChildren {
+  DocsCellModelRoute: typeof DocsCellModelRoute
+  DocsDidCkbRoute: typeof DocsDidCkbRoute
+  DocsMigrationRoute: typeof DocsMigrationRoute
+  DocsResolutionRoute: typeof DocsResolutionRoute
+  DocsIndexRoute: typeof DocsIndexRoute
+}
+
+const DocsRouteChildren: DocsRouteChildren = {
+  DocsCellModelRoute: DocsCellModelRoute,
+  DocsDidCkbRoute: DocsDidCkbRoute,
+  DocsMigrationRoute: DocsMigrationRoute,
+  DocsResolutionRoute: DocsResolutionRoute,
+  DocsIndexRoute: DocsIndexRoute,
+}
+
+const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClaimRoute: ClaimRoute,
   DeactivateRoute: DeactivateRoute,
-  DocsRoute: DocsRoute,
+  DocsRoute: DocsRouteWithChildren,
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,
