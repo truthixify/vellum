@@ -1,14 +1,11 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
   createRootRouteWithContext,
   useRouter,
-  HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
-
-import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
@@ -16,7 +13,9 @@ function NotFoundComponent() {
       <div className="border-2 border-ink p-12 text-center max-w-md">
         <div className="mono-caps text-muted-foreground mb-4">ERROR · 404</div>
         <h1 className="text-3xl font-medium mb-3">Page not found</h1>
-        <p className="text-muted-foreground mb-6">This document does not exist in the registry.</p>
+        <p className="text-muted-foreground mb-6">
+          This document does not exist in the registry.
+        </p>
         <Link to="/" className="mono-caps inline-block bg-ink text-paper px-5 py-3">
           Return home
         </Link>
@@ -35,7 +34,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <h1 className="text-2xl font-medium mb-3">This page didn't load</h1>
         <p className="text-muted-foreground mb-6 font-mono text-sm">{error.message}</p>
         <button
-          onClick={() => { router.invalidate(); reset(); }}
+          onClick={() => {
+            router.invalidate();
+            reset();
+          }}
           className="mono-caps bg-ink text-paper px-5 py-3"
         >
           Retry
@@ -46,43 +48,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vellum — Your identity, on paper that lasts" },
-      { name: "description", content: "A reference dashboard for did:ckb. Claim, manage and resolve a Decentralized Identifier on Nervos CKB." },
-      { property: "og:title", content: "Vellum — did:ckb dashboard" },
-      { property: "og:description", content: "Claim a permanent on-chain identity. Rotate keys, write a profile, migrate from did:plc." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -98,7 +67,13 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
 
 function VellumGlyph({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
       <rect x="3" y="2" width="18" height="20" />
       <path d="M3 6h18M7 10h10M7 14h10M7 18h6" />
     </svg>
@@ -119,7 +94,10 @@ function TopNav() {
           <NavLink to="/docs">Docs</NavLink>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/my" className="hidden sm:inline-flex mono-caps border border-ink px-3 py-2 hover:bg-ink hover:text-paper">
+          <Link
+            to="/my"
+            className="hidden sm:inline-flex mono-caps border border-ink px-3 py-2 hover:bg-ink hover:text-paper"
+          >
             My DID
           </Link>
           <button className="mono-caps bg-verdant text-paper px-4 py-2 hover:bg-[var(--verdant-hover)]">
@@ -146,16 +124,42 @@ function Footer() {
             </p>
           </div>
           {[
-            { title: "Product", links: [["Resolve", "/resolve"], ["Migrate", "/migrate"], ["My DID", "/my"]] },
-            { title: "Spec", links: [["did:ckb", "/docs"], ["Cell model", "/docs"], ["Migration", "/docs"]] },
-            { title: "Resources", links: [["Docs", "/docs"], ["GitHub", "#"], ["Contact", "#"]] },
+            {
+              title: "Product",
+              links: [
+                ["Resolve", "/resolve"],
+                ["Migrate", "/migrate"],
+                ["My DID", "/my"],
+              ],
+            },
+            {
+              title: "Spec",
+              links: [
+                ["did:ckb", "/docs"],
+                ["Cell model", "/docs"],
+                ["Migration", "/docs"],
+              ],
+            },
+            {
+              title: "Resources",
+              links: [
+                ["Docs", "/docs"],
+                ["GitHub", "#"],
+                ["Contact", "#"],
+              ],
+            },
           ].map((col) => (
             <div key={col.title}>
               <div className="mono-caps text-muted-foreground mb-4">{col.title}</div>
               <ul className="space-y-2.5">
                 {col.links.map(([label, href]) => (
                   <li key={label}>
-                    <Link to={href} className="text-sm hover:text-cobalt hover:underline">{label}</Link>
+                    <Link
+                      to={href}
+                      className="text-sm hover:text-cobalt hover:underline"
+                    >
+                      {label}
+                    </Link>
                   </li>
                 ))}
               </ul>
