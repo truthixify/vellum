@@ -31,6 +31,7 @@ function ClaimPage() {
 
   const [step, setStep] = useState<Stage>(0);
   const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
   const [bio, setBio] = useState("");
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +59,7 @@ function ClaimPage() {
       const result = await buildCreateTx(signer, {
         profile: {
           displayName: name.trim() || undefined,
+          avatar: avatar.trim() || undefined,
           bio: bio.trim() || undefined,
         },
         alsoKnownAs: handle.trim() ? [handle.trim()] : undefined,
@@ -241,18 +243,18 @@ function ClaimPage() {
                   />
                 </div>
               </Field>
-              <Field label="Avatar">
-                <div className="w-40 h-40 border border-ink relative flex items-center justify-center">
-                  <span className="absolute top-1 left-1 w-3 h-3 border-t border-l border-verdant" />
-                  <span className="absolute top-1 right-1 w-3 h-3 border-t border-r border-verdant" />
-                  <span className="absolute bottom-1 left-1 w-3 h-3 border-b border-l border-verdant" />
-                  <span className="absolute bottom-1 right-1 w-3 h-3 border-b border-r border-verdant" />
-                  <div className="mono-caps text-muted-foreground text-center px-4">
-                    AVATAR UPLOAD
-                    <br />
-                    SOON
-                  </div>
-                </div>
+              <Field label="Avatar URL">
+                <input
+                  value={avatar}
+                  onChange={(e) => setAvatar(e.target.value)}
+                  placeholder="https://example.com/avatar.png or ipfs://..."
+                  className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
+                  Paste a URL pointing to an image. Apps that render your DID
+                  will fetch it from there. Direct uploads land in a later
+                  release.
+                </p>
               </Field>
             </div>
             <div className="px-6 pb-6 flex justify-between">

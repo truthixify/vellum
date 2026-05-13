@@ -273,9 +273,9 @@ function DocumentBody({ record }: { record: DidRecord }) {
       footerRight={`${handles.length + verificationMethods.length + services.length + (profile.displayName ? 1 : 0) + (profile.bio ? 1 : 0)} FIELDS`}
     >
       <div className="flex justify-end px-6 py-3 border-b border-hairline">
-        <VButton variant="ghost" disabled>
-          Edit document
-        </VButton>
+        <Link to="/edit" search={{ did: record.did }}>
+          <VButton variant="ghost">Edit document →</VButton>
+        </Link>
       </div>
       <FieldRow
         label="Display name"
@@ -355,20 +355,22 @@ function DocumentBody({ record }: { record: DidRecord }) {
         />
       ))}
       <div className="px-6 py-4 border-b border-hairline">
-        <button
-          disabled
-          className="w-full border border-dashed border-ink py-3 mono-caps text-muted-foreground"
+        <Link
+          to="/edit"
+          search={{ did: record.did }}
+          className="block w-full border border-dashed border-ink py-3 mono-caps text-center hover:bg-ink hover:text-paper transition-colors"
         >
-          + ADD HANDLE (SOON)
-        </button>
+          + ADD HANDLE
+        </Link>
       </div>
       <div className="px-6 py-4">
-        <button
-          disabled
-          className="w-full border border-dashed border-ink py-3 mono-caps text-muted-foreground"
+        <Link
+          to="/edit"
+          search={{ did: record.did }}
+          className="block w-full border border-dashed border-ink py-3 mono-caps text-center hover:bg-ink hover:text-paper transition-colors"
         >
-          + ADD SERVICE (SOON)
-        </button>
+          + ADD SERVICE
+        </Link>
       </div>
     </Manifest>
   );
@@ -396,10 +398,19 @@ function LockScriptCard({ record }: { record: DidRecord }) {
           <div className="font-mono text-xs break-all">{lock.args}</div>
         </div>
       </div>
-      <div className="px-6 pb-6 flex justify-end">
-        <VButton variant="ghost" disabled>
-          Rotate (soon)
-        </VButton>
+      <div className="px-6 pb-6">
+        <div className="text-xs text-muted-foreground mb-3 max-w-[40ch]">
+          Lock script rotation moves control of this DID to a new key
+          without changing the identifier. The SDK already supports it via{" "}
+          <span className="font-mono">buildUpdateTx</span> with a{" "}
+          <span className="font-mono">newLock</span>; the UI for picking the
+          target lock lands in a follow-up.
+        </div>
+        <div className="flex justify-end">
+          <VButton variant="ghost" disabled>
+            Rotate (next release)
+          </VButton>
+        </div>
       </div>
     </Manifest>
   );

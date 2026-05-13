@@ -18,6 +18,7 @@ import {
   PROFILE_SERVICE_KEY,
   type DidRecord,
 } from "@/lib/did-ckb";
+import { useCopy } from "@/hooks/use-copy";
 
 export const Route = createFileRoute("/resolve")({
   component: ResolvePage,
@@ -133,6 +134,7 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
   const localIdString = record.localId
     ? new TextDecoder().decode(toBytes(record.localId))
     : null;
+  const { copied, copy } = useCopy();
 
   return (
     <div className="pt-4 pl-4">
@@ -144,8 +146,13 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
         footerRight="LIVE"
       >
         <div className="px-6 pt-8 pb-6">
-          <div className="mono-caps text-muted-foreground mb-3">
-            REGISTERED IDENTIFIER
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <div className="mono-caps text-muted-foreground">
+              REGISTERED IDENTIFIER
+            </div>
+            <VButton variant="secondary" onClick={() => copy(record.did)}>
+              {copied ? "Copied" : "Copy DID"}
+            </VButton>
           </div>
           <Brackets className="block">
             <div className="font-mono text-[20px] md:text-[28px] leading-tight break-all">
