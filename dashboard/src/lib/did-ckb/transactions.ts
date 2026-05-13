@@ -5,6 +5,7 @@ import { argsToDid, computeDidArgs, didToArgs } from "./identifier";
 import { DidCkbData } from "./molecule";
 import {
   buildDocument,
+  defaultAvatarUrl,
   encodeDocument,
   type DidDocument,
   type VellumProfile,
@@ -75,7 +76,20 @@ export async function buildCreateTx(
   const addressObj = await signer.getRecommendedAddressObj();
   const lock = addressObj.script;
 
-  const document = buildDocument(input.profile ?? {}, {
+  const profile = input.profile ?? {};
+  // If no avatar provided, fill the default DiceBear URL keyed off the DID.
+  // We can't know the DID until inputs are picked, so encode the document
+  // with a placeholder DID-shaped string first; both URLs are identical
+  // length so the cell's required capacity is identical. After
+  // completeInputsByCapacity gives us inputs[0], we recompute the real
+  // DID and re-encode the cell data in-place.
+  const userSuppliedAvatar = profile.avatar !== undefined && profile.avatar.length > 0;
+  const placeholderDid = argsToDid(PLACEHOLDER_ARGS);
+  const initialProfile: VellumProfile = userSuppliedAvatar
+    ? profile
+    : { ...profile, avatar: defaultAvatarUrl(placeholderDid) };
+
+  const document = buildDocument(initialProfile, {
     verificationMethods: input.verificationMethods,
     alsoKnownAs: input.alsoKnownAs,
     services: input.services,
@@ -107,10 +121,23 @@ export async function buildCreateTx(
     throw new Error("Type script missing on DID output");
   }
   tx.outputs[0].type.args = args;
+  const did = argsToDid(args);
+
+  if (!userSuppliedAvatar) {
+    const finalDocument = buildDocument(
+      { ...profile, avatar: defaultAvatarUrl(did) },
+      {
+        verificationMethods: input.verificationMethods,
+        alsoKnownAs: input.alsoKnownAs,
+        services: input.services,
+      },
+    );
+    tx.outputsData[0] = encodeCellData(finalDocument, null);
+  }
 
   await tx.completeFeeBy(signer);
 
-  return { tx, did: argsToDid(args), args };
+  return { tx, did, args };
 }
 
 // Update
