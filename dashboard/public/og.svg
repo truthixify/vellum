@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#FBF8EE"/>
+  <rect x="32" y="32" width="1136" height="566" fill="none" stroke="#0E0E0C" stroke-width="3"/>
+
+  <text x="72" y="92" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="22" font-weight="500" letter-spacing="3.2" fill="#6F6A5C">VELLUM · DID:CKB DASHBOARD</text>
+
+  <g transform="translate(72, 320)">
+    <text font-family="system-ui, -apple-system, sans-serif" font-size="148" font-weight="500" fill="#0E0E0C" letter-spacing="-3">Vellum.</text>
+    <text y="84" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="500" fill="#0E0E0C">Your identity, on <tspan fill="#1A6E4A">paper</tspan> that lasts.</text>
+  </g>
+
+  <g transform="translate(880, 180)" stroke="#0E0E0C" stroke-width="4" fill="none" stroke-linecap="square">
+    <rect width="220" height="244"/>
+    <path d="M0 44h220 M40 88h140 M40 132h140 M40 176h100 M40 220h60"/>
+  </g>
+
+  <text x="72" y="558" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" font-weight="500" letter-spacing="2.4" fill="#6F6A5C">REGISTRY · OPEN FOR ENROLMENT · MIT</text>
+  <text x="1128" y="558" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" font-weight="500" letter-spacing="2.4" fill="#6F6A5C" text-anchor="end">PAGE 01 / 01</text>
+</svg>
