@@ -49,15 +49,12 @@ function DocsLayout() {
   return (
     <>
       <MobileTabs />
-      {/* Mobile gets pt-16 (64px) to clear the fixed tabs bar (h-12 + border)
-          which now sits at top:0 because the global top nav is hidden on
-          mobile docs. Desktop drops back to the regular lg:pt-16. */}
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pt-16 pb-8 lg:pt-16 lg:pb-16">
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pb-12 lg:py-16">
         <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16">
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <SidebarNav />
           </aside>
-          <article className="min-w-0 max-w-[64ch]">
+          <article className="min-w-0 max-w-[64ch] pt-8 lg:pt-0">
             <Outlet />
             <DocsPager />
           </article>
@@ -107,14 +104,15 @@ function SidebarNav() {
   );
 }
 
-// Mobile: a horizontal tab strip fixed at the very top of the viewport. The
-// global top nav is hidden on mobile docs (see __root.tsx) so this strip is
-// the only chrome at the top, touching the viewport edge with no gap.
+// Mobile: a horizontal tab strip that sits in flow below the top nav and
+// sticks at top-16 (right below the sticky top nav) once the user scrolls
+// past it. The global top nav stays visible above. Desktop hides this and
+// uses the sidebar instead.
 function MobileTabs() {
   return (
     <nav
       aria-label="Documentation pages"
-      className="lg:hidden fixed top-0 inset-x-0 z-40 bg-paper border-b border-ink"
+      className="lg:hidden sticky top-16 z-30 bg-paper border-b border-ink"
     >
       <div className="overflow-x-auto">
         <ul className="flex items-stretch gap-0 min-w-max">

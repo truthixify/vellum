@@ -72,7 +72,9 @@
     font-family: var(--font-sans);
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+    /* `clip` prevents accidental horizontal scroll without turning body into
+       a scroll container (which would break position: sticky for descendants). */
+    overflow-x: clip;
   }
   /* Tailwind v4 no longer ships `cursor: pointer` on buttons by default
      (https://tailwindcss.com/docs/upgrade-guide#buttons-use-the-default-cursor).
