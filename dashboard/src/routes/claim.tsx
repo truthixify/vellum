@@ -41,6 +41,7 @@ function ClaimPage() {
     blockNumber?: bigint;
     status: "pending" | "committed";
   } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const networkLabel =
     client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
@@ -116,6 +117,8 @@ function ClaimPage() {
     if (!built) return;
     try {
       await navigator.clipboard.writeText(built.did);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch (err) {
       console.warn("Clipboard write failed", err);
     }
@@ -381,13 +384,37 @@ function ClaimPage() {
                 { label: "Network", value: networkLabel },
               ]}
             />
+            {confirmation?.status !== "committed" ? (
+              <div className="px-6 py-6 border-t border-hairline">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="pulse-dot inline-block w-2 h-2 bg-amber" />
+                  <span className="mono-caps text-muted-foreground">
+                    Waiting for confirmation on chain
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground max-w-[58ch]">
+                  The transaction has been submitted. We're polling the indexer for
+                  inclusion in a committed block. This usually takes seconds; if it
+                  takes longer than a minute, check the tx hash on an explorer.
+                </p>
+              </div>
+            ) : null}
             <div className="px-6 py-6 flex flex-wrap gap-3 justify-end">
               <VButton variant="secondary" onClick={copyDid}>
-                Copy DID
+                {copied ? "Copied" : "Copy DID"}
               </VButton>
-              <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
-                View my DID
-              </VButton>
+              {confirmation?.status === "committed" ? (
+                <VButton
+                  variant="verdant"
+                  onClick={() => navigate({ to: "/my" })}
+                >
+                  View my DID
+                </VButton>
+              ) : (
+                <VButton variant="verdant" disabled>
+                  Waiting for block…
+                </VButton>
+              )}
             </div>
           </Manifest>
         )}
