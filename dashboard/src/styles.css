@@ -86,6 +86,19 @@
   [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
   }
+  /* Prose-safety: long unbreakable tokens (hex hashes, DIDs, URLs) inside
+     article body should never push the column wider than the layout. */
+  article pre {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  article code {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  article a {
+    overflow-wrap: anywhere;
+  }
 }
 
 @layer utilities {

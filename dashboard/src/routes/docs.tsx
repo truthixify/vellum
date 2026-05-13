@@ -1,5 +1,4 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/docs")({
   component: DocsLayout,
@@ -48,20 +47,20 @@ function usePathname(): string {
 
 function DocsLayout() {
   return (
-    <div className="max-w-[1200px] mx-auto px-6 lg:px-12 py-12 lg:py-16">
-      <div className="lg:hidden mb-8">
-        <MobileNav />
+    <>
+      <MobileTabs />
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 py-8 lg:py-16">
+        <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16">
+          <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
+            <SidebarNav />
+          </aside>
+          <article className="min-w-0 max-w-[64ch]">
+            <Outlet />
+            <DocsPager />
+          </article>
+        </div>
       </div>
-      <div className="grid lg:grid-cols-[240px_1fr] gap-16">
-        <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
-          <SidebarNav />
-        </aside>
-        <article className="max-w-[64ch]">
-          <Outlet />
-          <DocsPager />
-        </article>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -102,74 +101,35 @@ function SidebarNav() {
   );
 }
 
-function MobileNav() {
-  const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const current = INTERNAL.find((item) => item.to === pathname);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
+// Mobile: a sticky horizontal tab strip pinned just under the top nav, always
+// visible (no toggle), with the active page highlighted. Scrolls horizontally
+// if the labels don't fit in the viewport.
+function MobileTabs() {
   return (
-    <div className="border-2 border-ink bg-paper">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="docs-mobile-menu"
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-ink hover:text-paper transition-colors"
-      >
-        <span className="flex items-baseline gap-3">
-          <span className="mono-caps text-muted-foreground">CONTENTS</span>
-          <span className="text-base font-medium">{current?.label ?? "Documentation"}</span>
-        </span>
-        <span className="mono-caps">{open ? "− CLOSE" : "+ MENU"}</span>
-      </button>
-      {open ? (
-        <div id="docs-mobile-menu" className="border-t border-ink">
-          <div className="mono-caps text-muted-foreground px-4 py-2 border-b border-hairline">
-            DOCUMENTATION
-          </div>
-          <ul>
-            {INTERNAL.map((item) => (
-              <li key={item.to}>
-                <Link
-                  to={item.to}
-                  activeOptions={{ exact: true }}
-                  className="block px-4 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
-                  activeProps={{
-                    className:
-                      "block px-4 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
-                  }}
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <div className="mono-caps text-muted-foreground px-4 py-2 border-b border-hairline">
-            REFERENCES
-          </div>
-          <ul>
-            {EXTERNAL.map((item) => (
-              <li key={item.href}>
-                <a
-                  href={item.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block px-4 py-3 mono-caps border-b border-hairline last:border-b-0 hover:bg-ink hover:text-paper transition-colors"
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label} <span aria-hidden>↗</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
+    <nav
+      aria-label="Documentation pages"
+      className="lg:hidden sticky top-16 z-30 bg-paper border-b border-ink"
+    >
+      <div className="overflow-x-auto">
+        <ul className="flex items-stretch gap-0 min-w-max">
+          {INTERNAL.map((item) => (
+            <li key={item.to} className="shrink-0">
+              <Link
+                to={item.to}
+                activeOptions={{ exact: true }}
+                className="mono-caps text-ink px-4 h-11 inline-flex items-center border-r border-hairline hover:bg-ink hover:text-paper transition-colors"
+                activeProps={{
+                  className:
+                    "mono-caps bg-verdant text-paper px-4 h-11 inline-flex items-center border-r border-hairline",
+                }}
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </nav>
   );
 }
 
