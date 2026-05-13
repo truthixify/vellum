@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const SIZES = {
+  xs: "w-6 h-6 text-[10px]",
   sm: "w-12 h-12 text-base",
   md: "w-16 h-16 text-xl",
   lg: "w-20 h-20 text-2xl",

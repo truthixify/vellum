@@ -1,39 +1,72 @@
 import { ccc, useCcc } from "@ckb-ccc/connector-react";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useCopy } from "@/hooks/use-copy";
+import { Avatar } from "./Avatar";
 
-function truncateAddress(address: string, head = 6, tail = 6): string {
-  if (address.length <= head + tail + 1) return address;
-  return `${address.slice(0, head)}…${address.slice(-tail)}`;
+function truncate(value: string, head = 6, tail = 6): string {
+  if (value.length <= head + tail + 1) return value;
+  return `${value.slice(0, head)}…${value.slice(-tail)}`;
+}
+
+function initials(record: DidRecord | undefined, fallback: string): string {
+  const source = record?.profile.displayName ?? fallback;
+  return source.replace(/[^a-zA-Z0-9]+/g, "").slice(0, 2).toUpperCase() || "??";
 }
 
 export function WalletButton() {
   const { open, disconnect, signerInfo, wallet, client } = useCcc();
   const [address, setAddress] = useState<string | null>(null);
+  const [lock, setLock] = useState<ccc.Script | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { copied, copy } = useCopy();
 
   useEffect(() => {
     let cancelled = false;
-    async function loadAddress() {
+    async function load() {
       if (!signerInfo) {
         setAddress(null);
+        setLock(null);
         return;
       }
       try {
-        const addr = await signerInfo.signer.getRecommendedAddress();
-        if (!cancelled) setAddress(addr);
+        const addrObj = await signerInfo.signer.getRecommendedAddressObj();
+        if (cancelled) return;
+        setAddress(addrObj.toString());
+        setLock(addrObj.script);
       } catch (err) {
         console.error("Failed to load wallet address", err);
-        if (!cancelled) setAddress(null);
+        if (!cancelled) {
+          setAddress(null);
+          setLock(null);
+        }
       }
     }
-    loadAddress();
+    load();
     return () => {
       cancelled = true;
     };
   }, [signerInfo]);
+
+  const network = client instanceof ccc.ClientPublicMainnet ? "mainnet" : "testnet";
+
+  // Shares the cache with /my; same query key so navigating between pages
+  // doesn't refetch when the wallet hasn't changed.
+  const { data: dids } = useQuery({
+    queryKey: ["my-dids", lock?.codeHash, lock?.hashType, lock?.args, network],
+    queryFn: async () => {
+      if (!lock) return [] as DidRecord[];
+      return listDidsByLock(client, lock);
+    },
+    enabled: !!lock,
+  });
+
+  const primaryDid = dids && dids.length > 0 ? dids[0] : undefined;
+  const displayName = primaryDid?.profile.displayName;
+  const avatarUrl = primaryDid?.profile.avatar;
+  const fallbackInitials = initials(primaryDid, address ?? "??");
 
   if (!signerInfo) {
     return (
@@ -46,24 +79,45 @@ export function WalletButton() {
     );
   }
 
-  const network = client instanceof ccc.ClientPublicMainnet ? "mainnet" : "testnet";
-
   return (
     <div className="relative">
       <button
         onClick={() => setMenuOpen((v) => !v)}
-        className="mono-caps border border-ink px-3 py-2 hover:bg-ink hover:text-paper transition-colors flex items-center gap-2"
+        className="border border-ink h-10 pr-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
       >
-        <span
-          className="w-2 h-2 bg-verdant"
-          aria-hidden
-        />
-        <span className="font-mono normal-case text-[13px] tracking-tight">
-          {address ? truncateAddress(address) : "Loading…"}
+        {primaryDid ? (
+          <Avatar
+            url={avatarUrl}
+            fallback={fallbackInitials}
+            size="xs"
+            className="border-0"
+          />
+        ) : (
+          <span className="w-2 h-2 bg-verdant ml-3" aria-hidden />
+        )}
+        <span className="font-mono normal-case text-[13px] tracking-tight max-w-[14ch] truncate">
+          {displayName ?? (address ? truncate(address) : "Loading…")}
         </span>
       </button>
       {menuOpen ? (
-        <div className="absolute right-0 mt-2 min-w-[220px] bg-paper border-2 border-ink z-50">
+        <div className="absolute right-0 mt-2 min-w-[260px] bg-paper border-2 border-ink z-50">
+          {primaryDid ? (
+            <div className="px-4 py-3 border-b border-hairline flex items-center gap-3">
+              <Avatar
+                url={avatarUrl}
+                fallback={fallbackInitials}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">
+                  {displayName ?? "(no display name)"}
+                </div>
+                <div className="font-mono text-xs text-muted-foreground truncate">
+                  {truncate(primaryDid.did, 14, 8)}
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div className="px-4 py-3 border-b border-hairline">
             <div className="mono-caps text-muted-foreground">Wallet</div>
             <div className="text-sm font-medium">{wallet?.name ?? "Connected"}</div>
