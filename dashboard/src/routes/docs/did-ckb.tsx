@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { useDocumentTitle } from "@/hooks/use-document-title";
+
 export const Route = createFileRoute("/docs/did-ckb")({
   component: DidCkbPage,
 });
 
 function DidCkbPage() {
+  useDocumentTitle("did:ckb method · Docs");
   return (
     <>
       <div className="mono-caps text-muted-foreground mb-3">SPEC · WIP-01</div>

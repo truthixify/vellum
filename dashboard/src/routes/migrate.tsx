@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export const Route = createFileRoute("/migrate")({
   component: MigratePage,
 });
 
 function MigratePage() {
+  useDocumentTitle("Migrate from did:plc");
   return (
     <div className="max-w-[1200px] mx-auto px-6 lg:px-12 py-16">
       <div className="mono-caps text-muted-foreground mb-3">REGISTRY · MIGRATION</div>

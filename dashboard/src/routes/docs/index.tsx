@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { useDocumentTitle } from "@/hooks/use-document-title";
+
 export const Route = createFileRoute("/docs/")({
   component: DocsIndex,
 });
@@ -41,6 +43,7 @@ const CARDS: Array<{
 ];
 
 function DocsIndex() {
+  useDocumentTitle("Docs");
   return (
     <>
       <div className="mono-caps text-muted-foreground mb-3">DOCUMENTATION · 0.1</div>

@@ -13,6 +13,7 @@ import {
 import { Avatar } from "@/components/vellum/Avatar";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 import {
   buildDocument,
@@ -47,6 +48,7 @@ function genId() {
 }
 
 function EditPage() {
+  useDocumentTitle("Edit DID");
   const { did } = Route.useSearch();
   const signer = useSigner();
   const { client, open } = useCcc();
@@ -528,12 +530,17 @@ function EditPage() {
               />
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
+            <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[58ch]">
+              Your wallet will prompt once. After you approve, the update
+              transaction replaces the existing DID Cell with the new
+              document on chain.
+            </div>
             <div className="px-6 py-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStage("compose")}>
                 ← Back to compose
               </VButton>
               <VButton variant="verdant" onClick={handleSign} disabled={busy}>
-                {busy ? "Waiting for wallet…" : "Sign and submit"}
+                {busy ? "Waiting for wallet…" : "Sign update transaction"}
               </VButton>
             </div>
           </Manifest>

@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { useDocumentTitle } from "@/hooks/use-document-title";
+
 export const Route = createFileRoute("/docs/cell-model")({
   component: CellModelPage,
 });
 
 function CellModelPage() {
+  useDocumentTitle("Cell model · Docs");
   return (
     <>
       <div className="mono-caps text-muted-foreground mb-3">PRIMER · CKB</div>

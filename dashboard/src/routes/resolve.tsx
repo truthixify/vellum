@@ -20,6 +20,7 @@ import {
 } from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export const Route = createFileRoute("/resolve")({
   component: ResolvePage,
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/resolve")({
 type Status = "idle" | "loading" | "ok" | "not_found" | "error";
 
 function ResolvePage() {
+  useDocumentTitle("Resolve");
   const { client } = useCcc();
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<Status>("idle");

@@ -12,6 +12,7 @@ import {
 import { VButton } from "@/components/vellum/VButton";
 
 import { buildDeactivateTx } from "@/lib/did-ckb";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const searchSchema = z.object({
   did: z.string().optional(),
@@ -29,6 +30,7 @@ function unlockKey(did: string): string {
 }
 
 function DeactivatePage() {
+  useDocumentTitle("Deactivate DID");
   const { did } = Route.useSearch();
   const signer = useSigner();
   const { client, open } = useCcc();
@@ -218,7 +220,12 @@ function DeactivatePage() {
                 />
               </div>
 
-              <div className="px-6 pb-6 flex flex-wrap justify-between gap-3">
+              <div className="px-6 pt-3 pb-2 text-xs text-muted-foreground max-w-[58ch]">
+                Your wallet will prompt once. After you approve, the burn
+                transaction destroys the DID Cell and returns the locked
+                capacity to your wallet in the same transaction.
+              </div>
+              <div className="px-6 pb-6 pt-3 flex flex-wrap justify-between gap-3">
                 <Link to="/my">
                   <VButton variant="ghost">← Cancel and return</VButton>
                 </Link>

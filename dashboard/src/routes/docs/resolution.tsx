@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { useDocumentTitle } from "@/hooks/use-document-title";
+
 export const Route = createFileRoute("/docs/resolution")({
   component: ResolutionPage,
 });
 
 function ResolutionPage() {
+  useDocumentTitle("Resolution · Docs");
   return (
     <>
       <div className="mono-caps text-muted-foreground mb-3">SPEC · RESOLUTION</div>

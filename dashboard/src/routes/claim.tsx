@@ -16,6 +16,7 @@ import { buildCreateTx } from "@/lib/did-ckb";
 import type { CreateTxResult } from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 export const Route = createFileRoute("/claim")({
   component: ClaimPage,
@@ -26,6 +27,7 @@ const STEPS = ["CONFIRM COST", "COMPOSE DOCUMENT", "SIGN AND SUBMIT", "CONFIRMAT
 type Stage = 0 | 1 | 2 | 3;
 
 function ClaimPage() {
+  useDocumentTitle("Claim a DID");
   const signer = useSigner();
   const { client, open } = useCcc();
   const navigate = useNavigate();
@@ -349,12 +351,17 @@ function ClaimPage() {
               />
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
-            <div className="px-6 py-6 flex justify-between">
+            <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[58ch]">
+              Your wallet will prompt once. After you approve, the create
+              transaction is broadcast to the CKB network and the DID is
+              minted on chain.
+            </div>
+            <div className="px-6 py-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStep(1)}>
                 ← Back
               </VButton>
               <VButton variant="verdant" onClick={handleSign} disabled={busy}>
-                {busy ? "Waiting for wallet…" : "Sign and submit"}
+                {busy ? "Waiting for wallet…" : "Sign create transaction"}
               </VButton>
             </div>
           </Manifest>
