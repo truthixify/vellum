@@ -19,14 +19,15 @@ function MigrationPage() {
         window after submission during which a higher-priority key can contest.
       </p>
 
-      <div className="border-2 border-cobalt bg-paper px-6 py-4 mb-12">
-        <div className="mono-caps text-cobalt mb-1">PREVIEW</div>
+      <div className="border-2 border-verdant bg-paper px-6 py-4 mb-12">
+        <div className="mono-caps text-verdant mb-1">LIVE</div>
         <p className="text-sm text-ink">
-          The Vellum UI for migration is currently a visual preview. The on-chain
-          logic (PLC operation history validation, witness construction,
-          rotation-key signature over the CKB tx hash) is fully specified and
-          implemented in the upstream did-ckb contract; the dashboard wiring lands in
-          a follow-up.
+          Migration is wired end-to-end on Vellum. The dashboard fetches the
+          source did:plc log from <span className="font-mono">plc.directory</span>,
+          signs the CKB tx hash with one of the genesis rotation keys you
+          provide, attaches the witness, and submits. Start a migration from
+          the <a className="text-cobalt underline" href="/migrate">/migrate</a>{" "}
+          route.
         </p>
       </div>
 

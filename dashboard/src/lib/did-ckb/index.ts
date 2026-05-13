@@ -42,11 +42,25 @@ export {
 export {
   buildCreateTx,
   buildDeactivateTx,
+  buildMigrationTx,
   buildUpdateTx,
   type CreateTxInput,
   type CreateTxResult,
+  type MigrationInput,
   type UpdateTxInput,
 } from "./transactions";
+
+export {
+  fetchPlcLog,
+  getGenesisOperation,
+  getRotationKeys,
+  parseDidKey,
+  signRotationHash,
+  verifyPrivateKeyMatch,
+  type Curve,
+  type PlcOperation,
+  type PlcRotationKey,
+} from "./plc";
 
 export {
   findDidCell,
