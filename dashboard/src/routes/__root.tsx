@@ -5,7 +5,9 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
 } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import { WalletButton } from "@/components/vellum/WalletButton";
 
@@ -86,10 +88,17 @@ function VellumGlyph({ className }: { className?: string }) {
 }
 
 function TopNav() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   return (
     <nav className="sticky top-0 z-40 bg-paper border-b border-ink">
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
+      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 h-16 flex items-center justify-between gap-3">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0">
           <VellumGlyph className="w-5 h-5 text-ink" />
           <span className="text-lg font-medium tracking-tight">Vellum</span>
         </Link>
@@ -98,7 +107,7 @@ function TopNav() {
           <NavLink to="/migrate">Migrate</NavLink>
           <NavLink to="/docs">Docs</NavLink>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Link
             to="/my"
             className="hidden sm:inline-flex mono-caps border border-ink px-3 py-2 hover:bg-ink hover:text-paper"
@@ -106,8 +115,76 @@ function TopNav() {
             My DID
           </Link>
           <WalletButton />
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            className="md:hidden h-10 w-10 border border-ink flex items-center justify-center hover:bg-ink hover:text-paper transition-colors"
+          >
+            <span aria-hidden className="mono-caps">
+              {mobileOpen ? "×" : "≡"}
+            </span>
+          </button>
         </div>
       </div>
+      {mobileOpen ? (
+        <div className="md:hidden border-t border-ink bg-paper">
+          <ul>
+            <li>
+              <Link
+                to="/my"
+                activeOptions={{ exact: false }}
+                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
+                activeProps={{
+                  className:
+                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
+                }}
+              >
+                My DID
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/resolve"
+                activeOptions={{ exact: false }}
+                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
+                activeProps={{
+                  className:
+                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
+                }}
+              >
+                Resolve
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/migrate"
+                activeOptions={{ exact: false }}
+                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
+                activeProps={{
+                  className:
+                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
+                }}
+              >
+                Migrate
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/docs"
+                activeOptions={{ exact: false }}
+                className="block px-6 py-3 mono-caps hover:bg-ink hover:text-paper transition-colors"
+                activeProps={{
+                  className: "block px-6 py-3 mono-caps bg-verdant text-paper",
+                }}
+              >
+                Docs
+              </Link>
+            </li>
+          </ul>
+        </div>
+      ) : null}
     </nav>
   );
 }
