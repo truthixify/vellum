@@ -49,7 +49,9 @@ function DocsLayout() {
   return (
     <>
       <MobileTabs />
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 py-8 lg:py-16">
+      {/* Mobile gets pt-14 (56px) to clear the fixed tabs bar (h-11 + border).
+          Desktop drops back to the regular pt-16 visual breathing room. */}
+      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pt-14 pb-8 lg:pt-16 lg:pb-16">
         <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16">
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <SidebarNav />
@@ -101,14 +103,14 @@ function SidebarNav() {
   );
 }
 
-// Mobile: a sticky horizontal tab strip pinned just under the top nav, always
-// visible (no toggle), with the active page highlighted. Scrolls horizontally
-// if the labels don't fit in the viewport.
+// Mobile: a horizontal tab strip fixed to the viewport directly under the top
+// nav, always visible regardless of scroll position or any ancestor overflow
+// constraint. Scrolls horizontally inside itself if labels don't fit.
 function MobileTabs() {
   return (
     <nav
       aria-label="Documentation pages"
-      className="lg:hidden sticky top-16 z-30 bg-paper border-b border-ink"
+      className="lg:hidden fixed top-16 inset-x-0 z-30 bg-paper border-b border-ink"
     >
       <div className="overflow-x-auto">
         <ul className="flex items-stretch gap-0 min-w-max">
