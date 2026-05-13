@@ -29,7 +29,16 @@ export function didToArgs(did: string): ccc.Hex {
   if (!did.startsWith(DID_PREFIX)) {
     throw new Error(`Expected did:ckb:..., got "${did}"`);
   }
-  const bytes = base32Decode(did.slice(DID_PREFIX.length));
+  const b32 = did.slice(DID_PREFIX.length);
+  // 20 bytes encode to exactly 32 base32 chars with no padding. Other lengths
+  // would decode to a different byte count (or silently truncate leftover
+  // bits), so be strict here.
+  if (b32.length !== 32) {
+    throw new Error(
+      `did:ckb identifier must be 32 base32 chars, got ${b32.length}`,
+    );
+  }
+  const bytes = base32Decode(b32);
   if (bytes.length !== ARGS_LEN_BYTES) {
     throw new Error(
       `did:ckb identifier must decode to ${ARGS_LEN_BYTES} bytes, got ${bytes.length}`,
