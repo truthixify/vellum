@@ -164,26 +164,31 @@ function ClaimPage() {
           >
             <div className="px-6 pt-8 pb-4">
               <div className="mono-caps text-muted-foreground mb-3">
-                TOTAL CAPACITY LOCKED
+                CAPACITY LOCKED ON CHAIN
               </div>
               <Brackets className="block">
                 <div className="font-mono text-[48px] md:text-[64px] leading-none">
-                  ~614 CKB
+                  ~300 to 600 CKB
                 </div>
               </Brackets>
+              <p className="text-xs text-muted-foreground mt-4 max-w-[58ch]">
+                The exact figure depends on your document size and lock script. The
+                review step before signing will show the precise amount.
+              </p>
             </div>
             <MetaStrip
               items={[
-                { label: "Base capacity", value: "~590 CKB" },
-                { label: "Padding", value: "~24 CKB" },
+                { label: "Type", value: "STORAGE RENT" },
+                { label: "Reserve", value: "200 CKB" },
                 { label: "Network fee", value: "< 0.01 CKB" },
                 { label: "Recoverable", value: "YES" },
               ]}
             />
             <div className="px-6 py-6 text-sm text-muted-foreground">
-              The capacity is locked on chain in your DID Cell. Deactivate any time
-              to recover it in full. Actual figures depend on the document size and
-              your lock script.
+              CKB is locked, not spent. The capacity sits inside your DID Cell and
+              returns to your wallet in full when you deactivate. The 200 CKB
+              reserve is padding so you can grow the document later without topping
+              up the cell.
             </div>
             <div className="px-6 pb-6 flex justify-end gap-3">
               <Link to="/">
@@ -311,6 +316,15 @@ function ClaimPage() {
                 }
               />
               <FieldRow
+                label="Capacity to lock"
+                mono
+                value={
+                  <span className="font-medium">
+                    {ccc.fixedPointToString(built.tx.outputs[0].capacity, 8)} CKB
+                  </span>
+                }
+              />
+              <FieldRow
                 label="Inputs"
                 mono
                 value={String(built.tx.inputs.length)}
@@ -367,10 +381,8 @@ function ClaimPage() {
                   value: confirmation?.status === "committed" ? "ACTIVE" : "PENDING",
                 },
                 {
-                  label: "Block",
-                  value: confirmation?.blockNumber
-                    ? confirmation.blockNumber.toString()
-                    : "…",
+                  label: "Capacity",
+                  value: `${ccc.fixedPointToString(built.tx.outputs[0].capacity, 8)} CKB`,
                 },
                 {
                   label: "Tx hash",
