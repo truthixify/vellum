@@ -59,8 +59,11 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className="mono-caps text-ink hover:text-cobalt transition-colors"
-      activeProps={{ className: "mono-caps text-cobalt" }}
+      activeOptions={{ exact: false }}
+      className="mono-caps text-ink px-2 py-1 hover:bg-ink hover:text-paper transition-colors"
+      activeProps={{
+        className: "mono-caps bg-verdant text-paper px-2 py-1 transition-colors",
+      }}
     >
       {children}
     </Link>
