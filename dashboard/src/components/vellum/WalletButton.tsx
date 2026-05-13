@@ -83,7 +83,7 @@ export function WalletButton() {
     <div className="relative">
       <button
         onClick={() => setMenuOpen((v) => !v)}
-        className="border border-ink h-10 pr-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
+        className="border border-ink h-10 px-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
       >
         {primaryDid ? (
           <Avatar
@@ -93,7 +93,7 @@ export function WalletButton() {
             className="border-0"
           />
         ) : (
-          <span className="w-2 h-2 bg-verdant ml-3" aria-hidden />
+          <span className="w-2 h-2 bg-verdant" aria-hidden />
         )}
         <span className="font-mono normal-case text-[13px] tracking-tight max-w-[14ch] truncate">
           {displayName ?? (address ? truncate(address) : "Loading…")}
