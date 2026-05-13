@@ -66,6 +66,15 @@
   * {
     border-color: var(--hairline);
   }
+  html {
+    /* Smooth in-page anchor scrolling for #history etc., with padding so the
+       target lands below the sticky top nav (64px) plus a small breathing gap. */
+    scroll-behavior: smooth;
+    scroll-padding-top: 80px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
   html, body {
     background-color: var(--paper);
     color: var(--ink);
