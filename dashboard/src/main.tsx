@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 
+import { CccProvider } from "./lib/ccc-provider";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -28,6 +29,8 @@ if (!rootEl) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <CccProvider>
+      <RouterProvider router={router} />
+    </CccProvider>
   </StrictMode>,
 );
