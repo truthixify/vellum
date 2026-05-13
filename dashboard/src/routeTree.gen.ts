@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResolveRouteImport } from './routes/resolve'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as MigrateRouteImport } from './routes/migrate'
@@ -18,11 +17,6 @@ import { Route as DeactivateRouteImport } from './routes/deactivate'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as IndexRouteImport } from './routes/index'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ResolveRoute = ResolveRouteImport.update({
   id: '/resolve',
   path: '/resolve',
@@ -67,7 +61,6 @@ export interface FileRoutesByFullPath {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,7 +70,6 @@ export interface FileRoutesByTo {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,7 +80,6 @@ export interface FileRoutesById {
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
-  '/sitemap.xml': typeof SitemapDotxmlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,17 +91,8 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
-    | '/sitemap.xml'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/claim'
-    | '/deactivate'
-    | '/docs'
-    | '/migrate'
-    | '/my'
-    | '/resolve'
-    | '/sitemap.xml'
+  to: '/' | '/claim' | '/deactivate' | '/docs' | '/migrate' | '/my' | '/resolve'
   id:
     | '__root__'
     | '/'
@@ -120,7 +102,6 @@ export interface FileRouteTypes {
     | '/migrate'
     | '/my'
     | '/resolve'
-    | '/sitemap.xml'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,18 +112,10 @@ export interface RootRouteChildren {
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
-  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/resolve': {
       id: '/resolve'
       path: '/resolve'
@@ -203,18 +176,7 @@ const rootRouteChildren: RootRouteChildren = {
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,
-  SitemapDotxmlRoute: SitemapDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
