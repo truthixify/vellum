@@ -41,7 +41,7 @@ Both `hash_type: type`, `index: 0x0`, `dep_type: code`. Source of truth is the u
 ## Develop
 
 ```bash
-cd dashboard
+cd apps/dashboard
 bun install
 bun run dev
 ```
@@ -49,7 +49,7 @@ bun run dev
 Vite serves on `http://localhost:8080`. Hot module replacement is on by default.
 
 ```bash
-bun run build          # production build, output in dashboard/dist
+bun run build          # production build, output in apps/dashboard/dist
 bun run preview        # serve the production build locally
 bun run lint           # eslint
 bun run format         # prettier
@@ -62,12 +62,12 @@ The dashboard defaults to **CKB testnet** so you can experiment without spending
 
 The project deploys cleanly as a Vercel Static Site.
 
-- **Root directory:** `dashboard`
+- **Root directory:** `apps/dashboard`
 - **Build command:** `bun install && bun run build`
 - **Output directory:** `dist`
 - **Framework preset:** Vite (or "Other"; Vercel picks up `package.json` either way)
 
-`dashboard/vercel.json` already contains the SPA rewrite (everything that doesn't match a real file is routed to `/index.html` so the client router can handle the path).
+`apps/dashboard/vercel.json` already contains the SPA rewrite (everything that doesn't match a real file is routed to `/index.html` so the client router can handle the path).
 
 ## Project layout
 
@@ -75,7 +75,8 @@ The project deploys cleanly as a Vercel Static Site.
 .
 ├── design.md                 the brand + design system brief
 ├── README.md                 you are here
-├── dashboard/                the SPA
+├── apps/
+│   └── dashboard/            the SPA
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── ui/           shadcn/ui primitives (copied in, not imported)
