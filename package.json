@@ -1,0 +1,8 @@
+{
+  "name": "vellum",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

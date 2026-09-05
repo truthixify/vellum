@@ -14,3 +14,16 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Workspace outputs
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+
+# Rust
+target/
+
+# Bun
+bun.lockb
