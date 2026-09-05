@@ -17,9 +17,7 @@ function NotFoundComponent() {
       <div className="border-2 border-ink p-12 text-center max-w-md">
         <div className="mono-caps text-muted-foreground mb-4">ERROR · 404</div>
         <h1 className="text-3xl font-medium mb-3">Page not found</h1>
-        <p className="text-muted-foreground mb-6">
-          This document does not exist in the registry.
-        </p>
+        <p className="text-muted-foreground mb-6">This document does not exist in the registry.</p>
         <Link to="/" className="mono-caps inline-block bg-ink text-paper px-5 py-3">
           Return home
         </Link>
@@ -278,10 +276,7 @@ function Footer() {
                         {link.label} <span aria-hidden>↗</span>
                       </a>
                     ) : (
-                      <Link
-                        to={link.href}
-                        className="text-sm hover:text-cobalt hover:underline"
-                      >
+                      <Link to={link.href} className="text-sm hover:text-cobalt hover:underline">
                         {link.label}
                       </Link>
                     )}

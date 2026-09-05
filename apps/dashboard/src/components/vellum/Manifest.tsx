@@ -3,14 +3,15 @@ import { cn } from "@/lib/utils";
 
 type State = "ACTIVE" | "PENDING" | "MIGRATING" | "CONTESTED" | "DEACTIVATED" | "DRAFT";
 
-const stateStyles: Record<State, { bg: string; text: string; dot?: "pulse" | "static" | "none" }> = {
-  ACTIVE: { bg: "bg-verdant", text: "text-paper", dot: "static" },
-  PENDING: { bg: "bg-amber", text: "text-paper", dot: "pulse" },
-  MIGRATING: { bg: "bg-cobalt", text: "text-paper", dot: "pulse" },
-  CONTESTED: { bg: "bg-alarm", text: "text-paper", dot: "pulse" },
-  DEACTIVATED: { bg: "bg-[var(--muted-ink)]", text: "text-paper", dot: "none" },
-  DRAFT: { bg: "bg-paper", text: "text-ink", dot: "none" },
-};
+const stateStyles: Record<State, { bg: string; text: string; dot?: "pulse" | "static" | "none" }> =
+  {
+    ACTIVE: { bg: "bg-verdant", text: "text-paper", dot: "static" },
+    PENDING: { bg: "bg-amber", text: "text-paper", dot: "pulse" },
+    MIGRATING: { bg: "bg-cobalt", text: "text-paper", dot: "pulse" },
+    CONTESTED: { bg: "bg-alarm", text: "text-paper", dot: "pulse" },
+    DEACTIVATED: { bg: "bg-[var(--muted-ink)]", text: "text-paper", dot: "none" },
+    DRAFT: { bg: "bg-paper", text: "text-ink", dot: "none" },
+  };
 
 export function StatusBand({ state, label }: { state: State; label?: string }) {
   const s = stateStyles[state];
@@ -30,7 +31,13 @@ export function StatusBand({ state, label }: { state: State; label?: string }) {
   );
 }
 
-export function IdTab({ children, color = "verdant" }: { children: ReactNode; color?: "verdant" | "ink" | "cobalt" }) {
+export function IdTab({
+  children,
+  color = "verdant",
+}: {
+  children: ReactNode;
+  color?: "verdant" | "ink" | "cobalt";
+}) {
   const bg = color === "verdant" ? "bg-verdant" : color === "cobalt" ? "bg-cobalt" : "bg-ink";
   return (
     <div className={cn("inline-flex items-center px-3 py-1.5 mono-caps text-paper", bg)}>
@@ -131,8 +138,17 @@ export function FieldRow({
 }) {
   return (
     <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-6 px-4 sm:px-6 py-5 border-b border-hairline">
-      <div className="mono-label text-muted-foreground sm:w-40 md:w-44 shrink-0 pt-0.5">{label}</div>
-      <div className={cn("flex-1 min-w-0 w-full text-ink break-words", mono ? "font-mono text-sm break-all" : "text-base")}>{value}</div>
+      <div className="mono-label text-muted-foreground sm:w-40 md:w-44 shrink-0 pt-0.5">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "flex-1 min-w-0 w-full text-ink break-words",
+          mono ? "font-mono text-sm break-all" : "text-base",
+        )}
+      >
+        {value}
+      </div>
       {action && <div className="shrink-0 self-end sm:self-auto">{action}</div>}
     </div>
   );

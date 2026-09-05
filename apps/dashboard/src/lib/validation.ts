@@ -18,12 +18,7 @@ const NOSTR_HANDLE = /^nostr:\/\/[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 export function validateHandle(value: string): string | null {
   const v = value.trim();
   if (!v) return null;
-  if (
-    URI_SCHEME.test(v) ||
-    DID_PATTERN.test(v) ||
-    AT_HANDLE.test(v) ||
-    NOSTR_HANDLE.test(v)
-  ) {
+  if (URI_SCHEME.test(v) || DID_PATTERN.test(v) || AT_HANDLE.test(v) || NOSTR_HANDLE.test(v)) {
     return null;
   }
   return "Expected a URI like at://you.bsky.social, nostr://you@example.com, https://your.site, or a did:method:id";

@@ -50,16 +50,16 @@
 }
 
 :root {
-  --paper: #FBF8EE;
-  --ink: #0E0E0C;
-  --verdant: #1A6E4A;
-  --verdant-hover: #1F805A;
-  --verdant-press: #155A3C;
-  --cobalt: #1F3DCB;
-  --amber: #D08A1A;
-  --alarm: #C53B2E;
-  --muted-ink: #6F6A5C;
-  --hairline: #E6DFC9;
+  --paper: #fbf8ee;
+  --ink: #0e0e0c;
+  --verdant: #1a6e4a;
+  --verdant-hover: #1f805a;
+  --verdant-press: #155a3c;
+  --cobalt: #1f3dcb;
+  --amber: #d08a1a;
+  --alarm: #c53b2e;
+  --muted-ink: #6f6a5c;
+  --hairline: #e6dfc9;
 }
 
 @layer base {
@@ -73,9 +73,12 @@
     scroll-padding-top: 80px;
   }
   @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+    html {
+      scroll-behavior: auto;
+    }
   }
-  html, body {
+  html,
+  body {
     background-color: var(--paper);
     color: var(--ink);
     font-family: var(--font-sans);
@@ -113,7 +116,9 @@
 }
 
 @layer utilities {
-  .font-mono { font-family: var(--font-mono); }
+  .font-mono {
+    font-family: var(--font-mono);
+  }
   .mono-label {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -133,15 +138,24 @@
     font-size: 13px;
     font-weight: 500;
   }
-  .hairline { border-color: var(--hairline); }
-  .ink-border { border-color: var(--ink); }
+  .hairline {
+    border-color: var(--hairline);
+  }
+  .ink-border {
+    border-color: var(--ink);
+  }
 
   .pulse-dot {
     animation: pulse-opacity 1.6s ease-in-out infinite;
   }
   @keyframes pulse-opacity {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
   }
   .sweep::after {
     content: "";
@@ -152,19 +166,34 @@
     animation: sweep 1.4s linear infinite;
   }
   @keyframes sweep {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
   }
   .stamp-flash {
     animation: stamp-flash 400ms ease-out;
   }
   @keyframes stamp-flash {
-    0% { background-color: var(--ink); }
-    100% {}
+    0% {
+      background-color: var(--ink);
+    }
+    100% {
+    }
   }
   @keyframes count-up {
-    0% { opacity: 0; transform: translateY(4px); }
-    100% { opacity: 1; transform: translateY(0); }
+    0% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
-  .fade-in-up { animation: count-up 280ms ease-out; }
+  .fade-in-up {
+    animation: count-up 280ms ease-out;
+  }
 }

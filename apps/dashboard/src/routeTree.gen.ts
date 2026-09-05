@@ -9,54 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as RotateRouteImport } from './routes/rotate'
-import { Route as ResolveRouteImport } from './routes/resolve'
-import { Route as MyRouteImport } from './routes/my'
-import { Route as MigrateRouteImport } from './routes/migrate'
-import { Route as EditRouteImport } from './routes/edit'
-import { Route as DocsRouteImport } from './routes/docs'
-import { Route as DeactivateRouteImport } from './routes/deactivate'
-import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClaimRouteImport } from './routes/claim'
+import { Route as DeactivateRouteImport } from './routes/deactivate'
+import { Route as DocsRouteImport } from './routes/docs'
+import { Route as EditRouteImport } from './routes/edit'
+import { Route as MigrateRouteImport } from './routes/migrate'
+import { Route as MyRouteImport } from './routes/my'
+import { Route as ResolveRouteImport } from './routes/resolve'
+import { Route as RotateRouteImport } from './routes/rotate'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
-import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
-import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
-import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
 import { Route as DocsCellModelRouteImport } from './routes/docs/cell-model'
+import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
+import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
+import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
 
-const RotateRoute = RotateRouteImport.update({
-  id: '/rotate',
-  path: '/rotate',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResolveRoute = ResolveRouteImport.update({
-  id: '/resolve',
-  path: '/resolve',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MyRoute = MyRouteImport.update({
-  id: '/my',
-  path: '/my',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MigrateRoute = MigrateRouteImport.update({
-  id: '/migrate',
-  path: '/migrate',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EditRoute = EditRouteImport.update({
-  id: '/edit',
-  path: '/edit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocsRoute = DocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeactivateRoute = DeactivateRouteImport.update({
-  id: '/deactivate',
-  path: '/deactivate',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClaimRoute = ClaimRouteImport.update({
@@ -64,9 +34,39 @@ const ClaimRoute = ClaimRouteImport.update({
   path: '/claim',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DeactivateRoute = DeactivateRouteImport.update({
+  id: '/deactivate',
+  path: '/deactivate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditRoute = EditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MigrateRoute = MigrateRouteImport.update({
+  id: '/migrate',
+  path: '/migrate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyRoute = MyRouteImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResolveRoute = ResolveRouteImport.update({
+  id: '/resolve',
+  path: '/resolve',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RotateRoute = RotateRouteImport.update({
+  id: '/rotate',
+  path: '/rotate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsIndexRoute = DocsIndexRouteImport.update({
@@ -74,14 +74,9 @@ const DocsIndexRoute = DocsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DocsRoute,
 } as any)
-const DocsResolutionRoute = DocsResolutionRouteImport.update({
-  id: '/resolution',
-  path: '/resolution',
-  getParentRoute: () => DocsRoute,
-} as any)
-const DocsMigrationRoute = DocsMigrationRouteImport.update({
-  id: '/migration',
-  path: '/migration',
+const DocsCellModelRoute = DocsCellModelRouteImport.update({
+  id: '/cell-model',
+  path: '/cell-model',
   getParentRoute: () => DocsRoute,
 } as any)
 const DocsDidCkbRoute = DocsDidCkbRouteImport.update({
@@ -89,9 +84,14 @@ const DocsDidCkbRoute = DocsDidCkbRouteImport.update({
   path: '/did-ckb',
   getParentRoute: () => DocsRoute,
 } as any)
-const DocsCellModelRoute = DocsCellModelRouteImport.update({
-  id: '/cell-model',
-  path: '/cell-model',
+const DocsMigrationRoute = DocsMigrationRouteImport.update({
+  id: '/migration',
+  path: '/migration',
+  getParentRoute: () => DocsRoute,
+} as any)
+const DocsResolutionRoute = DocsResolutionRouteImport.update({
+  id: '/resolution',
+  path: '/resolution',
   getParentRoute: () => DocsRoute,
 } as any)
 
@@ -207,53 +207,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/rotate': {
-      id: '/rotate'
-      path: '/rotate'
-      fullPath: '/rotate'
-      preLoaderRoute: typeof RotateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/resolve': {
-      id: '/resolve'
-      path: '/resolve'
-      fullPath: '/resolve'
-      preLoaderRoute: typeof ResolveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/my': {
-      id: '/my'
-      path: '/my'
-      fullPath: '/my'
-      preLoaderRoute: typeof MyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/migrate': {
-      id: '/migrate'
-      path: '/migrate'
-      fullPath: '/migrate'
-      preLoaderRoute: typeof MigrateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/edit': {
-      id: '/edit'
-      path: '/edit'
-      fullPath: '/edit'
-      preLoaderRoute: typeof EditRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docs': {
-      id: '/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof DocsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/deactivate': {
-      id: '/deactivate'
-      path: '/deactivate'
-      fullPath: '/deactivate'
-      preLoaderRoute: typeof DeactivateRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/claim': {
@@ -263,11 +221,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClaimRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/deactivate': {
+      id: '/deactivate'
+      path: '/deactivate'
+      fullPath: '/deactivate'
+      preLoaderRoute: typeof DeactivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edit': {
+      id: '/edit'
+      path: '/edit'
+      fullPath: '/edit'
+      preLoaderRoute: typeof EditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/migrate': {
+      id: '/migrate'
+      path: '/migrate'
+      fullPath: '/migrate'
+      preLoaderRoute: typeof MigrateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my': {
+      id: '/my'
+      path: '/my'
+      fullPath: '/my'
+      preLoaderRoute: typeof MyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resolve': {
+      id: '/resolve'
+      path: '/resolve'
+      fullPath: '/resolve'
+      preLoaderRoute: typeof ResolveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rotate': {
+      id: '/rotate'
+      path: '/rotate'
+      fullPath: '/rotate'
+      preLoaderRoute: typeof RotateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs/': {
@@ -277,18 +277,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsIndexRouteImport
       parentRoute: typeof DocsRoute
     }
-    '/docs/resolution': {
-      id: '/docs/resolution'
-      path: '/resolution'
-      fullPath: '/docs/resolution'
-      preLoaderRoute: typeof DocsResolutionRouteImport
-      parentRoute: typeof DocsRoute
-    }
-    '/docs/migration': {
-      id: '/docs/migration'
-      path: '/migration'
-      fullPath: '/docs/migration'
-      preLoaderRoute: typeof DocsMigrationRouteImport
+    '/docs/cell-model': {
+      id: '/docs/cell-model'
+      path: '/cell-model'
+      fullPath: '/docs/cell-model'
+      preLoaderRoute: typeof DocsCellModelRouteImport
       parentRoute: typeof DocsRoute
     }
     '/docs/did-ckb': {
@@ -298,11 +291,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsDidCkbRouteImport
       parentRoute: typeof DocsRoute
     }
-    '/docs/cell-model': {
-      id: '/docs/cell-model'
-      path: '/cell-model'
-      fullPath: '/docs/cell-model'
-      preLoaderRoute: typeof DocsCellModelRouteImport
+    '/docs/migration': {
+      id: '/docs/migration'
+      path: '/migration'
+      fullPath: '/docs/migration'
+      preLoaderRoute: typeof DocsMigrationRouteImport
+      parentRoute: typeof DocsRoute
+    }
+    '/docs/resolution': {
+      id: '/docs/resolution'
+      path: '/resolution'
+      fullPath: '/docs/resolution'
+      preLoaderRoute: typeof DocsResolutionRouteImport
       parentRoute: typeof DocsRoute
     }
   }

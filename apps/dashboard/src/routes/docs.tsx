@@ -5,11 +5,7 @@ export const Route = createFileRoute("/docs")({
 });
 
 type DocsPath =
-  | "/docs"
-  | "/docs/did-ckb"
-  | "/docs/cell-model"
-  | "/docs/resolution"
-  | "/docs/migration";
+  "/docs" | "/docs/did-ckb" | "/docs/cell-model" | "/docs/resolution" | "/docs/migration";
 
 type NavItem = {
   to: DocsPath;
@@ -168,9 +164,7 @@ function DocsPager() {
           to={next.to}
           className="group border border-ink p-5 hover:bg-ink hover:text-paper transition-colors sm:text-right"
         >
-          <div className="mono-caps text-muted-foreground group-hover:text-paper mb-1">
-            Next →
-          </div>
+          <div className="mono-caps text-muted-foreground group-hover:text-paper mb-1">Next →</div>
           <div className="text-lg font-medium">{next.label}</div>
         </Link>
       ) : (
