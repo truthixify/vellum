@@ -14,9 +14,8 @@
   "dependencies": {
     "@ckb-ccc/connector-react": "^1.0.34",
     "@ckb-ccc/core": "^1.12.5",
-    "@ckb-ccc/identity": "https://github.com/truthixify/ccc/releases/download/v0.0.3-identity/ckb-ccc-identity-0.0.3.tgz",
+    "@ckb-ccc/did-ckb": "^0.2.9",
     "@hookform/resolvers": "^5.2.2",
-    "@ipld/dag-cbor": "^10.0.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",

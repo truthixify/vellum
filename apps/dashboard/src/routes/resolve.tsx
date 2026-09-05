@@ -2,22 +2,10 @@ import { useCcc } from "@ckb-ccc/connector-react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  MetaStrip,
-  FieldRow,
-  Tag,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
-import {
-  isDidCkb,
-  resolveDid,
-  PROFILE_SERVICE_KEY,
-  type DidRecord,
-} from "@ckb-ccc/identity";
+import { isDidCkb, resolveDid, PROFILE_SERVICE_KEY, type DidRecord } from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -90,9 +78,7 @@ function ResolvePage() {
 
       {status === "loading" && (
         <div className="border-2 border-ink p-20 text-center">
-          <div className="mono-caps text-muted-foreground">
-            RESOLVING DID, INDEXING CELLS…
-          </div>
+          <div className="mono-caps text-muted-foreground">RESOLVING DID, INDEXING CELLS…</div>
         </div>
       )}
 
@@ -134,9 +120,7 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
   const services = Object.entries(document.services ?? {}).filter(
     ([key]) => key !== PROFILE_SERVICE_KEY,
   );
-  const localIdString = record.localId
-    ? new TextDecoder().decode(toBytes(record.localId))
-    : null;
+  const localIdString = record.localId ?? null;
   const { copied, copy } = useCopy();
 
   return (
@@ -150,9 +134,7 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
       >
         <div className="px-6 pt-8 pb-6">
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <div className="mono-caps text-muted-foreground">
-              REGISTERED IDENTIFIER
-            </div>
+            <div className="mono-caps text-muted-foreground">REGISTERED IDENTIFIER</div>
             <VButton variant="secondary" onClick={() => copy(record.did)}>
               {copied ? "Copied" : "Copy DID"}
             </VButton>
@@ -187,9 +169,7 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
           {profile.displayName && (
             <FieldRow
               label="Display name"
-              value={
-                <span className="text-2xl font-medium">{profile.displayName}</span>
-              }
+              value={<span className="text-2xl font-medium">{profile.displayName}</span>}
             />
           )}
           {profile.bio && <FieldRow label="Bio" value={profile.bio} />}
@@ -278,13 +258,4 @@ function ResolvedManifest({ record }: { record: DidRecord }) {
 function truncate(hex: string, head = 8, tail = 6): string {
   if (hex.length <= head + tail + 1) return hex;
   return `${hex.slice(0, head)}…${hex.slice(-tail)}`;
-}
-
-function toBytes(hex: string): Uint8Array {
-  const clean = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const out = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
-  }
-  return out;
 }

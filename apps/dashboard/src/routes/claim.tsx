@@ -2,18 +2,11 @@ import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  MetaStrip,
-  FieldRow,
-  Tag,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
-import { buildCreateTx } from "@ckb-ccc/identity";
-import type { CreateTxResult } from "@ckb-ccc/identity";
+import { buildCreateTx } from "@/lib/did-ckb";
+import type { CreateTxResult } from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -48,8 +41,7 @@ function ClaimPage() {
   } | null>(null);
   const { copied, copy } = useCopy();
 
-  const networkLabel =
-    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
 
   async function handleStage() {
     if (!signer) {
@@ -138,9 +130,7 @@ function ClaimPage() {
         {STEPS.map((label, i) => (
           <div
             key={label}
-            className={`px-3 py-3 border-t-2 ${
-              i <= step ? "border-verdant" : "border-hairline"
-            }`}
+            className={`px-3 py-3 border-t-2 ${i <= step ? "border-verdant" : "border-hairline"}`}
           >
             <div className="mono-caps text-muted-foreground">
               STEP {String(i + 1).padStart(2, "0")} / 04
@@ -168,17 +158,15 @@ function ClaimPage() {
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                CAPACITY LOCKED ON CHAIN
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">CAPACITY LOCKED ON CHAIN</div>
               <Brackets className="block">
                 <div className="font-mono text-[48px] md:text-[64px] leading-none">
                   ~300 to 600 CKB
                 </div>
               </Brackets>
               <p className="text-xs text-muted-foreground mt-4 max-w-[58ch]">
-                The exact figure depends on your document size and lock script. The
-                review step before signing will show the precise amount.
+                The exact figure depends on your document size and lock script. The review step
+                before signing will show the precise amount.
               </p>
             </div>
             <MetaStrip
@@ -190,10 +178,9 @@ function ClaimPage() {
               ]}
             />
             <div className="px-6 py-6 text-sm text-muted-foreground">
-              CKB is locked, not spent. The capacity sits inside your DID Cell and
-              returns to your wallet in full when you deactivate. The 200 CKB
-              reserve is padding so you can grow the document later without topping
-              up the cell.
+              CKB is locked, not spent. The capacity sits inside your DID Cell and returns to your
+              wallet in full when you deactivate. The 200 CKB reserve is padding so you can grow the
+              document later without topping up the cell.
             </div>
             <div className="px-6 pb-6 flex justify-end gap-3">
               <Link to="/">
@@ -231,9 +218,7 @@ function ClaimPage() {
                   className="w-full bg-paper border border-ink px-3 py-2 resize-none"
                   placeholder="Up to 240 characters."
                 />
-                <div className="mono-caps text-muted-foreground mt-1.5">
-                  {bio.length} / 240
-                </div>
+                <div className="mono-caps text-muted-foreground mt-1.5">{bio.length} / 240</div>
               </Field>
               <Field label="Handle">
                 <div className="flex gap-2 items-center">
@@ -261,9 +246,8 @@ function ClaimPage() {
                       className="w-full h-11 bg-paper border border-ink px-3 font-mono text-sm"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5 max-w-[58ch]">
-                      Leave empty and we'll generate a pixel-art avatar from
-                      your new DID. Paste any image URL to override.
-                      ipfs:// goes through a public gateway.
+                      Leave empty and we'll generate a pixel-art avatar from your new DID. Paste any
+                      image URL to override. ipfs:// goes through a public gateway.
                     </p>
                   </div>
                 </div>
@@ -274,11 +258,7 @@ function ClaimPage() {
                 ← Back
               </VButton>
               {signer ? (
-                <VButton
-                  variant="verdant"
-                  onClick={handleStage}
-                  disabled={!name || busy}
-                >
+                <VButton variant="verdant" onClick={handleStage} disabled={!name || busy}>
                   {busy ? "Preparing transaction…" : "Stage for signing"}
                 </VButton>
               ) : (
@@ -300,9 +280,7 @@ function ClaimPage() {
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                IDENTIFIER (PREVIEW)
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">IDENTIFIER (PREVIEW)</div>
               <Brackets className="block">
                 <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">
                   {built.did}
@@ -312,9 +290,7 @@ function ClaimPage() {
             <div>
               <FieldRow
                 label="Display name"
-                value={
-                  <span className="text-xl font-medium">{name || "(unset)"}</span>
-                }
+                value={<span className="text-xl font-medium">{name || "(unset)"}</span>}
               />
               <FieldRow
                 label="Bio"
@@ -323,11 +299,7 @@ function ClaimPage() {
               <FieldRow
                 label="Handle"
                 mono
-                value={
-                  handle || (
-                    <span className="text-muted-foreground font-sans">(unset)</span>
-                  )
-                }
+                value={handle || <span className="text-muted-foreground font-sans">(unset)</span>}
               />
               <FieldRow
                 label="Capacity to lock"
@@ -338,22 +310,13 @@ function ClaimPage() {
                   </span>
                 }
               />
-              <FieldRow
-                label="Inputs"
-                mono
-                value={String(built.tx.inputs.length)}
-              />
-              <FieldRow
-                label="Outputs"
-                mono
-                value={String(built.tx.outputs.length)}
-              />
+              <FieldRow label="Inputs" mono value={String(built.tx.inputs.length)} />
+              <FieldRow label="Outputs" mono value={String(built.tx.outputs.length)} />
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
             <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[58ch]">
-              Your wallet will prompt once. After you approve, the create
-              transaction is broadcast to the CKB network and the DID is
-              minted on chain.
+              Your wallet will prompt once. After you approve, the create transaction is broadcast
+              to the CKB network and the DID is minted on chain.
             </div>
             <div className="px-6 py-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStep(1)}>
@@ -384,9 +347,7 @@ function ClaimPage() {
             footerRight="DOC 001"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                YOUR IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">YOUR IDENTIFIER</div>
               <Brackets className="block">
                 <div className="font-mono text-[20px] md:text-[26px] leading-tight break-all">
                   {built.did}
@@ -419,9 +380,9 @@ function ClaimPage() {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground max-w-[58ch]">
-                  The transaction has been submitted. We're polling the indexer for
-                  inclusion in a committed block. This usually takes seconds; if it
-                  takes longer than a minute, check the tx hash on an explorer.
+                  The transaction has been submitted. We're polling the indexer for inclusion in a
+                  committed block. This usually takes seconds; if it takes longer than a minute,
+                  check the tx hash on an explorer.
                 </p>
               </div>
             ) : null}
@@ -430,10 +391,7 @@ function ClaimPage() {
                 {copied ? "Copied" : "Copy DID"}
               </VButton>
               {confirmation?.status === "committed" ? (
-                <VButton
-                  variant="verdant"
-                  onClick={() => navigate({ to: "/my" })}
-                >
+                <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
                   View my DID
                 </VButton>
               ) : (

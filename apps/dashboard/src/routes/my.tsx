@@ -3,14 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  MetaStrip,
-  FieldRow,
-  Tag,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
 import {
@@ -19,7 +12,7 @@ import {
   PROFILE_SERVICE_KEY,
   type DidRecord,
   type HistoryEntry,
-} from "@ckb-ccc/identity";
+} from "@/lib/did-ckb";
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -56,8 +49,7 @@ function MyDid() {
     };
   }, [signer]);
 
-  const networkLabel =
-    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["my-dids", lock?.codeHash, lock?.hashType, lock?.args, networkLabel],
@@ -76,8 +68,8 @@ function MyDid() {
           Connect a wallet to view your DID.
         </h1>
         <p className="text-muted-foreground mb-10 max-w-[60ch] mx-auto">
-          Your DID Cells are indexed by the lock script your wallet controls. Connect a
-          wallet to read or manage them.
+          Your DID Cells are indexed by the lock script your wallet controls. Connect a wallet to
+          read or manage them.
         </p>
         <VButton variant="verdant" onClick={() => open()}>
           Connect wallet
@@ -118,8 +110,8 @@ function MyDid() {
         <div className="mono-caps text-muted-foreground mb-3">REGISTRY · MY DOCUMENT</div>
         <h1 className="text-4xl md:text-5xl font-medium mb-6">No DID yet.</h1>
         <p className="text-muted-foreground mb-10 max-w-[60ch] mx-auto">
-          This wallet doesn't control any did:ckb cells on {networkLabel.toLowerCase()}.
-          Claim one to get started.
+          This wallet doesn't control any did:ckb cells on {networkLabel.toLowerCase()}. Claim one
+          to get started.
         </p>
         <Link to="/claim">
           <VButton variant="verdant">Claim a DID</VButton>
@@ -173,22 +165,16 @@ function MyDid() {
       </div>
 
       <div className="mt-24 border-2 border-alarm">
-        <div className="bg-alarm text-paper px-6 py-2.5 mono-caps">
-          DANGER ZONE · IRREVERSIBLE
-        </div>
+        <div className="bg-alarm text-paper px-6 py-2.5 mono-caps">DANGER ZONE · IRREVERSIBLE</div>
         <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-[58ch]">
             <h3 className="text-xl font-medium mb-2">Deactivate this DID.</h3>
             <p className="text-muted-foreground text-sm">
-              Burn the Cell, return the locked CKB to your wallet, and make this
-              identifier permanently unresolvable. The string can never be reissued.
+              Burn the Cell, return the locked CKB to your wallet, and make this identifier
+              permanently unresolvable. The string can never be reissued.
             </p>
           </div>
-          <Link
-            to="/deactivate"
-            search={{ did: active.did }}
-            className="shrink-0"
-          >
+          <Link to="/deactivate" search={{ did: active.did }} className="shrink-0">
             <VButton variant="destructive">Deactivate DID</VButton>
           </Link>
         </div>
@@ -396,8 +382,8 @@ function LockScriptCard({ record }: { record: DidRecord }) {
       </div>
       <div className="px-6 pb-6">
         <div className="text-xs text-muted-foreground mb-3 max-w-[40ch]">
-          Rotation moves control of this DID to a new key without changing
-          the identifier. The current Lock signs the rotation transaction.
+          Rotation moves control of this DID to a new key without changing the identifier. The
+          current Lock signs the rotation transaction.
         </div>
         <div className="flex justify-end">
           <Link to="/rotate" search={{ did: record.did }}>
@@ -430,12 +416,7 @@ function ActivityFeed({ record }: { record: DidRecord }) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: [
-      "did-history",
-      record.args,
-      record.cell.outPoint.txHash,
-      networkLabel,
-    ],
+    queryKey: ["did-history", record.args, record.cell.outPoint.txHash, networkLabel],
     queryFn: () => getDidHistory(client, record.args, record.cell),
   });
 
@@ -479,9 +460,7 @@ function ActivityFeed({ record }: { record: DidRecord }) {
         ))}
       </div>
       {history.length === 50 && (
-        <p className="text-xs text-muted-foreground mt-3">
-          History walk capped at 50 operations.
-        </p>
+        <p className="text-xs text-muted-foreground mt-3">History walk capped at 50 operations.</p>
       )}
     </>
   );
@@ -507,14 +486,10 @@ function ActivityEntry({
         />
         <span className="mono-caps">{entry.action}</span>
         <span className="font-mono text-xs text-muted-foreground">
-          {entry.blockNumber
-            ? `BLOCK ${entry.blockNumber.toString()}`
-            : "PENDING"}
+          {entry.blockNumber ? `BLOCK ${entry.blockNumber.toString()}` : "PENDING"}
         </span>
         {isLatest && (
-          <span className="mono-caps text-verdant text-[10px] tracking-[0.16em]">
-            CURRENT
-          </span>
+          <span className="mono-caps text-verdant text-[10px] tracking-[0.16em]">CURRENT</span>
         )}
       </div>
       <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2 pl-5">
@@ -523,9 +498,7 @@ function ActivityEntry({
           <span className="text-muted-foreground">
             {" "}
             · capacity{" "}
-            <span className="font-mono">
-              {ccc.fixedPointToString(entry.capacity, 8)} CKB
-            </span>
+            <span className="font-mono">{ccc.fixedPointToString(entry.capacity, 8)} CKB</span>
           </span>
         </div>
         {explorerHref ? (

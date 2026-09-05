@@ -3,15 +3,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  MetaStrip,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, MetaStrip } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
-import { buildDeactivateTx } from "@ckb-ccc/identity";
+import { buildDeactivateTx } from "@/lib/did-ckb";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const searchSchema = z.object({
@@ -87,8 +82,8 @@ function DeactivatePage() {
       <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24 text-center">
         <h1 className="text-3xl font-medium mb-4">No DID selected</h1>
         <p className="text-muted-foreground mb-8 max-w-[58ch] mx-auto">
-          Deactivation needs an explicit DID. Go back to your dashboard and select the
-          one you want to retire.
+          Deactivation needs an explicit DID. Go back to your dashboard and select the one you want
+          to retire.
         </p>
         <Link to="/my">
           <VButton variant="secondary">Back to my DID</VButton>
@@ -130,8 +125,8 @@ function DeactivatePage() {
       <div className="mono-caps text-alarm mb-3">REGISTRY · IRREVERSIBLE</div>
       <h1 className="text-4xl md:text-5xl font-medium mb-4">Deactivate this DID.</h1>
       <p className="text-muted-foreground mb-12 max-w-[60ch]">
-        This action burns the Cell that holds your identity. It cannot be undone, and
-        the same DID string can never be reissued.
+        This action burns the Cell that holds your identity. It cannot be undone, and the same DID
+        string can never be reissued.
       </p>
 
       {error ? (
@@ -152,9 +147,7 @@ function DeactivatePage() {
           footerRight="DOC 099"
         >
           <div className="px-6 pt-8 pb-6">
-            <div className="mono-caps text-muted-foreground mb-3">
-              IDENTIFIER TO DEACTIVATE
-            </div>
+            <div className="mono-caps text-muted-foreground mb-3">IDENTIFIER TO DEACTIVATE</div>
             <Brackets className="block">
               <div className="font-mono text-[18px] md:text-[24px] leading-tight break-all">
                 {did}
@@ -197,14 +190,12 @@ function DeactivatePage() {
                       {String(s).padStart(2, "0")}
                     </div>
                     <p className="text-sm text-muted-foreground max-w-[58ch]">
-                      The deactivate button unlocks after a 24-hour wait. This is a
-                      deliberate friction. Leave the page; the timer continues.
+                      The deactivate button unlocks after a 24-hour wait. This is a deliberate
+                      friction. Leave the page; the timer continues.
                     </p>
                   </div>
                 ) : (
-                  <div className="mono-caps text-verdant">
-                    COOL-DOWN COMPLETE · YOU MAY PROCEED
-                  </div>
+                  <div className="mono-caps text-verdant">COOL-DOWN COMPLETE · YOU MAY PROCEED</div>
                 )}
               </div>
 
@@ -221,20 +212,15 @@ function DeactivatePage() {
               </div>
 
               <div className="px-6 pt-3 pb-2 text-xs text-muted-foreground max-w-[58ch]">
-                Your wallet will prompt once. After you approve, the burn
-                transaction destroys the DID Cell and returns the locked
-                capacity to your wallet in the same transaction.
+                Your wallet will prompt once. After you approve, the burn transaction destroys the
+                DID Cell and returns the locked capacity to your wallet in the same transaction.
               </div>
               <div className="px-6 pb-6 pt-3 flex flex-wrap justify-between gap-3">
                 <Link to="/my">
                   <VButton variant="ghost">← Cancel and return</VButton>
                 </Link>
                 {signer ? (
-                  <VButton
-                    variant="destructive"
-                    disabled={locked || !matches}
-                    onClick={handleBurn}
-                  >
+                  <VButton variant="destructive" disabled={locked || !matches} onClick={handleBurn}>
                     Sign burn transaction
                   </VButton>
                 ) : (

@@ -2,7 +2,7 @@ import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { listDidsByLock, type DidRecord } from "@ckb-ccc/identity";
+import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useCopy } from "@/hooks/use-copy";
 import { Avatar } from "./Avatar";
 
@@ -13,7 +13,12 @@ function truncate(value: string, head = 6, tail = 6): string {
 
 function initials(record: DidRecord | undefined, fallback: string): string {
   const source = record?.profile.displayName ?? fallback;
-  return source.replace(/[^a-zA-Z0-9]+/g, "").slice(0, 2).toUpperCase() || "??";
+  return (
+    source
+      .replace(/[^a-zA-Z0-9]+/g, "")
+      .slice(0, 2)
+      .toUpperCase() || "??"
+  );
 }
 
 export function WalletButton() {
@@ -27,10 +32,7 @@ export function WalletButton() {
   useEffect(() => {
     if (!menuOpen) return;
     function onPointerDown(e: MouseEvent | TouchEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     }
@@ -110,12 +112,7 @@ export function WalletButton() {
         className="border border-ink h-10 px-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
       >
         {primaryDid ? (
-          <Avatar
-            url={avatarUrl}
-            fallback={fallbackInitials}
-            size="xs"
-            className="border-0"
-          />
+          <Avatar url={avatarUrl} fallback={fallbackInitials} size="xs" className="border-0" />
         ) : (
           <span className="w-2 h-2 bg-verdant" aria-hidden />
         )}
@@ -127,11 +124,7 @@ export function WalletButton() {
         <div className="absolute right-0 mt-2 min-w-[260px] bg-paper border-2 border-ink z-50">
           {primaryDid ? (
             <div className="px-4 py-3 border-b border-hairline flex items-center gap-3">
-              <Avatar
-                url={avatarUrl}
-                fallback={fallbackInitials}
-                size="sm"
-              />
+              <Avatar url={avatarUrl} fallback={fallbackInitials} size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium truncate">
                   {displayName ?? "(no display name)"}

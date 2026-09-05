@@ -3,38 +3,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  MetaStrip,
-  FieldRow,
-  Tag,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-import { buildMigrationTx } from "@ckb-ccc/identity";
+import { buildMigrationTx } from "@/lib/did-ckb";
 import {
   fetchPlcLog,
   getGenesisOperation,
   getRotationKeys,
   type PlcOperation,
   type PlcRotationKey,
-} from "@ckb-ccc/identity/plc";
+} from "@ckb-ccc/did-ckb/plc";
 
 export const Route = createFileRoute("/migrate")({
   component: MigratePage,
 });
 
-type Stage =
-  | "source"
-  | "compose"
-  | "review"
-  | "pending"
-  | "done"
-  | "error";
+type Stage = "source" | "compose" | "review" | "pending" | "done" | "error";
 
 function MigratePage() {
   useDocumentTitle("Migrate from did:plc");
@@ -44,8 +31,7 @@ function MigratePage() {
   const queryClient = useQueryClient();
   const { copied, copy } = useCopy();
 
-  const networkLabel =
-    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
 
   const [sourceInput, setSourceInput] = useState("");
   const [log, setLog] = useState<PlcOperation[] | null>(null);
@@ -138,12 +124,9 @@ function MigratePage() {
           bio: bio.trim() || undefined,
         },
         alsoKnownAs:
-          genesis.alsoKnownAs && genesis.alsoKnownAs.length > 0
-            ? genesis.alsoKnownAs
-            : undefined,
+          genesis.alsoKnownAs && genesis.alsoKnownAs.length > 0 ? genesis.alsoKnownAs : undefined,
         verificationMethods:
-          genesis.verificationMethods &&
-          Object.keys(genesis.verificationMethods).length > 0
+          genesis.verificationMethods && Object.keys(genesis.verificationMethods).length > 0
             ? genesis.verificationMethods
             : undefined,
         services:
@@ -184,10 +167,9 @@ function MigratePage() {
       <div className="mono-caps text-cobalt mb-3">REGISTRY · MIGRATION · {networkLabel}</div>
       <h1 className="text-4xl md:text-5xl font-medium mb-4">Migrate from did:plc.</h1>
       <p className="text-muted-foreground mb-10 max-w-[60ch]">
-        Move an existing did:plc identity onto CKB. The genesis operation is
-        anchored in your did:ckb's <span className="font-mono">local_id</span>{" "}
-        field, signed by one of the PLC rotation keys. After a 72-hour
-        finalisation window, the migration is sealed.
+        Move an existing did:plc identity onto CKB. The genesis operation is anchored in your
+        did:ckb's <span className="font-mono">local_id</span> field, signed by one of the PLC
+        rotation keys. After a 72-hour finalisation window, the migration is sealed.
       </p>
 
       {error ? (
@@ -207,9 +189,7 @@ function MigratePage() {
             footerRight="STAGE 01"
           >
             <div className="px-6 pt-6 pb-3">
-              <div className="mono-caps text-muted-foreground mb-3">
-                SOURCE IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">SOURCE IDENTIFIER</div>
               <form onSubmit={handleFetchSource} className="flex flex-col sm:flex-row gap-3">
                 <input
                   value={sourceInput}
@@ -228,14 +208,10 @@ function MigratePage() {
                   {fetchingLog ? "Fetching…" : "Fetch from PLC directory"}
                 </VButton>
               </form>
-              {sourceError && (
-                <p className="text-xs text-alarm mt-2">{sourceError}</p>
-              )}
+              {sourceError && <p className="text-xs text-alarm mt-2">{sourceError}</p>}
               <p className="text-xs text-muted-foreground mt-3 max-w-[58ch]">
-                We pull your PLC operation log from{" "}
-                <span className="font-mono">plc.directory</span>. Only the
-                genesis operation is needed for the on-chain witness (WIP-02
-                §3.1.1).
+                We pull your PLC operation log from <span className="font-mono">plc.directory</span>
+                . Only the genesis operation is needed for the on-chain witness (WIP-02 §3.1.1).
               </p>
             </div>
           </Manifest>
@@ -253,12 +229,8 @@ function MigratePage() {
               footerRight={`OPS ${log?.length ?? 1}`}
             >
               <div className="px-6 pt-6 pb-3">
-                <div className="mono-caps text-muted-foreground mb-2">
-                  SOURCE IDENTIFIER
-                </div>
-                <div className="font-mono text-sm md:text-base break-all">
-                  {sourceInput.trim()}
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">SOURCE IDENTIFIER</div>
+                <div className="font-mono text-sm md:text-base break-all">{sourceInput.trim()}</div>
               </div>
               <MetaStrip
                 items={[
@@ -273,25 +245,18 @@ function MigratePage() {
                   },
                   {
                     label: "Handles",
-                    value: String(genesis.alsoKnownAs?.length ?? 0).padStart(
-                      2,
-                      "0",
-                    ),
+                    value: String(genesis.alsoKnownAs?.length ?? 0).padStart(2, "0"),
                   },
                 ]}
               />
               <div className="px-6 py-5">
-                <div className="mono-caps text-muted-foreground mb-2">
-                  ROTATION KEYS
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">ROTATION KEYS</div>
                 <ul className="space-y-2">
                   {rotationKeys.map((rk, i) => (
                     <li key={rk.didKey} className="flex items-center gap-2 flex-wrap">
                       <Tag>#{i}</Tag>
                       <Tag>{rk.curve.toUpperCase()}</Tag>
-                      <span className="font-mono text-xs break-all">
-                        {rk.didKey}
-                      </span>
+                      <span className="font-mono text-xs break-all">{rk.didKey}</span>
                     </li>
                   ))}
                 </ul>
@@ -302,9 +267,7 @@ function MigratePage() {
           <div className="pt-4 pl-4">
             <Manifest
               idTab={<IdTab color="cobalt">TARGET · DID:CKB</IdTab>}
-              state={
-                stage === "done" ? "MIGRATING" : stage === "pending" ? "PENDING" : "DRAFT"
-              }
+              state={stage === "done" ? "MIGRATING" : stage === "pending" ? "PENDING" : "DRAFT"}
               stateLabel={
                 stage === "done"
                   ? "MIGRATING · 72H WINDOW"
@@ -322,9 +285,7 @@ function MigratePage() {
               }
             >
               <div className="px-6 pt-6 pb-3">
-                <div className="mono-caps text-muted-foreground mb-2">
-                  NEW IDENTIFIER
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">NEW IDENTIFIER</div>
                 <Brackets className="block">
                   <div className="font-mono text-sm md:text-base break-all min-h-[1.5em]">
                     {resultDid ?? "computed after staging"}
@@ -380,9 +341,7 @@ function MigratePage() {
                             <Tag>#{i}</Tag>
                             <Tag>{rk.curve.toUpperCase()}</Tag>
                           </div>
-                          <div className="font-mono text-xs break-all">
-                            {rk.didKey}
-                          </div>
+                          <div className="font-mono text-xs break-all">{rk.didKey}</div>
                         </div>
                       </label>
                     </li>
@@ -404,16 +363,14 @@ function MigratePage() {
                   spellCheck={false}
                 />
                 <p className="text-xs text-alarm mt-2 max-w-[78ch]">
-                  This private key is used once to sign the CKB transaction
-                  hash and is never stored, logged, or transmitted by Vellum.
-                  Only paste a key you trust this browser session with.
+                  This private key is used once to sign the CKB transaction hash and is never
+                  stored, logged, or transmitted by Vellum. Only paste a key you trust this browser
+                  session with.
                 </p>
               </div>
 
               <div>
-                <div className="mono-caps text-muted-foreground mb-2">
-                  NEW DOCUMENT FIELDS
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">NEW DOCUMENT FIELDS</div>
                 <div className="space-y-3">
                   <input
                     value={displayName}
@@ -429,10 +386,9 @@ function MigratePage() {
                     className="w-full bg-paper border border-ink px-3 py-2 resize-none"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Handles, verification methods, and services from the PLC
-                    document are carried over automatically. The avatar
-                    defaults to a DID-seeded pixel-art image, which you can
-                    change later via /edit.
+                    Handles, verification methods, and services from the PLC document are carried
+                    over automatically. The avatar defaults to a DID-seeded pixel-art image, which
+                    you can change later via /edit.
                   </p>
                 </div>
               </div>
@@ -471,24 +427,16 @@ function MigratePage() {
             footerRight="STAGE 03"
           >
             <div className="px-6 pt-6 pb-3">
-              <div className="mono-caps text-muted-foreground mb-2">
-                NEW IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-2">NEW IDENTIFIER</div>
               <Brackets className="block">
-                <div className="font-mono text-sm md:text-base break-all">
-                  {resultDid}
-                </div>
+                <div className="font-mono text-sm md:text-base break-all">{resultDid}</div>
               </Brackets>
             </div>
             <div>
               <FieldRow
                 label="Source"
                 mono
-                value={
-                  <span className="font-mono text-xs break-all">
-                    {sourceInput.trim()}
-                  </span>
-                }
+                value={<span className="font-mono text-xs break-all">{sourceInput.trim()}</span>}
               />
               <FieldRow
                 label="Capacity"
@@ -507,11 +455,10 @@ function MigratePage() {
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
             <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[78ch]">
-              Your wallet will prompt once to authorize the CKB transaction's
-              lock script. The PLC rotation-key signature has already been
-              attached to the witness. After approval, the migration cell
-              lands on chain in <Tag variant="cobalt">MIGRATING</Tag> state
-              for 72 hours before sealing.
+              Your wallet will prompt once to authorize the CKB transaction's lock script. The PLC
+              rotation-key signature has already been attached to the witness. After approval, the
+              migration cell lands on chain in <Tag variant="cobalt">MIGRATING</Tag> state for 72
+              hours before sealing.
             </div>
             <div className="px-6 pb-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStage("compose")}>
@@ -567,30 +514,22 @@ function MigratePage() {
             footerRight="STAGE 04"
           >
             <div className="px-6 pt-6 pb-3">
-              <div className="mono-caps text-muted-foreground mb-2">
-                NEW IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-2">NEW IDENTIFIER</div>
               <Brackets className="block">
-                <div className="font-mono text-sm md:text-base break-all">
-                  {resultDid}
-                </div>
+                <div className="font-mono text-sm md:text-base break-all">{resultDid}</div>
               </Brackets>
               <p className="text-sm text-muted-foreground mt-6 max-w-[78ch]">
-                The migration cell is live on chain. During the next 72 hours,
-                a higher-priority rotation key from the source did:plc can
-                submit a competing migration and overwrite this one. After
-                the window closes, the migration is final and the status
-                flips to <Tag>ACTIVE</Tag>.
+                The migration cell is live on chain. During the next 72 hours, a higher-priority
+                rotation key from the source did:plc can submit a competing migration and overwrite
+                this one. After the window closes, the migration is final and the status flips to{" "}
+                <Tag>ACTIVE</Tag>.
               </p>
             </div>
             <div className="px-6 py-6 flex flex-wrap gap-3 justify-end">
               <VButton variant="secondary" onClick={() => copy(resultDid)}>
                 {copied ? "Copied" : "Copy DID"}
               </VButton>
-              <VButton
-                variant="verdant"
-                onClick={() => navigate({ to: "/my" })}
-              >
+              <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
                 View my DID
               </VButton>
             </div>

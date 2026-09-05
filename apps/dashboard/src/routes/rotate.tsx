@@ -4,17 +4,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  FieldRow,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, FieldRow } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
-import { buildUpdateTx, resolveDid, type DidRecord } from "@ckb-ccc/identity";
+import { buildUpdateTx, resolveDid, type DidRecord } from "@/lib/did-ckb";
 
 const searchSchema = z.object({
   did: z.string().optional(),
@@ -132,9 +127,7 @@ function RotatePage() {
   if (isLoading) {
     return (
       <Status>
-        <div className="mono-caps text-muted-foreground">
-          RESOLVING DID · INDEXING CELLS…
-        </div>
+        <div className="mono-caps text-muted-foreground">RESOLVING DID · INDEXING CELLS…</div>
       </Status>
     );
   }
@@ -192,27 +185,24 @@ function RotatePage() {
     }
   }
 
-  const networkLabel =
-    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
 
   return (
     <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-16">
       <div className="mono-caps text-alarm mb-3">REGISTRY · KEY ROTATION</div>
       <h1 className="text-4xl md:text-5xl font-medium mb-4">Rotate lock script.</h1>
       <p className="text-muted-foreground mb-10 max-w-[60ch]">
-        Move control of this DID to a different key without changing the
-        identifier. The current Lock Script signs the rotation; afterwards
-        only the new Lock can update or deactivate the DID. The DID string
-        does not change.
+        Move control of this DID to a different key without changing the identifier. The current
+        Lock Script signs the rotation; afterwards only the new Lock can update or deactivate the
+        DID. The DID string does not change.
       </p>
 
       <div className="mb-12 border-2 border-alarm bg-paper px-4 py-3">
         <div className="mono-caps text-alarm mb-1">IRREVERSIBLE BY DEFAULT</div>
         <p className="text-sm text-ink max-w-[78ch]">
-          If you lose access to the new key after rotation, you also lose
-          control of the DID. The current Lock Script signs the rotation
-          transaction, so test with a key you control fully before rotating
-          to a multi-sig or a hardware-backed lock.
+          If you lose access to the new key after rotation, you also lose control of the DID. The
+          current Lock Script signs the rotation transaction, so test with a key you control fully
+          before rotating to a multi-sig or a hardware-backed lock.
         </p>
       </div>
 
@@ -233,9 +223,7 @@ function RotatePage() {
             footerRight="DOC 002"
           >
             <div className="px-6 pt-6 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                ROTATING
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">ROTATING</div>
               <Brackets className="block">
                 <div className="font-mono text-[18px] md:text-[22px] leading-tight break-all">
                   {record.did}
@@ -244,15 +232,11 @@ function RotatePage() {
             </div>
             <div className="px-6 py-5 border-t border-hairline space-y-4">
               <div>
-                <div className="mono-caps text-muted-foreground mb-2">
-                  CURRENT LOCK
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">CURRENT LOCK</div>
                 <ScriptCard script={currentLock} />
               </div>
               <div>
-                <div className="mono-caps text-muted-foreground mb-2">
-                  TARGET CKB ADDRESS
-                </div>
+                <div className="mono-caps text-muted-foreground mb-2">TARGET CKB ADDRESS</div>
                 <input
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
@@ -262,24 +246,19 @@ function RotatePage() {
                   }`}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  Paste the address that should control this DID after
-                  rotation. The address's Lock Script becomes the new owner.
+                  Paste the address that should control this DID after rotation. The address's Lock
+                  Script becomes the new owner.
                 </p>
-                {parseError && (
-                  <p className="text-xs text-alarm mt-1.5">{parseError}</p>
-                )}
+                {parseError && <p className="text-xs text-alarm mt-1.5">{parseError}</p>}
                 {sameAsCurrent && (
                   <p className="text-xs text-amber mt-1.5">
-                    Target Lock Script matches the current one. No rotation
-                    needed.
+                    Target Lock Script matches the current one. No rotation needed.
                   </p>
                 )}
               </div>
               {resolvedScript && !sameAsCurrent && (
                 <div>
-                  <div className="mono-caps text-muted-foreground mb-2">
-                    NEW LOCK (RESOLVED)
-                  </div>
+                  <div className="mono-caps text-muted-foreground mb-2">NEW LOCK (RESOLVED)</div>
                   <ScriptCard script={resolvedScript} highlight />
                 </div>
               )}
@@ -316,9 +295,7 @@ function RotatePage() {
             footerRight="DOC 002"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">IDENTIFIER</div>
               <Brackets className="block">
                 <div className="font-mono text-[18px] md:text-[22px] leading-tight break-all">
                   {record.did}
@@ -346,27 +323,18 @@ function RotatePage() {
                   </span>
                 }
               />
-              <FieldRow
-                label="Document changes"
-                mono
-                value="none (rotation only)"
-              />
+              <FieldRow label="Document changes" mono value="none (rotation only)" />
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
             <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[58ch]">
-              Your wallet will prompt once with the current Lock Script
-              signing the rotation. After confirmation, only the new Lock
-              can update or deactivate this DID.
+              Your wallet will prompt once with the current Lock Script signing the rotation. After
+              confirmation, only the new Lock can update or deactivate this DID.
             </div>
             <div className="px-6 pb-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStage("compose")}>
                 ← Back
               </VButton>
-              <VButton
-                variant="destructive"
-                onClick={handleSign}
-                disabled={busy}
-              >
+              <VButton variant="destructive" onClick={handleSign} disabled={busy}>
                 {busy ? "Waiting for wallet…" : "Sign rotation transaction"}
               </VButton>
             </div>
@@ -384,9 +352,7 @@ function RotatePage() {
             footerRight="DOC 002"
           >
             <div className="px-6 pt-8 pb-6">
-              <div className="mono-caps text-muted-foreground mb-3">
-                ROTATING
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">ROTATING</div>
               <Brackets className="block">
                 <div className="font-mono text-[18px] md:text-[22px] leading-tight break-all">
                   {record.did}
@@ -401,9 +367,7 @@ function RotatePage() {
                 </span>
               </div>
               {txHash && (
-                <div className="font-mono text-xs text-muted-foreground break-all">
-                  TX {txHash}
-                </div>
+                <div className="font-mono text-xs text-muted-foreground break-all">TX {txHash}</div>
               )}
             </div>
           </Manifest>
@@ -430,18 +394,15 @@ function RotatePage() {
                 </div>
               </Brackets>
               <p className="text-sm text-muted-foreground mt-6 max-w-[58ch]">
-                The DID identifier is unchanged. The new Lock Script now
-                controls updates and deactivation.
+                The DID identifier is unchanged. The new Lock Script now controls updates and
+                deactivation.
               </p>
             </div>
             <div className="px-6 py-6 flex flex-wrap gap-3 justify-end">
               <VButton variant="secondary" onClick={() => copy(record.did)}>
                 {copied ? "Copied" : "Copy DID"}
               </VButton>
-              <VButton
-                variant="verdant"
-                onClick={() => navigate({ to: "/my" })}
-              >
+              <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
                 View my DID
               </VButton>
             </div>
@@ -494,9 +455,7 @@ function Guard({ title, body }: { title: string; body: string }) {
 }
 
 function Status({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24">{children}</div>
-  );
+  return <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24">{children}</div>;
 }
 
 function truncate(hex: string, head = 8, tail = 6): string {

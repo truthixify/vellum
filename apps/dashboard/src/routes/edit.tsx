@@ -4,12 +4,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 
-import {
-  Manifest,
-  IdTab,
-  Brackets,
-  FieldRow,
-} from "@/components/vellum/Manifest";
+import { Manifest, IdTab, Brackets, FieldRow } from "@/components/vellum/Manifest";
 import { Avatar } from "@/components/vellum/Avatar";
 import { VButton } from "@/components/vellum/VButton";
 import { useCopy } from "@/hooks/use-copy";
@@ -22,7 +17,7 @@ import {
   PROFILE_SERVICE_KEY,
   resolveDid,
   type DidRecord,
-} from "@ckb-ccc/identity";
+} from "@/lib/did-ckb";
 import {
   validateHandle,
   validateServiceName,
@@ -105,9 +100,11 @@ function EditPage() {
       })),
     );
     setVms(
-      Object.entries(record.document.verificationMethods ?? {}).map(
-        ([k, v]) => ({ id: genId(), key: k, value: v }),
-      ),
+      Object.entries(record.document.verificationMethods ?? {}).map(([k, v]) => ({
+        id: genId(),
+        key: k,
+        value: v,
+      })),
     );
     setServices(
       Object.entries(record.document.services ?? {})
@@ -160,9 +157,7 @@ function EditPage() {
   if (loadingRecord) {
     return (
       <Status>
-        <div className="mono-caps text-muted-foreground">
-          RESOLVING DID · INDEXING CELLS…
-        </div>
+        <div className="mono-caps text-muted-foreground">RESOLVING DID · INDEXING CELLS…</div>
       </Status>
     );
   }
@@ -196,21 +191,13 @@ function EditPage() {
     setVms((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
   function addService() {
-    setServices((rows) => [
-      ...rows,
-      { id: genId(), key: "", type: "", endpoint: "" },
-    ]);
+    setServices((rows) => [...rows, { id: genId(), key: "", type: "", endpoint: "" }]);
   }
   function removeService(id: string) {
     setServices((rows) => rows.filter((r) => r.id !== id));
   }
-  function updateService(
-    id: string,
-    patch: Partial<Omit<ServiceEntry, "id">>,
-  ) {
-    setServices((rows) =>
-      rows.map((r) => (r.id === id ? { ...r, ...patch } : r)),
-    );
+  function updateService(id: string, patch: Partial<Omit<ServiceEntry, "id">>) {
+    setServices((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
   async function handleStage() {
@@ -221,9 +208,7 @@ function EditPage() {
     setBusy(true);
     setError(null);
     try {
-      const cleanHandles = handles
-        .map((h) => h.value.trim())
-        .filter((v) => v.length > 0);
+      const cleanHandles = handles.map((h) => h.value.trim()).filter((v) => v.length > 0);
       const cleanVms = Object.fromEntries(
         vms
           .filter((v) => v.key.trim() && v.value.trim())
@@ -232,10 +217,7 @@ function EditPage() {
       const cleanServices = Object.fromEntries(
         services
           .filter((s) => s.key.trim() && s.type.trim() && s.endpoint.trim())
-          .map((s) => [
-            s.key.trim(),
-            { type: s.type.trim(), endpoint: s.endpoint.trim() },
-          ]),
+          .map((s) => [s.key.trim(), { type: s.type.trim(), endpoint: s.endpoint.trim() }]),
       );
       const trimmedAvatar = avatar.trim();
       const document = buildDocument(
@@ -248,12 +230,8 @@ function EditPage() {
         },
         {
           alsoKnownAs: cleanHandles.length ? cleanHandles : undefined,
-          verificationMethods: Object.keys(cleanVms).length
-            ? cleanVms
-            : undefined,
-          services: Object.keys(cleanServices).length
-            ? cleanServices
-            : undefined,
+          verificationMethods: Object.keys(cleanVms).length ? cleanVms : undefined,
+          services: Object.keys(cleanServices).length ? cleanServices : undefined,
         },
       );
       const built = await buildUpdateTx(signer, { did: did!, document });
@@ -283,8 +261,7 @@ function EditPage() {
     }
   }
 
-  const networkLabel =
-    client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
+  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
 
   return (
     <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-16">
@@ -293,8 +270,8 @@ function EditPage() {
       </div>
       <h1 className="text-4xl md:text-5xl font-medium mb-4">Edit DID.</h1>
       <p className="text-muted-foreground mb-10 max-w-[58ch]">
-        Update your document on chain. Capacity is reused, you pay only the
-        network fee. The Lock Script on the cell authorizes the update.
+        Update your document on chain. Capacity is reused, you pay only the network fee. The Lock
+        Script on the cell authorizes the update.
       </p>
 
       <div className="mb-12 border border-ink p-4 flex items-center justify-between gap-3">
@@ -337,9 +314,7 @@ function EditPage() {
                   <div className="flex items-start gap-4 flex-wrap sm:flex-nowrap">
                     <Avatar
                       url={avatar.trim() || defaultAvatarUrl(record.did)}
-                      fallback={(displayName || record.did.slice(-2))
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      fallback={(displayName || record.did.slice(-2)).slice(0, 2).toUpperCase()}
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
@@ -355,9 +330,8 @@ function EditPage() {
                         <p className="text-xs text-alarm mt-1.5">{avatarError}</p>
                       ) : (
                         <p className="text-xs text-muted-foreground mt-1.5">
-                          Leave empty for the DID-seeded pixel-art default.
-                          Paste any image URL to override. ipfs:// goes
-                          through a public gateway.
+                          Leave empty for the DID-seeded pixel-art default. Paste any image URL to
+                          override. ipfs:// goes through a public gateway.
                         </p>
                       )}
                     </div>
@@ -371,9 +345,7 @@ function EditPage() {
                     className="w-full bg-paper border border-ink px-3 py-2 resize-none"
                     placeholder="Up to 240 characters."
                   />
-                  <div className="mono-caps text-muted-foreground mt-1.5">
-                    {bio.length} / 240
-                  </div>
+                  <div className="mono-caps text-muted-foreground mt-1.5">{bio.length} / 240</div>
                 </Field>
               </Section>
 
@@ -398,11 +370,7 @@ function EditPage() {
                             />
                             <RemoveButton onClick={() => removeHandle(h.id)} />
                           </div>
-                          {error && (
-                            <p className="text-xs text-alarm mt-1.5 ml-1">
-                              {error}
-                            </p>
-                          )}
+                          {error && <p className="text-xs text-alarm mt-1.5 ml-1">{error}</p>}
                         </div>
                       );
                     })}
@@ -514,11 +482,7 @@ function EditPage() {
                 <VButton variant="ghost">← Cancel</VButton>
               </Link>
               {signer ? (
-                <VButton
-                  variant="verdant"
-                  onClick={handleStage}
-                  disabled={busy}
-                >
+                <VButton variant="verdant" onClick={handleStage} disabled={busy}>
                   {busy ? "Preparing transaction…" : "Stage for signing"}
                 </VButton>
               ) : (
@@ -540,9 +504,7 @@ function EditPage() {
             footerRight="REV +01"
           >
             <div className="px-6 pt-8 pb-4">
-              <div className="mono-caps text-muted-foreground mb-3">
-                IDENTIFIER
-              </div>
+              <div className="mono-caps text-muted-foreground mb-3">IDENTIFIER</div>
               <Brackets className="block">
                 <div className="font-mono text-[18px] md:text-[22px] leading-tight break-all">
                   {record.did}
@@ -550,10 +512,7 @@ function EditPage() {
               </Brackets>
             </div>
             <div>
-              <FieldRow
-                label="Display name"
-                value={<span>{displayName || "(unset)"}</span>}
-              />
+              <FieldRow label="Display name" value={<span>{displayName || "(unset)"}</span>} />
               <FieldRow
                 label="Bio"
                 value={bio || <span className="text-muted-foreground">(unset)</span>}
@@ -576,24 +535,18 @@ function EditPage() {
                 value={
                   <span>
                     {ccc.fixedPointToString(tx.outputs[0].capacity, 8)} CKB
-                    {tx.outputs[0].capacity >
-                    BigInt(record.cell.cellOutput.capacity)
+                    {tx.outputs[0].capacity > BigInt(record.cell.cellOutput.capacity)
                       ? " (cell grown)"
                       : " (unchanged)"}
                   </span>
                 }
               />
-              <FieldRow
-                label="Inputs"
-                mono
-                value={String(tx.inputs.length)}
-              />
+              <FieldRow label="Inputs" mono value={String(tx.inputs.length)} />
               <FieldRow label="Network" mono value={networkLabel} />
             </div>
             <div className="px-6 py-5 border-t border-hairline text-xs text-muted-foreground max-w-[58ch]">
-              Your wallet will prompt once. After you approve, the update
-              transaction replaces the existing DID Cell with the new
-              document on chain.
+              Your wallet will prompt once. After you approve, the update transaction replaces the
+              existing DID Cell with the new document on chain.
             </div>
             <div className="px-6 py-6 flex justify-between gap-3">
               <VButton variant="ghost" onClick={() => setStage("compose")}>
@@ -631,9 +584,7 @@ function EditPage() {
                 </span>
               </div>
               {txHash && (
-                <div className="font-mono text-xs text-muted-foreground break-all">
-                  TX {txHash}
-                </div>
+                <div className="font-mono text-xs text-muted-foreground break-all">TX {txHash}</div>
               )}
             </div>
           </Manifest>
@@ -664,10 +615,7 @@ function EditPage() {
               <VButton variant="secondary" onClick={() => copy(record.did)}>
                 {copied ? "Copied" : "Copy DID"}
               </VButton>
-              <VButton
-                variant="verdant"
-                onClick={() => navigate({ to: "/my" })}
-              >
+              <VButton variant="verdant" onClick={() => navigate({ to: "/my" })}>
                 View my DID
               </VButton>
             </div>
@@ -691,9 +639,7 @@ function Section({
     <div className="border-t border-hairline pt-5 first:border-t-0 first:pt-0">
       <div className="mono-caps text-muted-foreground mb-1">{title}</div>
       {subtitle ? (
-        <p className="text-sm text-muted-foreground mb-4 max-w-[58ch]">
-          {subtitle}
-        </p>
+        <p className="text-sm text-muted-foreground mb-4 max-w-[58ch]">{subtitle}</p>
       ) : (
         <div className="mb-3" />
       )}
@@ -702,13 +648,7 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="mono-label text-muted-foreground mb-2">{label}</div>
@@ -763,7 +703,5 @@ function Guard({
 }
 
 function Status({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24">{children}</div>
-  );
+  return <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-24">{children}</div>;
 }
