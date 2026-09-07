@@ -1,5 +1,6 @@
 import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, WalletCards } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
@@ -96,59 +97,58 @@ export function WalletButton() {
 
   if (!signerInfo) {
     return (
-      <button
-        onClick={() => open()}
-        className="mono-caps bg-verdant text-paper px-4 py-2 hover:bg-[var(--verdant-hover)] active:bg-[var(--verdant-press)] transition-colors"
-      >
-        Connect wallet
+      <button onClick={() => open()} className="dashboard-wallet dashboard-wallet--connect">
+        <WalletCards size={14} strokeWidth={1.8} aria-hidden="true" />
+        <span>Connect wallet</span>
       </button>
     );
   }
 
   return (
-    <div className="relative" ref={wrapperRef}>
+    <div className="dashboard-wallet-wrap" ref={wrapperRef}>
       <button
         onClick={() => setMenuOpen((v) => !v)}
-        className="border border-ink h-10 px-3 flex items-center gap-2 hover:bg-ink hover:text-paper transition-colors"
+        className="dashboard-wallet"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
       >
         {primaryDid ? (
           <Avatar url={avatarUrl} fallback={fallbackInitials} size="xs" className="border-0" />
         ) : (
-          <span className="w-2 h-2 bg-verdant" aria-hidden />
+          <span className="dashboard-wallet__status" aria-hidden />
         )}
-        <span className="font-mono normal-case text-[13px] tracking-tight max-w-[14ch] truncate">
+        <span className="dashboard-wallet__label">
           {displayName ?? (address ? truncate(address) : "Loading…")}
         </span>
+        <ChevronDown size={13} strokeWidth={1.8} aria-hidden="true" />
       </button>
       {menuOpen ? (
-        <div className="absolute right-0 mt-2 min-w-[260px] bg-paper border-2 border-ink z-50">
+        <div className="dashboard-wallet-menu" role="menu">
           {primaryDid ? (
-            <div className="px-4 py-3 border-b border-hairline flex items-center gap-3">
+            <div className="dashboard-wallet-menu__identity">
               <Avatar url={avatarUrl} fallback={fallbackInitials} size="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">
+              <div>
+                <div className="dashboard-wallet-menu__name">
                   {displayName ?? "(no display name)"}
                 </div>
-                <div className="font-mono text-xs text-muted-foreground truncate">
-                  {truncate(primaryDid.did, 14, 8)}
-                </div>
+                <div className="dashboard-wallet-menu__did">{truncate(primaryDid.did, 14, 8)}</div>
               </div>
             </div>
           ) : null}
-          <div className="px-4 py-3 border-b border-hairline">
-            <div className="mono-caps text-muted-foreground">Wallet</div>
-            <div className="text-sm font-medium">{wallet?.name ?? "Connected"}</div>
+          <div className="dashboard-wallet-menu__fact">
+            <span>Wallet</span>
+            <strong>{wallet?.name ?? "Connected"}</strong>
           </div>
-          <div className="px-4 py-3 border-b border-hairline">
-            <div className="mono-caps text-muted-foreground">Network</div>
-            <div className="text-sm font-mono">{network.toUpperCase()}</div>
+          <div className="dashboard-wallet-menu__fact">
+            <span>Network</span>
+            <strong className="mono">{network.toUpperCase()}</strong>
           </div>
           <button
             onClick={() => {
               if (address) void copy(address);
             }}
             disabled={!address}
-            className="w-full text-left px-4 py-3 mono-caps hover:bg-ink hover:text-paper transition-colors border-b border-hairline"
+            className="dashboard-wallet-menu__action"
           >
             {copied ? "Address copied" : "Copy address"}
           </button>
@@ -157,7 +157,7 @@ export function WalletButton() {
               setMenuOpen(false);
               open();
             }}
-            className="w-full text-left px-4 py-3 mono-caps hover:bg-ink hover:text-paper transition-colors border-b border-hairline"
+            className="dashboard-wallet-menu__action"
           >
             Switch wallet
           </button>
@@ -166,7 +166,7 @@ export function WalletButton() {
               setMenuOpen(false);
               disconnect();
             }}
-            className="w-full text-left px-4 py-3 mono-caps text-alarm hover:bg-alarm hover:text-paper transition-colors"
+            className="dashboard-wallet-menu__action dashboard-wallet-menu__action--danger"
           >
             Disconnect
           </button>

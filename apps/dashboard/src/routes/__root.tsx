@@ -1,53 +1,31 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet,
+  Activity,
+  BookOpen,
+  ExternalLink,
+  Landmark,
+  LayoutGrid,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Shield,
+} from "lucide-react";
+import {
   Link,
+  Outlet,
   createRootRouteWithContext,
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { ThemeButton, Wordmark } from "@vellum/ui";
+import type { ComponentType, ReactNode } from "react";
 
 import { WalletButton } from "@/components/vellum/WalletButton";
 
-function NotFoundComponent() {
-  return (
-    <div className="min-h-screen bg-paper flex items-center justify-center px-6">
-      <div className="border-2 border-ink p-12 text-center max-w-md">
-        <div className="mono-caps text-muted-foreground mb-4">ERROR · 404</div>
-        <h1 className="text-3xl font-medium mb-3">Page not found</h1>
-        <p className="text-muted-foreground mb-6">This document does not exist in the registry.</p>
-        <Link to="/" className="mono-caps inline-block bg-ink text-paper px-5 py-3">
-          Return home
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
-  const router = useRouter();
-  return (
-    <div className="min-h-screen bg-paper flex items-center justify-center px-6">
-      <div className="border-2 border-ink p-12 text-center max-w-md">
-        <div className="mono-caps text-alarm mb-4">ERROR · UNHANDLED</div>
-        <h1 className="text-2xl font-medium mb-3">This page didn't load</h1>
-        <p className="text-muted-foreground mb-6 font-mono text-sm">{error.message}</p>
-        <button
-          onClick={() => {
-            router.invalidate();
-            reset();
-          }}
-          className="mono-caps bg-ink text-paper px-5 py-3"
-        >
-          Retry
-        </button>
-      </div>
-    </div>
-  );
-}
+const SITE_ORIGIN =
+  import.meta.env.VITE_SITE_URL ??
+  (import.meta.env.DEV ? "http://localhost:8081" : "https://usevellum.xyz");
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: RootComponent,
@@ -55,258 +33,165 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+type NavItem = {
+  label: string;
+  to: "/" | "/my" | "/resolve" | "/issue" | "/activity" | "/governance";
+  icon: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
+};
+
+const PRIMARY_NAV: NavItem[] = [
+  { label: "Overview", to: "/", icon: LayoutGrid },
+  { label: "Identity", to: "/my", icon: Shield },
+  { label: "Verify", to: "/resolve", icon: Search },
+  { label: "Issue", to: "/issue", icon: Plus },
+  { label: "Activity", to: "/activity", icon: Activity },
+  { label: "Governance", to: "/governance", icon: Landmark },
+];
+
+const MOBILE_NAV = [PRIMARY_NAV[0], PRIMARY_NAV[1], PRIMARY_NAV[2], PRIMARY_NAV[4], PRIMARY_NAV[3]];
+
+function DashboardNavLink({ item, mobile = false }: { item: NavItem; mobile?: boolean }) {
+  const Icon = mobile && item.to === "/issue" ? MoreHorizontal : item.icon;
+  const base = mobile ? "dashboard-mobile-link" : "dashboard-nav-link";
   return (
     <Link
-      to={to}
-      activeOptions={{ exact: false }}
-      className="mono-caps text-ink px-2 py-1 hover:bg-ink hover:text-paper transition-colors"
-      activeProps={{
-        className: "mono-caps bg-verdant text-paper px-2 py-1 transition-colors",
-      }}
+      to={item.to}
+      activeOptions={{ exact: item.to === "/" }}
+      className={base}
+      activeProps={{ className: `${base} ${base}--active` }}
     >
-      {children}
+      <Icon size={mobile ? 18 : 15} strokeWidth={1.8} aria-hidden={true} />
+      <span>{item.label === "Issue" && mobile ? "More" : item.label}</span>
     </Link>
   );
 }
 
-function VellumGlyph({ className }: { className?: string }) {
+function DashboardSidebar() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    >
-      <rect x="3" y="2" width="18" height="20" />
-      <path d="M3 6h18M7 10h10M7 14h10M7 18h6" />
-    </svg>
-  );
-}
-
-function TopNav() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  return (
-    <nav className="sticky top-0 z-40 bg-paper border-b border-ink">
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 h-16 flex items-center justify-between gap-3">
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
-          <VellumGlyph className="w-5 h-5 text-ink" />
-          <span className="text-lg font-medium tracking-tight">Vellum</span>
+    <aside className="dashboard-sidebar">
+      <div className="dashboard-sidebar__brand">
+        <Wordmark />
+      </div>
+      <nav className="dashboard-nav" aria-label="Dashboard navigation">
+        {PRIMARY_NAV.map((item) => (
+          <DashboardNavLink key={item.to} item={item} />
+        ))}
+      </nav>
+      <nav className="dashboard-sidebar__secondary" aria-label="Resources">
+        <Link to="/docs">
+          <BookOpen size={14} strokeWidth={1.8} />
+          Documentation
         </Link>
-        <div className="hidden md:flex items-center gap-8">
-          <NavLink to="/resolve">Resolve</NavLink>
-          <NavLink to="/migrate">Migrate</NavLink>
-          <NavLink to="/docs">Docs</NavLink>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/my"
-            className="hidden sm:inline-flex mono-caps border border-ink px-3 py-2 hover:bg-ink hover:text-paper"
-          >
-            My DID
-          </Link>
-          <WalletButton />
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            aria-expanded={mobileOpen}
-            className="md:hidden h-10 w-10 border border-ink flex items-center justify-center hover:bg-ink hover:text-paper transition-colors"
-          >
-            <span aria-hidden className="mono-caps">
-              {mobileOpen ? "×" : "≡"}
-            </span>
-          </button>
-        </div>
-      </div>
-      {mobileOpen ? (
-        <div className="md:hidden border-t border-ink bg-paper">
-          <ul>
-            <li>
-              <Link
-                to="/my"
-                activeOptions={{ exact: false }}
-                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
-                activeProps={{
-                  className:
-                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
-                }}
-              >
-                My DID
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/resolve"
-                activeOptions={{ exact: false }}
-                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
-                activeProps={{
-                  className:
-                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
-                }}
-              >
-                Resolve
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/migrate"
-                activeOptions={{ exact: false }}
-                className="block px-6 py-3 mono-caps border-b border-hairline hover:bg-ink hover:text-paper transition-colors"
-                activeProps={{
-                  className:
-                    "block px-6 py-3 mono-caps border-b border-hairline bg-verdant text-paper",
-                }}
-              >
-                Migrate
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/docs"
-                activeOptions={{ exact: false }}
-                className="block px-6 py-3 mono-caps hover:bg-ink hover:text-paper transition-colors"
-                activeProps={{
-                  className: "block px-6 py-3 mono-caps bg-verdant text-paper",
-                }}
-              >
-                Docs
-              </Link>
-            </li>
-          </ul>
-        </div>
-      ) : null}
-    </nav>
+        <a href={`${SITE_ORIGIN}/transparency`}>
+          <span className="dashboard-help-icon">?</span>Transparency
+        </a>
+        <a href={SITE_ORIGIN}>
+          <ExternalLink size={14} strokeWidth={1.8} />
+          Public site
+        </a>
+      </nav>
+    </aside>
   );
 }
 
-type FooterLink =
-  | { label: string; href: InternalFooterPath; external?: false }
-  | { label: string; href: string; external: true };
+function pageTitle(pathname: string) {
+  if (pathname === "/") return "Overview";
+  if (pathname.startsWith("/my")) return "Identity";
+  if (pathname.startsWith("/claim")) return "Identity - Claim";
+  if (pathname.startsWith("/edit")) return "Identity - Edit";
+  if (pathname.startsWith("/rotate")) return "Identity - Rotate key";
+  if (pathname.startsWith("/migrate")) return "Identity - Migrate";
+  if (pathname.startsWith("/deactivate")) return "Identity - Deactivate";
+  if (pathname.startsWith("/resolve")) return "Verify";
+  if (pathname.startsWith("/issue")) return "Issue a claim";
+  if (pathname.startsWith("/activity")) return "Activity";
+  if (pathname.startsWith("/governance")) return "Governance policy";
+  if (pathname.startsWith("/docs")) return "Documentation";
+  return "Vellum";
+}
 
-type InternalFooterPath =
-  | "/"
-  | "/claim"
-  | "/resolve"
-  | "/migrate"
-  | "/my"
-  | "/deactivate"
-  | "/docs"
-  | "/docs/did-ckb"
-  | "/docs/cell-model"
-  | "/docs/resolution"
-  | "/docs/migration";
-
-const FOOTER_COLUMNS: Array<{ title: string; links: FooterLink[] }> = [
-  {
-    title: "Product",
-    links: [
-      { label: "Claim", href: "/claim" },
-      { label: "My DID", href: "/my" },
-      { label: "Resolve", href: "/resolve" },
-      { label: "Migrate", href: "/migrate" },
-    ],
-  },
-  {
-    title: "Spec",
-    links: [
-      { label: "did:ckb method", href: "/docs/did-ckb" },
-      { label: "Cell model", href: "/docs/cell-model" },
-      { label: "Resolution", href: "/docs/resolution" },
-      { label: "Migration", href: "/docs/migration" },
-    ],
-  },
-  {
-    title: "Resources",
-    links: [
-      { label: "Docs", href: "/docs" },
-      {
-        label: "GitHub",
-        href: "https://github.com/truthixify/vellum",
-        external: true,
-      },
-      {
-        label: "WIPs",
-        href: "https://github.com/web5fans/web5-wips",
-        external: true,
-      },
-      {
-        label: "Report an issue",
-        href: "https://github.com/truthixify/vellum/issues",
-        external: true,
-      },
-    ],
-  },
-];
-
-function Footer() {
+function ContextBar() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   return (
-    <footer className="border-t-2 border-ink bg-paper mt-32">
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
-          <div>
-            <div className="flex items-center gap-2.5 mb-4">
-              <VellumGlyph className="w-5 h-5 text-ink" />
-              <span className="text-lg font-medium tracking-tight">Vellum</span>
-            </div>
-            <p className="text-sm text-muted-foreground max-w-[28ch]">
-              A reference dashboard for did:ckb on Nervos CKB.
-            </p>
-          </div>
-          {FOOTER_COLUMNS.map((col) => (
-            <div key={col.title}>
-              <div className="mono-caps text-muted-foreground mb-4">{col.title}</div>
-              <ul className="space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    {link.external ? (
-                      <a
-                        href={link.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm hover:text-cobalt hover:underline"
-                      >
-                        {link.label} <span aria-hidden>↗</span>
-                      </a>
-                    ) : (
-                      <Link to={link.href} className="text-sm hover:text-cobalt hover:underline">
-                        {link.label}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-hairline mt-12 pt-6 flex flex-wrap justify-between gap-4 mono-caps text-muted-foreground">
-          <span>VELLUM · DID:CKB DASHBOARD</span>
-          <span>© REGISTRY</span>
-        </div>
+    <header className="dashboard-context-bar">
+      <div className="dashboard-context-bar__title">
+        <strong>{pageTitle(pathname)}</strong>
+        {pathname === "/" && (
+          <>
+            <span className="dashboard-updated">Data last updated 18 minutes ago</span>
+            <span className="v-preview-badge dashboard-preview-badge">&lt;&gt; Preview data</span>
+          </>
+        )}
       </div>
-    </footer>
+      <div className="dashboard-context-bar__actions">
+        <WalletButton />
+        <ThemeButton />
+      </div>
+    </header>
+  );
+}
+
+function MobileNavigation() {
+  return (
+    <nav className="dashboard-mobile-nav" aria-label="Dashboard navigation">
+      {MOBILE_NAV.map((item) => (
+        <DashboardNavLink key={item.to} item={item} mobile />
+      ))}
+    </nav>
   );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-paper">
-        <TopNav />
-        <main className="flex-1">
-          <Outlet />
-        </main>
-        <Footer />
+      <div className="dashboard-layout">
+        <DashboardSidebar />
+        <div className="dashboard-workspace">
+          <ContextBar />
+          <main className="dashboard-main">
+            <Outlet />
+          </main>
+        </div>
+        <MobileNavigation />
       </div>
     </QueryClientProvider>
+  );
+}
+
+function ErrorFrame({ children }: { children: ReactNode }) {
+  return <div className="dashboard-error-frame">{children}</div>;
+}
+
+function NotFoundComponent() {
+  return (
+    <ErrorFrame>
+      <span>404</span>
+      <h1>Page not found</h1>
+      <p>This view does not exist in the registry.</p>
+      <Link className="v-button v-button--primary" to="/">
+        Return to overview
+      </Link>
+    </ErrorFrame>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <ErrorFrame>
+      <span>Error</span>
+      <h1>This page did not load</h1>
+      <p>{error.message}</p>
+      <button
+        className="v-button v-button--primary"
+        onClick={() => {
+          router.invalidate();
+          reset();
+        }}
+      >
+        Retry
+      </button>
+    </ErrorFrame>
   );
 }

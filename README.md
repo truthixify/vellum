@@ -1,6 +1,6 @@
 # Vellum
 
-A reference dashboard for [`did:ckb`](https://github.com/web5fans/web5-wips/blob/master/01.md), the Decentralized Identifier method that lives on the Nervos CKB blockchain.
+The Vellum public site and identity dashboard for [`did:ckb`](https://github.com/web5fans/web5-wips/blob/master/01.md), the Decentralized Identifier method that lives on the Nervos CKB blockchain.
 
 Claim a DID, write a profile to it, rotate the keys that control it, look up any DID on the network, migrate an existing `did:plc` identity onto CKB, and deactivate when you're done.
 
@@ -10,7 +10,8 @@ The SDK now lives in the `@ckb-ccc/identity` package on a fork of [ckb-devrel/cc
 
 | Surface | State |
 |---|---|
-| `/` landing page | live |
+| `usevellum.xyz` public site | live, including testnet DID resolution |
+| `dashboard.usevellum.xyz` overview | design preview; reputation data is explicitly labeled |
 | `/claim` create flow | live, end-to-end on testnet and mainnet |
 | `/my` dashboard | live, with reverse-lookup, document body, lock script card, full operation history |
 | `/edit` document editor | live, every field editable, real on-chain update |
@@ -41,59 +42,43 @@ Both `hash_type: type`, `index: 0x0`, `dep_type: code`. Source of truth is the u
 ## Develop
 
 ```bash
-cd apps/dashboard
 bun install
-bun run dev
+bun --cwd apps/site run dev
+bun --cwd apps/dashboard run dev
 ```
 
-Vite serves on `http://localhost:8080`. Hot module replacement is on by default.
+The public site serves on `http://localhost:8081`; the dashboard serves on
+`http://localhost:8080`. Both are Vite apps with hot module replacement.
 
 ```bash
-bun run build          # production build, output in apps/dashboard/dist
-bun run preview        # serve the production build locally
-bun run lint           # eslint
-bun run format         # prettier
-bunx tsc --noEmit      # type-check the whole project
+bun --cwd apps/site run build
+bun --cwd apps/dashboard run build
+bun --cwd apps/dashboard run lint
+bun --cwd apps/dashboard x tsc --noEmit
 ```
 
 The dashboard defaults to **CKB testnet** so you can experiment without spending mainnet CKB. The wallet dropdown lets the holder switch to mainnet at any time.
 
 ## Deploy
 
-The project deploys cleanly as a Vercel Static Site.
+Each app deploys independently as a Vercel static site:
 
-- **Root directory:** `apps/dashboard`
-- **Build command:** `bun install && bun run build`
-- **Output directory:** `dist`
-- **Framework preset:** Vite (or "Other"; Vercel picks up `package.json` either way)
+- `usevellum.xyz`: root `apps/site`, build `bun install && bun run build`, output `dist`
+- `dashboard.usevellum.xyz`: root `apps/dashboard`, build `bun install && bun run build`, output `dist`
 
-`apps/dashboard/vercel.json` already contains the SPA rewrite (everything that doesn't match a real file is routed to `/index.html` so the client router can handle the path).
+Each app has its own `vercel.json` SPA fallback so direct route visits resolve through Vite's
+`index.html`.
 
 ## Project layout
 
 ```
 .
-├── design.md                 the brand + design system brief
 ├── README.md                 you are here
 ├── apps/
-│   └── dashboard/            the SPA
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── ui/           shadcn/ui primitives (copied in, not imported)
-│   │   │   └── vellum/       Vellum-specific components (Manifest, Avatar, VButton, WalletButton)
-│   │   ├── hooks/            useCopy, useDocumentTitle
-│   │   ├── lib/
-│   │   │   ├── ccc-provider.tsx
-│   │   │   ├── utils.ts
-│   │   │   └── validation.ts
-│   │   │   # the did:ckb SDK lives upstream in @ckb-ccc/identity; see
-│   │   │   # https://github.com/truthixify/ccc/tree/feat/identity-package/packages/identity
-│   │   ├── routes/           TanStack Router file routes
-│   │   └── main.tsx          SPA entry, router + CCC provider
-│   ├── public/               static assets (favicon, og image, robots.txt)
-│   ├── vite.config.ts        vanilla Vite + TanStack Router + Tailwind
-│   ├── vercel.json           SPA fallback for Vercel
-│   └── package.json
+│   ├── site/                 public site for usevellum.xyz
+│   └── dashboard/            application for dashboard.usevellum.xyz
+├── packages/
+│   └── ui/                   shared design tokens and React primitives
 └── tmp/                      research clones (did-ckb, web5-wips), gitignored
 ```
 

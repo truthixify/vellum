@@ -29,7 +29,7 @@ export function Avatar({
   }, [src]);
 
   const boxSize = SIZES[size];
-  const wrapperClass = `${boxSize} border border-ink bg-paper flex items-center justify-center font-mono font-medium overflow-hidden shrink-0 ${className}`;
+  const wrapperClass = `${boxSize} border border-hairline bg-[var(--primary-soft)] text-verdant flex items-center justify-center font-mono font-medium overflow-hidden shrink-0 ${className}`;
 
   if (!src || errored) {
     return (

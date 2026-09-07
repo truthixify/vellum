@@ -10,10 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as ClaimRouteImport } from './routes/claim'
 import { Route as DeactivateRouteImport } from './routes/deactivate'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as EditRouteImport } from './routes/edit'
+import { Route as GovernanceRouteImport } from './routes/governance'
+import { Route as IssueRouteImport } from './routes/issue'
 import { Route as MigrateRouteImport } from './routes/migrate'
 import { Route as MyRouteImport } from './routes/my'
 import { Route as ResolveRouteImport } from './routes/resolve'
@@ -27,6 +30,11 @@ import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClaimRoute = ClaimRouteImport.update({
@@ -47,6 +55,16 @@ const DocsRoute = DocsRouteImport.update({
 const EditRoute = EditRouteImport.update({
   id: '/edit',
   path: '/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssueRoute = IssueRouteImport.update({
+  id: '/issue',
+  path: '/issue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MigrateRoute = MigrateRouteImport.update({
@@ -97,10 +115,13 @@ const DocsResolutionRoute = DocsResolutionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
   '/docs': typeof DocsRouteWithChildren
   '/edit': typeof EditRoute
+  '/governance': typeof GovernanceRoute
+  '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -113,9 +134,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
   '/edit': typeof EditRoute
+  '/governance': typeof GovernanceRoute
+  '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -129,10 +153,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/claim': typeof ClaimRoute
   '/deactivate': typeof DeactivateRoute
   '/docs': typeof DocsRouteWithChildren
   '/edit': typeof EditRoute
+  '/governance': typeof GovernanceRoute
+  '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
   '/resolve': typeof ResolveRoute
@@ -147,10 +174,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity'
     | '/claim'
     | '/deactivate'
     | '/docs'
     | '/edit'
+    | '/governance'
+    | '/issue'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -163,9 +193,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity'
     | '/claim'
     | '/deactivate'
     | '/edit'
+    | '/governance'
+    | '/issue'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -178,10 +211,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity'
     | '/claim'
     | '/deactivate'
     | '/docs'
     | '/edit'
+    | '/governance'
+    | '/issue'
     | '/migrate'
     | '/my'
     | '/resolve'
@@ -195,10 +231,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
   ClaimRoute: typeof ClaimRoute
   DeactivateRoute: typeof DeactivateRoute
   DocsRoute: typeof DocsRouteWithChildren
   EditRoute: typeof EditRoute
+  GovernanceRoute: typeof GovernanceRoute
+  IssueRoute: typeof IssueRoute
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
@@ -212,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/claim': {
@@ -240,6 +286,20 @@ declare module '@tanstack/react-router' {
       path: '/edit'
       fullPath: '/edit'
       preLoaderRoute: typeof EditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issue': {
+      id: '/issue'
+      path: '/issue'
+      fullPath: '/issue'
+      preLoaderRoute: typeof IssueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/migrate': {
@@ -328,10 +388,13 @@ const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
   ClaimRoute: ClaimRoute,
   DeactivateRoute: DeactivateRoute,
   DocsRoute: DocsRouteWithChildren,
   EditRoute: EditRoute,
+  GovernanceRoute: GovernanceRoute,
+  IssueRoute: IssueRoute,
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,

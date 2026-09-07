@@ -1,270 +1,330 @@
+import { Check, ChevronDown, Clock3, Copy, ExternalLink, Filter } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
-import { VButton } from "@/components/vellum/VButton";
+import { AvatarMark, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
+import { useState } from "react";
 
-export const Route = createFileRoute("/")({
-  component: Landing,
-});
+export const Route = createFileRoute("/")({ component: Overview });
 
-function Landing() {
+const DID = "did:ckb:0x8f2a\u2026c41d";
+const SITE_ORIGIN =
+  import.meta.env.VITE_SITE_URL ??
+  (import.meta.env.DEV ? "http://localhost:8081" : "https://usevellum.xyz");
+
+const CATEGORIES = [
+  { label: "Contribution", value: 28, max: 40 },
+  { label: "Credentials", value: 22, max: 30 },
+  { label: "Account coverage", value: 12, max: 20 },
+  { label: "Longevity", value: 6, max: 10 },
+];
+
+const CLAIMS = [
+  {
+    title: "Protocol contribution \u2014 14 merged pull requests",
+    schema: "vellum.contribution/1",
+    issuer: "CKBoost",
+    issued: "3 months ago",
+    state: "Verified",
+    contribution: "+28 index",
+  },
+  {
+    title: "CKB script development \u2014 completed",
+    schema: "vellum.credential.education/1",
+    issuer: "Nervos Academy",
+    issued: "12 months ago",
+    state: "Expires 2027",
+    contribution: "+22 index",
+  },
+  {
+    title: "Peer review \u2014 RFC 0042",
+    schema: "vellum.attestation.review/2",
+    issuer: "0x3d1b\u2026c0a7",
+    issued: "2 weeks ago",
+    state: "Unknown issuer",
+    contribution: "0 index",
+  },
+];
+
+function Overview() {
+  const { copied, copy } = useCopyFeedback();
+  const [tab, setTab] = useState<"claims" | "accounts">("claims");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [reverseClaims, setReverseClaims] = useState(false);
+
+  function openLedger(nextTab: "claims" | "accounts") {
+    setTab(nextTab);
+    requestAnimationFrame(() =>
+      document.querySelector(".overview-ledger")?.scrollIntoView({ behavior: "smooth" }),
+    );
+  }
+
   return (
-    <div>
-      {/* Top stamp */}
-      <div className="border-b border-hairline">
-        <div className="max-w-[1100px] mx-auto px-6 lg:px-12 py-3 flex justify-between mono-caps text-muted-foreground">
-          <span>VELLUM · DID:CKB DASHBOARD</span>
-          <span className="hidden md:inline">REGISTRY · OPEN</span>
+    <div className="overview-page">
+      <section className="overview-identity">
+        <AvatarMark>RM</AvatarMark>
+        <div className="overview-identity__body">
+          <div className="overview-identity__name">
+            <h1>Rae Maddox</h1>
+            <StatusMark tone="positive">Active</StatusMark>
+            <StatusMark icon={false}>You control this identity</StatusMark>
+          </div>
+          <div className="overview-identity__did">
+            <span className="mono">{DID}</span>
+            <button
+              className="v-icon-button"
+              title="Copy DID"
+              aria-label="Copy DID"
+              onClick={() => void copy(DID)}
+            >
+              <Copy size={14} />
+              {copied && <span className="sr-only">Copied</span>}
+            </button>
+            <a
+              className="v-icon-button"
+              title="Open public example"
+              aria-label="Open public example"
+              href={`${SITE_ORIGIN}/profile`}
+            >
+              <ExternalLink size={14} />
+            </a>
+          </div>
         </div>
-      </div>
-
-      {/* Hero */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 pt-24 pb-32 relative">
-        <div className="mono-caps text-muted-foreground mb-8">DOCUMENT · 001 · INTRODUCTION</div>
-        <h1 className="text-[56px] md:text-[80px] leading-[0.98] tracking-tight font-medium max-w-[16ch]">
-          Your identity, on <span className="text-verdant">paper</span> that lasts.
-        </h1>
-        <p className="text-[22px] leading-[1.5] text-ink mt-10 max-w-[58ch]">
-          Vellum lets you claim a Cell on the Nervos CKB blockchain that holds your identity. It
-          survives wallet rotation, travels between apps, and is resolvable by anyone.
-        </p>
-        <div className="flex flex-wrap gap-3 mt-10">
-          <Link to="/claim">
-            <VButton variant="verdant">Claim a DID</VButton>
-          </Link>
-          <Link to="/resolve">
-            <VButton variant="secondary">Resolve a DID</VButton>
-          </Link>
-        </div>
-        <div className="mt-16 flex items-center gap-4 mono-caps text-muted-foreground">
-          <span className="w-12 h-px bg-ink" />
-          <span>SCROLL FOR REGISTRY</span>
-        </div>
+        <Link className="v-button v-button--primary overview-manage" to="/my">
+          Manage identity
+        </Link>
       </section>
 
-      {/* What you get */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 py-24 border-t border-hairline">
-        <div className="mono-caps text-muted-foreground mb-2">SECTION · 02</div>
-        <h2 className="text-4xl md:text-5xl font-medium max-w-[20ch] mb-16">
-          What you get when you claim a DID.
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              n: "01",
-              t: "A permanent identifier",
-              b: "The string survives key rotation. Lose your wallet, mint a new one, the DID stays.",
-            },
-            {
-              n: "02",
-              t: "One profile, every app",
-              b: "Display name, avatar, bio, handles, services. Written once on chain. Read by anyone.",
-            },
-            {
-              n: "03",
-              t: "Portable across protocols",
-              b: "Link did:plc, Nostr keys, AT Protocol handles. Your identity travels with you.",
-            },
-          ].map((c) => (
-            <div key={c.n} className="border border-ink p-8 bg-paper">
-              <div className="mono-caps text-verdant mb-6">FEATURE · {c.n}</div>
-              <h3 className="text-2xl font-medium mb-3">{c.t}</h3>
-              <p className="text-muted-foreground">{c.b}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 py-24 border-t border-hairline">
-        <div className="mono-caps text-muted-foreground mb-2">SECTION · 03</div>
-        <h2 className="text-4xl md:text-5xl font-medium mb-16">How it works.</h2>
-        <div className="relative">
-          {/* Single horizontal connector behind the tab row, desktop only */}
-          <div className="hidden md:block absolute top-3 left-0 right-0 h-px bg-ink" aria-hidden />
-          <ol className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-y-10 md:gap-y-0 gap-x-6 relative">
-            {[
-              ["01", "Connect", "Wallet supplies the signing key."],
-              ["02", "Compose", "Write your profile fields."],
-              ["03", "Sign", "Sign the create transaction."],
-              ["04", "Confirm", "DID lands on chain in seconds."],
-              ["05", "Manage", "Edit, rotate, deactivate any time."],
-            ].map(([n, t, b]) => (
-              <li key={n} className="relative">
-                <div className="bg-paper inline-flex relative z-10">
-                  <IdTab>STEP · {n}</IdTab>
-                </div>
-                <h3 className="text-lg font-medium mt-5 mb-2">{t}</h3>
-                <p className="text-sm text-muted-foreground">{b}</p>
-              </li>
+      <section className="overview-metrics">
+        <div className="reputation-panel">
+          <h2>Reputation index</h2>
+          <div className="reputation-total">
+            <span>68</span>
+            <small>/ 100</small>
+            <StatusMark tone="warning" icon={false}>
+              <Clock3 size={11} />
+              Calculated 18 minutes ago
+            </StatusMark>
+          </div>
+          <SignalRail value={68} max={100} height={10} label="Preview reputation index 68 of 100" />
+          <p>
+            Method v0.4.1 {"\u00b7"} 6 claims from 3 issuers {"\u00b7"}{" "}
+            <a href={`${SITE_ORIGIN}/transparency`}>How this is calculated</a>
+          </p>
+          <div className="reputation-categories">
+            {CATEGORIES.map((category) => (
+              <div key={category.label}>
+                <span>
+                  <strong>{category.label}</strong>
+                  <b className="mono">
+                    {category.value} / {category.max}
+                  </b>
+                </span>
+                <SignalRail
+                  value={category.value}
+                  max={category.max}
+                  label={`${category.label} ${category.value} of ${category.max}`}
+                />
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
-      </section>
-
-      {/* Sample manifest */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 py-24 border-t border-hairline">
-        <div className="mono-caps text-muted-foreground mb-2">SECTION · 04 · SPECIMEN</div>
-        <h2 className="text-4xl md:text-5xl font-medium mb-16">What goes in a DID.</h2>
-        <div className="pt-4 pl-4">
-          <Manifest
-            idTab={<IdTab>VL · DID:CKB · SPECIMEN</IdTab>}
-            state="ACTIVE"
-            offset
-            footerLeft="VELLUM · DID DOCUMENT · SPECIMEN"
-            footerRight="PAGE 01 / 01"
-          >
-            <div className="px-6 pt-8 pb-6">
-              <div className="mono-caps text-muted-foreground mb-3">REGISTERED IDENTIFIER</div>
-              <Brackets className="block">
-                <div className="font-mono text-[22px] md:text-[32px] leading-tight break-all">
-                  did:ckb:qq2m72yfxs8wn3v0c46aaxzhe6up4u4nba
-                </div>
-              </Brackets>
-            </div>
-            <MetaStrip
-              items={[
-                { label: "Created", value: "BLOCK 17,314,192" },
-                { label: "Capacity", value: "614.00 CKB" },
-                { label: "Operations", value: "04" },
-                { label: "Status", value: "ACTIVE" },
-              ]}
-            />
+        <div className="coverage-panel">
+          <h2>Verification coverage</h2>
+          <dl className="coverage-table">
             <div>
-              <FieldRow
-                label="Display name"
-                value={<span className="text-2xl font-medium">Margot Weil</span>}
-              />
-              <FieldRow
-                label="Avatar"
-                value={
-                  <div className="w-20 h-20 border border-ink bg-paper flex items-center justify-center text-2xl font-medium font-mono">
-                    MW
-                  </div>
-                }
-              />
-              <FieldRow
-                label="Bio"
-                value="Conservation lab tech. Writes about ledgers, paper, and the long now."
-              />
-              <FieldRow
-                label="Handles"
-                mono
-                value={
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Tag>AT PROTOCOL</Tag>
-                    <span>@margot.bsky.social</span>
-                  </div>
-                }
-              />
-              <FieldRow
-                label="Services"
-                mono
-                value={
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <Tag>PROFILE</Tag>
-                    <span>https://margot.weil/profile</span>
-                  </div>
-                }
-              />
+              <dt>Verified account links</dt>
+              <dd className="positive">2</dd>
             </div>
-          </Manifest>
+            <div>
+              <dt>Self-declared links</dt>
+              <dd className="mono muted">1 {"\u00b7"} not counted</dd>
+            </div>
+            <div>
+              <dt>Registry issuers</dt>
+              <dd className="mono">2 of 3</dd>
+            </div>
+            <div>
+              <dt>Claims expiring within 90 days</dt>
+              <dd className="mono warning">0</dd>
+            </div>
+          </dl>
+          <h3>Derived from missing evidence</h3>
+          <div className="coverage-action">
+            <span>
+              <strong>Account coverage is 12 of 20</strong>
+              <small>Verify the CKBoost link to replace the self-declared entry</small>
+            </span>
+            <button className="v-button v-button--quiet" onClick={() => openLedger("accounts")}>
+              Verify link
+            </button>
+          </div>
+          <div className="coverage-action">
+            <span>
+              <strong>One claim has an unknown issuer</strong>
+              <small>It stays visible and neutral until the issuer is listed</small>
+            </span>
+            <button className="v-button v-button--quiet" onClick={() => openLedger("claims")}>
+              Inspect
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* Cost */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 py-24 border-t border-hairline">
-        <div className="mono-caps text-muted-foreground mb-2">SECTION · 05 · COST</div>
-        <h2 className="text-4xl md:text-5xl font-medium mb-12 max-w-[18ch]">
-          Honest about what it costs.
-        </h2>
-        <div className="border-2 border-ink bg-paper p-10 grid md:grid-cols-3 gap-8">
-          <div>
-            <div className="mono-caps text-muted-foreground mb-2">STORAGE RENT</div>
-            <div className="text-3xl font-medium">~600 CKB</div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Locked on chain. Recoverable on deactivation.
-            </p>
+      <section className="overview-ledger">
+        <div className="ledger-toolbar">
+          <div className="ledger-tabs">
+            <button className={tab === "claims" ? "active" : ""} onClick={() => setTab("claims")}>
+              Claims
+            </button>
+            <button
+              className={tab === "accounts" ? "active" : ""}
+              onClick={() => setTab("accounts")}
+            >
+              Accounts
+            </button>
           </div>
-          <div>
-            <div className="mono-caps text-muted-foreground mb-2">NETWORK FEE</div>
-            <div className="text-3xl font-medium">&lt; 0.01 CKB</div>
-            <p className="text-sm text-muted-foreground mt-2">
-              <span className="border-b-[1.5px] border-verdant">Per transaction</span>. No
-              subscription.
-            </p>
-          </div>
-          <div>
-            <div className="mono-caps text-muted-foreground mb-2">OWNERSHIP</div>
-            <div className="text-3xl font-medium">Yours</div>
-            <p className="text-sm text-muted-foreground mt-2">
-              No platform holds the keys. Your wallet is the only authority.
-            </p>
+          <div className="ledger-actions">
+            <button
+              className="v-button v-button--quiet"
+              onClick={() => setVerifiedOnly((current) => !current)}
+              aria-pressed={verifiedOnly}
+            >
+              <Filter size={13} />
+              {verifiedOnly ? "Verified" : "Category"}
+            </button>
+            <button
+              className="v-button v-button--quiet"
+              onClick={() => setReverseClaims((current) => !current)}
+            >
+              {reverseClaims ? "Oldest" : "Newest"} <ChevronDown size={13} />
+            </button>
+            <Link className="v-button v-button--secondary" to="/issue">
+              Issue a claim
+            </Link>
           </div>
         </div>
+        {tab === "claims" ? (
+          <ClaimsTable verifiedOnly={verifiedOnly} reverse={reverseClaims} />
+        ) : (
+          <AccountsTable />
+        )}
       </section>
 
-      {/* FAQ */}
-      <section className="max-w-[1100px] mx-auto px-6 lg:px-12 py-24 border-t border-hairline">
-        <div className="mono-caps text-muted-foreground mb-2">SECTION · 06</div>
-        <h2 className="text-4xl md:text-5xl font-medium mb-12">Questions.</h2>
-        <div className="border-t border-ink">
+      <section className="overview-activity">
+        <div className="section-heading-row">
+          <h2>Activity</h2>
+          <Link className="v-button v-button--quiet" to="/activity">
+            All activity
+          </Link>
+        </div>
+        <ol className="activity-timeline">
           {[
             [
-              "What if I lose my keys?",
-              "Rotate the Lock Script using a recovery key, or have a multi-sig configured. The DID itself does not move; only the key controlling it does.",
+              "Claim issued \u2014 protocol contribution",
+              "3 months ago",
+              "by CKBoost",
+              "0x91c4\u20267ab2",
             ],
-            [
-              "What if I change my name?",
-              "Edit the document. The DID string never changes. Your display name, handles, and services are mutable.",
-            ],
-            [
-              "Can someone else claim my DID?",
-              "No. The string is derived from your initial Cell. It is unique on chain.",
-            ],
-            [
-              "What happens if I deactivate?",
-              "The Cell is burned, your locked CKB returns to your wallet, and the DID becomes unresolvable. Permanent.",
-            ],
-            [
-              "Can I migrate from did:plc?",
-              "Yes. Sign a migration tx with one of your did:plc rotation keys. After a 72-hour window the new did:ckb is final.",
-            ],
-            [
-              "Why CKB and not Ethereum?",
-              "CKB's Cell model gives you a single piece of state you actually own. Storage is rent, not gas-per-edit.",
-            ],
-          ].map(([q, a]) => (
-            <details key={q} className="group border-b border-ink py-6 px-2">
-              <summary className="cursor-pointer flex justify-between items-start gap-6 list-none">
-                <span className="text-lg md:text-xl font-medium">{q}</span>
-                <span className="mono-caps text-muted-foreground shrink-0 group-open:hidden">
-                  OPEN +
-                </span>
-                <span className="mono-caps text-muted-foreground shrink-0 hidden group-open:inline">
-                  CLOSE −
-                </span>
-              </summary>
-              <p className="mt-4 text-muted-foreground max-w-[64ch]">{a}</p>
-            </details>
+            ["Identity edited \u2014 display name", "5 months ago", "by you", "0x7a20\u202633bc"],
+            ["Key rotated", "7 months ago", "by you", "0x5c11\u20269ee1"],
+            ["Identity claimed", "10 months ago", "by you", "0x1f83\u202640aa"],
+          ].map(([title, time, actor, tx]) => (
+            <li key={tx}>
+              <span />
+              <div>
+                <strong>{title}</strong>
+                <time className="mono">{time}</time>
+                <small>{actor}</small>
+                <span className="activity-hash">{tx}</span>
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
+        <p className="activity-note">
+          Example events are shown only to demonstrate the planned evidence ledger.
+        </p>
       </section>
+    </div>
+  );
+}
 
-      {/* CTA stamp */}
-      <section className="border-t-2 border-ink bg-paper">
-        <div className="max-w-[1100px] mx-auto px-6 lg:px-12 py-32 text-center">
-          <div className="mono-caps text-muted-foreground mb-8">REGISTRY · OPEN FOR ENROLMENT</div>
-          <h2 className="text-5xl md:text-7xl font-medium mb-12">Claim your name.</h2>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link to="/claim">
-              <VButton variant="verdant">Claim a DID</VButton>
-            </Link>
-            <Link to="/resolve">
-              <VButton variant="secondary">Resolve a DID</VButton>
-            </Link>
-          </div>
+function ClaimsTable({ verifiedOnly, reverse }: { verifiedOnly: boolean; reverse: boolean }) {
+  const claims = CLAIMS.filter((claim) => !verifiedOnly || claim.state === "Verified");
+  if (reverse) claims.reverse();
+  return (
+    <div className="dashboard-data-table">
+      <div className="dashboard-data-table__head">
+        <span>Claim</span>
+        <span>Issuer</span>
+        <span>Issued</span>
+        <span>State</span>
+        <span>Contribution</span>
+      </div>
+      {claims.map((claim) => (
+        <div className="dashboard-data-table__row" key={claim.schema}>
+          <span>
+            <strong>{claim.title}</strong>
+            <small className="mono">{claim.schema}</small>
+          </span>
+          <span>
+            {claim.issuer}{" "}
+            <small className={claim.state === "Unknown issuer" ? "muted" : "positive"}>
+              {claim.state === "Unknown issuer" ? "\u00b7 not in registry" : "\u00b7 listed"}
+            </small>
+          </span>
+          <span className="mono muted">{claim.issued}</span>
+          <StatusMark
+            tone={
+              claim.state === "Verified"
+                ? "positive"
+                : claim.state.startsWith("Expires")
+                  ? "warning"
+                  : "neutral"
+            }
+            icon={claim.state === "Verified"}
+          >
+            {claim.state}
+          </StatusMark>
+          <span className="dashboard-contribution">
+            <b className="mono">{claim.contribution}</b>
+            <a className="v-button v-button--quiet" href={`${SITE_ORIGIN}/profile`}>
+              Inspect
+            </a>
+          </span>
         </div>
-      </section>
+      ))}
+    </div>
+  );
+}
+
+function AccountsTable() {
+  const rows = [
+    ["GitHub \u00b7 @rmaddox", "Signed gist proof", "Verified"],
+    ["ckb1qzda\u20264mns9f0", "Signature control proof", "Controller"],
+    ["CKBoost \u00b7 rae.boost", "Profile link only", "Self-declared"],
+  ];
+  return (
+    <div className="dashboard-data-table dashboard-data-table--accounts">
+      {rows.map(([name, method, state]) => (
+        <div className="dashboard-data-table__row" key={name}>
+          <span>
+            <strong>{name}</strong>
+            <small>{method}</small>
+          </span>
+          <span className="muted">Added 2026-02-11</span>
+          <StatusMark
+            tone={state === "Verified" ? "positive" : "neutral"}
+            icon={state === "Verified"}
+          >
+            {state}
+          </StatusMark>
+          <Link
+            className="v-button v-button--quiet"
+            to={state === "Self-declared" ? "/my" : "/resolve"}
+          >
+            {state === "Self-declared" ? "Verify" : "Inspect"}
+          </Link>
+        </div>
+      ))}
     </div>
   );
 }

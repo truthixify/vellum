@@ -4,4 +4,5 @@ Runnable applications. Each subfolder is its own Bun/Node package with its own b
 
 ## Contents
 
-- `dashboard/` — the Vellum SPA (Vite + React + TanStack Router)
+- `site/` - the public Vellum site for `usevellum.xyz` (Vite + React)
+- `dashboard/` - the authenticated Vellum application for `dashboard.usevellum.xyz` (Vite + React + TanStack Router)

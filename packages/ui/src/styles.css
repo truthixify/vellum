@@ -1,0 +1,288 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+:root {
+  --canvas: #f2f4ef;
+  --surface: #ffffff;
+  --surface-subtle: #e7ebe5;
+  --ink: #151817;
+  --ink-secondary: #58605b;
+  --line: #c9d0ca;
+  --line-strong: #747d76;
+  --primary: #126b4f;
+  --primary-soft: #d7ede4;
+  --info: #3155c6;
+  --info-soft: #e0e7ff;
+  --warning: #9b5a00;
+  --warning-soft: #f8e7c4;
+  --danger: #b53b34;
+  --danger-soft: #f7ddda;
+  --focus: #3155c6;
+  --on-primary: #ffffff;
+  --overlay: rgb(21 24 23 / 0.32);
+  --overlay-shadow: 0 12px 32px rgb(21 24 23 / 0.14);
+}
+
+:root.dark {
+  --canvas: #111411;
+  --surface: #191d1a;
+  --surface-subtle: #222823;
+  --ink: #f1f4f0;
+  --ink-secondary: #aab3ac;
+  --line: #353d37;
+  --line-strong: #7e8981;
+  --primary: #61cfa3;
+  --primary-soft: #173d30;
+  --info: #94a9ff;
+  --info-soft: #222d58;
+  --warning: #f1bb63;
+  --warning-soft: #463218;
+  --danger: #ff8b82;
+  --danger-soft: #492522;
+  --focus: #94a9ff;
+  --on-primary: #111411;
+  --overlay: rgb(0 0 0 / 0.54);
+  --overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.36);
+}
+
+.v-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.v-button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.v-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.v-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.v-button--primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.v-button--secondary {
+  background: transparent;
+  color: var(--ink);
+}
+
+.v-button--quiet {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.v-button--danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-primary);
+}
+
+.v-icon-button {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.v-button:focus-visible,
+.v-icon-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.v-network-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  color: var(--warning);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.v-network-status > span {
+  width: 7px;
+  height: 7px;
+  background: var(--warning);
+}
+
+.v-preview-badge {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 3px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.v-status {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--surface-subtle);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.v-status--positive {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.v-status--warning {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.v-status--danger {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.v-status--info {
+  border-color: var(--info);
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.v-avatar-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: 1px solid var(--line);
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.v-avatar-mark--small {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.v-avatar-mark--medium {
+  width: 56px;
+  height: 56px;
+  font-size: 20px;
+}
+
+.v-avatar-mark--large {
+  width: 88px;
+  height: 88px;
+  font-size: 32px;
+}
+
+.v-signal-rail {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+}
+
+.v-signal-rail > span {
+  height: var(--rail-height);
+}
+
+.v-signal-rail > span:first-child {
+  background: var(--primary);
+}
+
+.v-signal-rail > span:last-child {
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+@media (hover: hover) {
+  .v-button--primary:hover {
+    filter: brightness(1.08);
+  }
+
+  .v-button--secondary:hover {
+    background: var(--surface-subtle);
+  }
+
+  .v-button--quiet:hover,
+  .v-icon-button:hover {
+    border-color: var(--line-strong);
+  }
+
+  .v-button--danger:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .v-button,
+  .v-icon-button {
+    transition:
+      background-color 100ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 100ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      color 100ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      filter 100ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      transform 100ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@media (max-width: 639px) {
+  .v-button {
+    min-height: 44px;
+  }
+
+  .v-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}

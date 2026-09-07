@@ -18,14 +18,14 @@ export function StatusBand({ state, label }: { state: State; label?: string }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-6 py-2.5 mono-caps",
+        "registry-manifest__status",
         s.bg,
         s.text,
-        state === "DRAFT" && "border-b border-ink",
+        state === "DRAFT" && "registry-manifest__status--draft",
       )}
     >
-      {s.dot === "pulse" && <span className="w-2 h-2 rounded-full bg-current pulse-dot" />}
-      {s.dot === "static" && <span className="w-2 h-2 rounded-full bg-current" />}
+      {s.dot === "pulse" && <span className="w-2 h-2 bg-current pulse-dot" />}
+      {s.dot === "static" && <span className="w-2 h-2 bg-current" />}
       <span>{label ?? state}</span>
     </div>
   );
@@ -39,11 +39,7 @@ export function IdTab({
   color?: "verdant" | "ink" | "cobalt";
 }) {
   const bg = color === "verdant" ? "bg-verdant" : color === "cobalt" ? "bg-cobalt" : "bg-ink";
-  return (
-    <div className={cn("inline-flex items-center px-3 py-1.5 mono-caps text-paper", bg)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("registry-manifest__tab", bg)}>{children}</div>;
 }
 
 export function Manifest({
@@ -68,25 +64,21 @@ export function Manifest({
   className?: string;
 }) {
   return (
-    <div className={cn("relative", className)}>
-      {offset && (
-        <div
-          aria-hidden
-          className={cn(
-            "absolute inset-0 translate-x-3 translate-y-3 -z-10",
-            offsetColor === "verdant" ? "bg-verdant" : "bg-ink",
-          )}
-        />
+    <div
+      className={cn(
+        "registry-manifest",
+        offset && "registry-manifest--offset",
+        `registry-manifest--${offsetColor}`,
+        className,
       )}
-      {idTab && <div className="absolute -top-3 left-6 z-10">{idTab}</div>}
-      <div className="border-2 border-ink bg-paper">
-        <div className="border border-hairline m-1.5">
-          {state && <StatusBand state={state} label={stateLabel} />}
-          <div className="min-w-0">{children}</div>
-          <div className="border-t border-ink/80 px-4 sm:px-6 py-2.5 flex flex-wrap justify-between gap-x-4 gap-y-1 mono-caps text-muted-foreground">
-            <span className="break-words">{footerLeft}</span>
-            <span className="break-words">{footerRight}</span>
-          </div>
+    >
+      {idTab && <div className="registry-manifest__tab-wrap">{idTab}</div>}
+      <div className="registry-manifest__surface">
+        {state && <StatusBand state={state} label={stateLabel} />}
+        <div className="min-w-0">{children}</div>
+        <div className="registry-manifest__footer">
+          <span>{footerLeft}</span>
+          <span>{footerRight}</span>
         </div>
       </div>
     </div>

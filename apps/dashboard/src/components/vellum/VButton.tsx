@@ -9,16 +9,13 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function VButton({ variant = "primary", className, children, ...rest }: Props) {
-  const base =
-    "inline-flex items-center justify-center px-5 h-11 mono-caps transition-colors active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "v-button";
   const variants: Record<Variant, string> = {
-    primary: "bg-ink text-paper hover:bg-verdant",
-    verdant:
-      "bg-verdant text-paper hover:bg-[var(--verdant-hover)] active:bg-[var(--verdant-press)]",
-    secondary: "bg-paper text-ink border border-ink hover:bg-ink hover:text-paper",
-    destructive: "bg-alarm text-paper hover:opacity-90",
-    ghost:
-      "bg-transparent text-ink underline decoration-ink underline-offset-4 hover:text-cobalt hover:decoration-cobalt px-2",
+    primary: "v-button--primary",
+    verdant: "v-button--primary",
+    secondary: "v-button--secondary",
+    destructive: "v-button--danger",
+    ghost: "v-button--quiet vellum-button--ghost",
   };
   return (
     <button className={cn(base, variants[variant], className)} {...rest}>

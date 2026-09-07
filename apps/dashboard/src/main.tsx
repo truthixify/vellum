@@ -2,9 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
+import { ThemeProvider } from "@vellum/ui";
 
 import { CccProvider } from "./lib/ccc-provider";
 import { routeTree } from "./routeTree.gen";
+import "@vellum/ui/styles.css";
 import "./styles.css";
 
 const queryClient = new QueryClient();
@@ -29,8 +31,10 @@ if (!rootEl) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <CccProvider>
-      <RouterProvider router={router} />
-    </CccProvider>
+    <ThemeProvider>
+      <CccProvider>
+        <RouterProvider router={router} />
+      </CccProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

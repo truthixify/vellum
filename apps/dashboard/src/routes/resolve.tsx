@@ -19,7 +19,9 @@ type Status = "idle" | "loading" | "ok" | "not_found" | "error";
 function ResolvePage() {
   useDocumentTitle("Resolve");
   const { client } = useCcc();
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(
+    () => new URLSearchParams(window.location.search).get("did") ?? "",
+  );
   const [status, setStatus] = useState<Status>("idle");
   const [record, setRecord] = useState<DidRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,38 +55,37 @@ function ResolvePage() {
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto px-6 lg:px-12 py-16">
-      <div className="mono-caps text-muted-foreground mb-3">REGISTRY · LOOKUP</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-12">Resolve any DID.</h1>
+    <div className="dashboard-verify-page">
+      <h1>Verify an identity</h1>
+      <p>Read any Vellum record and inspect its DID document before relying on the identity.</p>
 
-      <form onSubmit={handleResolve} className="flex flex-col sm:flex-row gap-3 mb-16">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="did:ckb:..."
-          className="flex-1 h-14 bg-paper border border-ink px-4 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-verdant"
-        />
-        <VButton
-          type="submit"
-          variant="verdant"
-          className="h-14 px-8"
-          disabled={status === "loading"}
-        >
-          {status === "loading" ? "Resolving…" : "Resolve"}
-        </VButton>
+      <form onSubmit={handleResolve} className="dashboard-verify-form">
+        <label htmlFor="dashboard-did-input">Identifier</label>
+        <div>
+          <input
+            id="dashboard-did-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="did:ckb:..."
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <VButton type="submit" variant="verdant" disabled={status === "loading"}>
+            {status === "loading" ? "Resolving..." : "Resolve"}
+          </VButton>
+        </div>
+        <small>Resolved directly against CKB Testnet</small>
       </form>
 
-      {status === "idle" && <EmptyState />}
-
       {status === "loading" && (
-        <div className="border-2 border-ink p-20 text-center">
-          <div className="mono-caps text-muted-foreground">RESOLVING DID, INDEXING CELLS…</div>
+        <div className="dashboard-verify-result" role="status">
+          <div className="mono-caps text-muted-foreground">Resolving DID on CKB Testnet...</div>
         </div>
       )}
 
       {status === "not_found" && (
-        <div className="border-2 border-ink p-20 text-center">
-          <div className="mono-caps text-alarm mb-2">NOT FOUND</div>
+        <div className="dashboard-verify-result">
+          <div className="mono-caps text-alarm mb-2">Not found</div>
           <p className="text-muted-foreground">
             No Live DID Cell matches that identifier on the current network.
           </p>
@@ -92,23 +93,13 @@ function ResolvePage() {
       )}
 
       {status === "error" && error && (
-        <div className="border-2 border-alarm p-10">
-          <div className="mono-caps text-alarm mb-2">ERROR</div>
+        <div className="dashboard-verify-result dashboard-verify-result--error">
+          <div className="mono-caps text-alarm mb-2">Error</div>
           <p className="text-sm font-mono break-all">{error}</p>
         </div>
       )}
 
       {status === "ok" && record && <ResolvedManifest record={record} />}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="border-2 border-ink p-20 text-center">
-      <div className="w-12 h-12 mx-auto mb-6 border-2 border-verdant" />
-      <div className="mono-caps text-muted-foreground">PASTE A DID TO RESOLVE</div>
-      <p className="mt-3 text-muted-foreground">Public records are free to read.</p>
     </div>
   );
 }
