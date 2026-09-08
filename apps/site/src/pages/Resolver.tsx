@@ -1,25 +1,11 @@
 import { ccc } from "@ckb-ccc/core";
 import { isDidCkb, resolveDidCkb } from "@ckb-ccc/did-ckb";
-import {
-  AlertCircle,
-  Check,
-  ClipboardPaste,
-  Copy,
-  ExternalLink,
-  Search,
-} from "lucide-react";
-import {
-  AvatarMark,
-  Button,
-  NetworkStatus,
-  StatusMark,
-  useCopyFeedback,
-} from "@vellum/ui";
+import { AlertCircle, Check, ClipboardPaste, Copy, ExternalLink, Search } from "lucide-react";
+import { AvatarMark, Button, NetworkStatus, StatusMark, useCopyFeedback } from "@vellum/ui";
 import { useMemo, useState } from "react";
 import { dashboardUrl } from "../config";
 
-type ResolveState =
-  "idle" | "loading" | "resolved" | "invalid" | "not-found" | "error";
+type ResolveState = "idle" | "loading" | "resolved" | "invalid" | "not-found" | "error";
 type ResolvedRecord = NonNullable<Awaited<ReturnType<typeof resolveDidCkb>>>;
 
 function documentFrom(record: ResolvedRecord): Record<string, unknown> {
@@ -28,14 +14,10 @@ function documentFrom(record: ResolvedRecord): Record<string, unknown> {
 }
 
 function profileFrom(document: Record<string, unknown>) {
-  const services = document.services as
-    Record<string, Record<string, unknown>> | undefined;
+  const services = document.services as Record<string, Record<string, unknown>> | undefined;
   const profile = services?.profile;
   return {
-    displayName:
-      typeof profile?.displayName === "string"
-        ? profile.displayName
-        : undefined,
+    displayName: typeof profile?.displayName === "string" ? profile.displayName : undefined,
     bio: typeof profile?.bio === "string" ? profile.bio : undefined,
   };
 }
@@ -68,11 +50,7 @@ export function Resolver() {
       }
       setRecord(result);
       setState("resolved");
-      window.history.replaceState(
-        null,
-        "",
-        `/resolve?did=${encodeURIComponent(did)}`,
-      );
+      window.history.replaceState(null, "", `/resolve?did=${encodeURIComponent(did)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
       setState("error");
@@ -93,8 +71,7 @@ export function Resolver() {
       <div className="resolver-page__inner">
         <h1>Resolve a DID</h1>
         <p>
-          Enter a Vellum identifier to read its current identity record directly
-          from CKB Testnet.
+          Enter a Vellum identifier to read its current identity record directly from CKB Testnet.
         </p>
         <form className="resolver-form" onSubmit={resolve}>
           <label htmlFor="did-input">Identifier</label>
@@ -117,18 +94,13 @@ export function Resolver() {
                 <ClipboardPaste size={14} />
               </button>
             </div>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={state === "loading"}
-            >
+            <Button variant="primary" type="submit" disabled={state === "loading"}>
               {state === "loading" ? "Resolving" : "Resolve"}
             </Button>
           </div>
           <small>
-            Format{" "}
-            <span className="mono">did:ckb:&lt;base32 identifier&gt;</span> -
-            resolved against CKB Testnet
+            Format <span className="mono">did:ckb:&lt;base32 identifier&gt;</span> - resolved
+            against CKB Testnet
           </small>
         </form>
         <div className="resolver-network">
@@ -176,8 +148,8 @@ function ResolverResult({
         <div>
           <strong>This identifier is not a valid DID.</strong>
           <p>
-            Expected a value accepted by the current did:ckb identifier codec.
-            Your input remains in the field.
+            Expected a value accepted by the current did:ckb identifier codec. Your input remains in
+            the field.
           </p>
         </div>
       </div>
@@ -189,14 +161,8 @@ function ResolverResult({
         <Search size={15} />
         <div>
           <strong>This DID could not be resolved on CKB Testnet.</strong>
-          <p>
-            No live DID Metadata Cell matches this identifier. Check the network
-            or identifier.
-          </p>
-          <a
-            className="v-button v-button--secondary"
-            href={dashboardUrl("/claim")}
-          >
+          <p>No live DID Metadata Cell matches this identifier. Check the network or identifier.</p>
+          <a className="v-button v-button--secondary" href={dashboardUrl("/claim")}>
             Claim an identity
           </a>
         </div>
@@ -209,9 +175,7 @@ function ResolverResult({
         <AlertCircle size={15} />
         <div>
           <strong>The resolver is unavailable.</strong>
-          <p>
-            {message || "The request failed before a record could be returned."}
-          </p>
+          <p>{message || "The request failed before a record could be returned."}</p>
         </div>
       </div>
     );
@@ -238,9 +202,7 @@ function ResolvedIdentity({ record }: { record: ResolvedRecord }) {
     (document.verificationMethods as object | undefined) ?? {},
   );
   const services = Object.keys((document.services as object | undefined) ?? {});
-  const handles = Array.isArray(document.alsoKnownAs)
-    ? document.alsoKnownAs
-    : [];
+  const handles = Array.isArray(document.alsoKnownAs) ? document.alsoKnownAs : [];
   const { copied, copy } = useCopyFeedback();
 
   return (

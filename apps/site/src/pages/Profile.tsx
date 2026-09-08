@@ -1,11 +1,5 @@
 import { Check, Copy, ExternalLink, Info, Share2 } from "lucide-react";
-import {
-  AvatarMark,
-  PreviewBadge,
-  SignalRail,
-  StatusMark,
-  useCopyFeedback,
-} from "@vellum/ui";
+import { AvatarMark, PreviewBadge, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
 
 const DID = "did:ckb:0x8f2a\u2026c41d";
 
@@ -69,12 +63,7 @@ export function Profile() {
             <span>68</span>
             <small>/ 100</small>
           </div>
-          <SignalRail
-            value={68}
-            max={100}
-            height={10}
-            label="Example index 68 of 100"
-          />
+          <SignalRail value={68} max={100} height={10} label="Example index 68 of 100" />
           <p>Proposed method v0.4.1 - 6 example claims from 3 issuers</p>
           <a className="v-button v-button--secondary" href="/transparency">
             <Info size={14} />
@@ -109,9 +98,7 @@ export function Profile() {
         <div className="profile-ledger__heading">
           <div>
             <h2>Evidence ledger</h2>
-            <p>
-              Every example record keeps its source and issuer boundary visible.
-            </p>
+            <p>Every example record keeps its source and issuer boundary visible.</p>
           </div>
           <PreviewBadge label="Preview records" />
         </div>
@@ -135,12 +122,7 @@ export function Profile() {
               "2026-07-19",
               "Verified",
             ],
-            [
-              "Peer review attestation",
-              "0x3d1b... - unknown",
-              "2026-08-21",
-              "Neutral",
-            ],
+            ["Peer review attestation", "0x3d1b... - unknown", "2026-08-21", "Neutral"],
           ].map(([claim, issuer, date, state]) => (
             <div className="claims-table__row" key={claim}>
               <strong>{claim}</strong>

@@ -1,2 +1,2 @@
 // Schemas land here.
-export {}
+export {};

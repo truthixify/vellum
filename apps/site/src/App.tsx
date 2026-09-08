@@ -2,12 +2,8 @@ import { lazy, Suspense } from "react";
 import { SiteShell } from "./components/SiteShell";
 import { Home } from "./pages/Home";
 
-const Docs = lazy(() =>
-  import("./pages/Docs").then(({ Docs }) => ({ default: Docs })),
-);
-const Profile = lazy(() =>
-  import("./pages/Profile").then(({ Profile }) => ({ default: Profile })),
-);
+const Docs = lazy(() => import("./pages/Docs").then(({ Docs }) => ({ default: Docs })));
+const Profile = lazy(() => import("./pages/Profile").then(({ Profile }) => ({ default: Profile })));
 const Resolver = lazy(() =>
   import("./pages/Resolver").then(({ Resolver }) => ({ default: Resolver })),
 );

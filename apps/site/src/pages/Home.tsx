@@ -1,11 +1,5 @@
 import { ArrowRight, Check, Copy, ShieldCheck } from "lucide-react";
-import {
-  AvatarMark,
-  PreviewBadge,
-  SignalRail,
-  StatusMark,
-  useCopyFeedback,
-} from "@vellum/ui";
+import { AvatarMark, PreviewBadge, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
 import { useState } from "react";
 import { dashboardUrl } from "../config";
 
@@ -147,9 +141,7 @@ function RegistryScene() {
                 onSelect={setSelected}
               >
                 <strong>GitHub &middot; @rmaddox</strong>
-                <small className="positive">
-                  Verified &middot; signed gist
-                </small>
+                <small className="positive">Verified &middot; signed gist</small>
               </NodeButton>
               <NodeButton
                 record={byKey("address")}
@@ -157,9 +149,7 @@ function RegistryScene() {
                 onSelect={setSelected}
               >
                 <strong>CKB address &middot; ckb1q&hellip;s9f0</strong>
-                <small className="positive">
-                  Verified &middot; control proof
-                </small>
+                <small className="positive">Verified &middot; control proof</small>
               </NodeButton>
               <NodeButton
                 record={byKey("ckboost")}
@@ -240,27 +230,15 @@ function RegistryLegend() {
   return (
     <section className="site-content registry-legend">
       {[
-        [
-          "did:ckb:0x8f2a\u2026c41d",
-          "One resolvable identifier, owned by a person",
-        ],
-        [
-          "Three linked services",
-          "GitHub, CKB address, CKBoost \u2014 each with its own method",
-        ],
-        [
-          "Independently sourced claims",
-          "Issuer, schema, and timestamp visible on every record",
-        ],
+        ["did:ckb:0x8f2a\u2026c41d", "One resolvable identifier, owned by a person"],
+        ["Three linked services", "GitHub, CKB address, CKBoost \u2014 each with its own method"],
+        ["Independently sourced claims", "Issuer, schema, and timestamp visible on every record"],
         [
           "One transparent eligibility result",
           "Every contributing rule is shown, not just the outcome",
         ],
       ].map(([title, body], index) => (
-        <div
-          className={index === 0 ? "registry-legend__primary" : ""}
-          key={title}
-        >
+        <div className={index === 0 ? "registry-legend__primary" : ""} key={title}>
           <span className="registry-legend__node" />
           <strong className={index === 0 ? "mono" : ""}>{title}</strong>
           <p>{body}</p>
@@ -361,9 +339,7 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">
-          Grants council v3 \u2014 eligibility
-        </div>
+        <div className="policy-card__bar">Grants council v3 \u2014 eligibility</div>
         <div className="policy-card__result">
           <StatusMark tone="positive">Eligible</StatusMark>
           <span>Evaluated 2026-09-05 14:02 UTC</span>
@@ -421,11 +397,7 @@ function CodeExample() {
     <div className="code-sample">
       <div className="code-sample__bar">
         <span className="mono">resolve.ts</span>
-        <button
-          onClick={() => void copy(code)}
-          title="Copy code"
-          aria-label="Copy code"
-        >
+        <button onClick={() => void copy(code)} title="Copy code" aria-label="Copy code">
           <Copy size={14} />
           {copied && <span>Copied</span>}
         </button>
@@ -464,8 +436,8 @@ export function Home() {
             <span className="section-number">01</span>
             <h2>Own the identifier</h2>
             <p>
-              One DID, controlled by your keys and resolvable by anyone. Rotate
-              the controller or migrate it without losing the record.
+              One DID, controlled by your keys and resolvable by anyone. Rotate the controller or
+              migrate it without losing the record.
             </p>
           </div>
           <IdentitySpecimen />
@@ -478,8 +450,8 @@ export function Home() {
             <span className="section-number">02</span>
             <h2>Attach evidence</h2>
             <p>
-              Issuers write claims against published schemas. Every record keeps
-              its issuer, dates, and trust boundary in view.
+              Issuers write claims against published schemas. Every record keeps its issuer, dates,
+              and trust boundary in view.
             </p>
             <PreviewBadge label="Testnet preview" />
           </div>
@@ -491,13 +463,10 @@ export function Home() {
             <span className="section-number">03</span>
             <h2>Use it elsewhere</h2>
             <p>
-              Applications read the same evidence and apply their own published
-              policy. Vellum interprets; it never decides for them.
+              Applications read the same evidence and apply their own published policy. Vellum
+              interprets; it never decides for them.
             </p>
-            <a
-              className="v-button v-button--secondary"
-              href={dashboardUrl("/governance")}
-            >
+            <a className="v-button v-button--secondary" href={dashboardUrl("/governance")}>
               Open governance demo
             </a>
           </div>
@@ -509,22 +478,18 @@ export function Home() {
           <PreviewBadge label="Planned testnet method" />
           <h2>Portable evidence. Transparent interpretation.</h2>
           <p>
-            A Vellum index is one reading of the evidence attached to an
-            identity. The method is versioned, the inputs are inspectable, and
-            the result never asserts that a person is unique or honest.
+            A Vellum index is one reading of the evidence attached to an identity. The method is
+            versioned, the inputs are inspectable, and the result never asserts that a person is
+            unique or honest.
           </p>
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">
-                0\u2013100 {"\u00b7"} method v0.4.1
-              </strong>
+              <strong className="mono">0\u2013100 {"\u00b7"} method v0.4.1</strong>
             </div>
             <div>
               <small>Contributing categories</small>
-              <strong>
-                Contribution, credentials, account coverage, longevity
-              </strong>
+              <strong>Contribution, credentials, account coverage, longevity</strong>
             </div>
             <div>
               <small>Issuer visibility</small>
@@ -532,15 +497,10 @@ export function Home() {
             </div>
             <div>
               <small>Scope</small>
-              <strong className="warning">
-                Reputation surfaces are preview-only
-              </strong>
+              <strong className="warning">Reputation surfaces are preview-only</strong>
             </div>
           </div>
-          <a
-            className="v-button v-button--secondary method-band__link"
-            href="/transparency"
-          >
+          <a className="v-button v-button--secondary method-band__link" href="/transparency">
             How this is calculated <ArrowRight size={14} />
           </a>
         </div>
@@ -550,9 +510,8 @@ export function Home() {
           <div className="feature-copy">
             <h2>Resolve any identity</h2>
             <p>
-              Use the current did:ckb package to read a DID document directly
-              from CKB. Identity resolution is live; reputation extensions
-              remain clearly separated as preview data.
+              Use the current did:ckb package to read a DID document directly from CKB. Identity
+              resolution is live; reputation extensions remain clearly separated as preview data.
             </p>
             <div className="button-row">
               <a className="v-button v-button--primary" href="/docs">

@@ -27,10 +27,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="site-header__actions">
             <ThemeButton />
-            <a
-              className="v-button v-button--primary site-dashboard-link"
-              href={dashboardUrl()}
-            >
+            <a className="v-button v-button--primary site-dashboard-link" href={dashboardUrl()}>
               Open dashboard
             </a>
           </div>

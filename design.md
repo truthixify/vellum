@@ -23,7 +23,7 @@ Facts that color every design call:
 ## 1. Brand
 
 **Name:** Vellum.
-**Tagline:** *Your identity, on paper that lasts.*
+**Tagline:** _Your identity, on paper that lasts._
 
 Vellum is the material historic identity documents were written on. Permanent, expensive, single-owner. That metaphor drives everything: a DID Cell is a ledger page, not an app card.
 
@@ -51,16 +51,16 @@ Think old library catalogue cards, embossed letterhead, vellum charters, the bac
 
 ## 3. Color system
 
-| Token | Hex | Role |
-|---|---|---|
-| `paper` | `#FBF8EE` | Primary background, surface fills |
-| `ink` | `#0E0E0C` | Primary type, all borders, dark fills |
-| `verdant` | `#1A6E4A` | Brand accent, primary CTA fill, `ACTIVE` state, registration brackets that frame critical values |
-| `cobalt` | `#1F3DCB` | Secondary accent. Body links. `MIGRATING` state (the 72-hour did:plc window). Resolver color. |
-| `amber` | `#D08A1A` | `PENDING` state. Transactions in flight, drafts not yet submitted. |
-| `alarm` | `#C53B2E` | `CONTESTED` and `FAILED` states. Destructive-action confirmations. |
-| `muted` | `#6F6A5C` | Secondary text, mono labels, form-footer lines, `DEACTIVATED` state. |
-| `hairline` | `#E6DFC9` | Soft inner dividers. |
+| Token      | Hex       | Role                                                                                             |
+| ---------- | --------- | ------------------------------------------------------------------------------------------------ |
+| `paper`    | `#FBF8EE` | Primary background, surface fills                                                                |
+| `ink`      | `#0E0E0C` | Primary type, all borders, dark fills                                                            |
+| `verdant`  | `#1A6E4A` | Brand accent, primary CTA fill, `ACTIVE` state, registration brackets that frame critical values |
+| `cobalt`   | `#1F3DCB` | Secondary accent. Body links. `MIGRATING` state (the 72-hour did:plc window). Resolver color.    |
+| `amber`    | `#D08A1A` | `PENDING` state. Transactions in flight, drafts not yet submitted.                               |
+| `alarm`    | `#C53B2E` | `CONTESTED` and `FAILED` states. Destructive-action confirmations.                               |
+| `muted`    | `#6F6A5C` | Secondary text, mono labels, form-footer lines, `DEACTIVATED` state.                             |
+| `hairline` | `#E6DFC9` | Soft inner dividers.                                                                             |
 
 ### Rules
 
@@ -80,17 +80,17 @@ Think old library catalogue cards, embossed letterhead, vellum charters, the bac
 **Monospace:** Berkeley Mono, JetBrains Mono, IBM Plex Mono, or Geist Mono.
 No third family. No serif. No script.
 
-| Use | Size | Weight |
-|---|---|---|
-| Hero headline | 56 to 80px | 500 |
-| Page title (`<h1>`) | 36 to 44px | 500 |
-| Card title | 22 to 26px | 500 |
-| Body | 16px | 400 |
-| Small body | 14px | 400 |
-| Mono label | 11px | 500, letter-spacing 1.4 |
-| Mono small caps | 10px | 500, letter-spacing 1.6 |
-| Mono inline (DIDs, addresses) | 13 to 14px | 500 |
-| Big values (capacity, block height, the DID itself) | 48 to 80px | 500 |
+| Use                                                 | Size       | Weight                  |
+| --------------------------------------------------- | ---------- | ----------------------- |
+| Hero headline                                       | 56 to 80px | 500                     |
+| Page title (`<h1>`)                                 | 36 to 44px | 500                     |
+| Card title                                          | 22 to 26px | 500                     |
+| Body                                                | 16px       | 400                     |
+| Small body                                          | 14px       | 400                     |
+| Mono label                                          | 11px       | 500, letter-spacing 1.4 |
+| Mono small caps                                     | 10px       | 500, letter-spacing 1.6 |
+| Mono inline (DIDs, addresses)                       | 13 to 14px | 500                     |
+| Big values (capacity, block height, the DID itself) | 48 to 80px | 500                     |
 
 Two weights only: 400 and 500. Never 600 or 700.
 
@@ -142,6 +142,7 @@ Components:
 - **Form footer:** mono caps `VELLUM · [DOCUMENT TYPE] · MIT` left, page/document ID right.
 
 **Variations:**
+
 - **Slim row** (multi-DID listing): outer 1px border, 4px state stripe down the left edge, no ID tab, no offset, no internal hairlines.
 - **Hero/focal card**: full pattern with offset block.
 - **Mini card** (toast, feed line): outer 1px, status pill, content, no form footer.
@@ -252,14 +253,14 @@ Bottom-right. Paper fill, 1px ink border, status dot left, body, mono timestamp 
 ### Marketing landing page
 
 1. **Top stamp.** Brand stamp at top, mono caps version line `VELLUM · v0.1 · DID:CKB DASHBOARD · MIT`.
-2. **Hero.** Editorial headline *"Your identity, on paper that lasts."* at 64 to 80px ink with one word in verdant. 2-line subhead in 22px body explaining you're claiming a Cell on CKB that holds your identity, survives wallet rotation, resolvable by anyone. CTAs: `CLAIM A DID` (verdant), `RESOLVE A DID` (paper + ink border).
+2. **Hero.** Editorial headline _"Your identity, on paper that lasts."_ at 64 to 80px ink with one word in verdant. 2-line subhead in 22px body explaining you're claiming a Cell on CKB that holds your identity, survives wallet rotation, resolvable by anyone. CTAs: `CLAIM A DID` (verdant), `RESOLVE A DID` (paper + ink border).
 3. **What you get.** Three small manifest cards: (a) permanent identifier surviving key rotation, (b) profile every app reads from one place, (c) portable handle across CKB / AT Protocol / Nostr. Each with a small verdant line-art illustration (no photography).
 4. **How it works.** 5-step horizontal manifest. Numbered tabs (`01`, `02`, …), short titles, mono caps subtitles, connected by a hairline. Steps: connect wallet → write profile → sign create tx → DID is live on chain → manage from anywhere.
 5. **What goes in a DID.** A single example manifest card, mocked. Shows sample DID with name, avatar, handles, services. The visitor sees what their record will look like.
 6. **The cost.** A stamped panel: `Storage rent: ~600 CKB locked, recoverable on deactivation. Network fee: less than 0.01 CKB per transaction. No subscription.` Mono caps. Verdant underline on the per-tx figure.
 7. **What can read it.** Three small cards: any wallet, any CKB app integrating the SDK, the generic resolver (this site's `RESOLVE` page).
 8. **FAQ.** Six accordion items, paper-and-ink, no chrome: what if I lose my keys, what if I change my name, can someone else claim my DID, what happens if I deactivate, can I migrate from did:plc, why CKB and not Ethereum.
-9. **CTA stamp.** Full-bleed paper, big editorial line *"Claim your name."* with both CTAs again.
+9. **CTA stamp.** Full-bleed paper, big editorial line _"Claim your name."_ with both CTAs again.
 10. **Footer.**
 
 Decorative SVGs are fine here sparingly: faint 1px ink line-art folded-sheet motif behind the hero, registration-mark details at section breaks. Type and layout do most of the work.
@@ -381,6 +382,7 @@ Things move because something happened, not to look fancy.
 - Status changes: 400ms color flash (band briefly inverts e.g. amber → ink → verdant). The "stamp landing" moment.
 
 **Tx lifecycle** (the most important motion):
+
 1. Band animates `DRAFT` → `PENDING` with stamp-landing flash.
 2. While pending: pulsing amber dot, cycling mono caps text (`WAITING FOR BLOCK…` → `INDEXING…` → `VERIFYING TYPE SCRIPT…`).
 3. On confirmation: flash ink for 400ms, settle into verdant `ACTIVE`. Block height counts up from placeholder. Hairline sweeps left-to-right across the form footer.

@@ -75,7 +75,8 @@ export function buildDocument(
 
 export function extractProfile(doc: DidDocument): VellumProfile {
   const entry = doc.services?.[PROFILE_SERVICE_KEY] as
-    (Record<string, unknown> & { type: string }) | undefined;
+    | (Record<string, unknown> & { type: string })
+    | undefined;
   if (!entry || entry.type !== PROFILE_SERVICE_TYPE) return {};
   return {
     displayName: typeof entry.displayName === "string" ? entry.displayName : undefined,
@@ -83,4 +84,3 @@ export function extractProfile(doc: DidDocument): VellumProfile {
     bio: typeof entry.bio === "string" ? entry.bio : undefined,
   };
 }
-

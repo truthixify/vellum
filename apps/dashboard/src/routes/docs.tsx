@@ -5,7 +5,11 @@ export const Route = createFileRoute("/docs")({
 });
 
 type DocsPath =
-  "/docs" | "/docs/did-ckb" | "/docs/cell-model" | "/docs/resolution" | "/docs/migration";
+  | "/docs"
+  | "/docs/did-ckb"
+  | "/docs/cell-model"
+  | "/docs/resolution"
+  | "/docs/migration";
 
 type NavItem = {
   to: DocsPath;

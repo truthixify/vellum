@@ -40,22 +40,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useVellumTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
-  if (!context)
-    throw new Error("useVellumTheme must be used inside ThemeProvider");
+  if (!context) throw new Error("useVellumTheme must be used inside ThemeProvider");
   return context;
 }
 
 export function ThemeButton({ className = "" }: { className?: string }) {
   const { theme, toggleTheme } = useVellumTheme();
-  const label =
-    theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+  const label = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
   const Icon = theme === "dark" ? Sun : Moon;
 
   return (

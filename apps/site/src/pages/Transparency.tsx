@@ -8,9 +8,9 @@ export function Transparency() {
         <PreviewBadge label="Planned reputation method" />
         <h1>Method and service record</h1>
         <p>
-          What Vellum intends to measure, from which sources, and what it will
-          not claim. The reputation extension is not deployed; the records below
-          document the proposed, reviewable methodology.
+          What Vellum intends to measure, from which sources, and what it will not claim. The
+          reputation extension is not deployed; the records below document the proposed, reviewable
+          methodology.
         </p>
       </section>
       <section className="transparency-section transparency-section--strong">
@@ -25,18 +25,12 @@ export function Transparency() {
             <div>
               <span className="mono">v0.4.1</span>
               <span>Design candidate</span>
-              <span>
-                Self-declared account links do not contribute to account
-                coverage.
-              </span>
+              <span>Self-declared account links do not contribute to account coverage.</span>
             </div>
             <div>
               <span className="mono">v0.4.0</span>
               <span>Research iteration</span>
-              <span>
-                Category maxima defined; expired claims decay instead of
-                disappearing.
-              </span>
+              <span>Category maxima defined; expired claims decay instead of disappearing.</span>
             </div>
             <div>
               <span className="mono">v0.3.2</span>
@@ -67,10 +61,7 @@ export function Transparency() {
           <div>
             <small>Coverage statistics</small>
             <strong>Not available</strong>
-            <span>
-              No aggregate reporting endpoint exists. This page does not
-              estimate one.
-            </span>
+            <span>No aggregate reporting endpoint exists. This page does not estimate one.</span>
           </div>
           <div>
             <small>Uptime history</small>
@@ -84,18 +75,12 @@ export function Transparency() {
           <div>
             <h2>Known limitations</h2>
             <ul>
+              <li>An index cannot prove uniqueness, humanity, honesty, or intent.</li>
               <li>
-                An index cannot prove uniqueness, humanity, honesty, or intent.
-              </li>
-              <li>
-                Issuer listing only describes a registry decision; it does not
-                make a claim true.
+                Issuer listing only describes a registry decision; it does not make a claim true.
               </li>
               <li>Claims may be revoked after a cached calculation.</li>
-              <li>
-                Any initial reputation work is testnet-only and must remain
-                reproducible.
-              </li>
+              <li>Any initial reputation work is testnet-only and must remain reproducible.</li>
             </ul>
           </div>
           <div>
