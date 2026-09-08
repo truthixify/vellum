@@ -4,22 +4,24 @@ The Vellum public site and identity dashboard for [`did:ckb`](https://github.com
 
 Claim a DID, write a profile to it, rotate the keys that control it, look up any DID on the network, migrate an existing `did:plc` identity onto CKB, and deactivate when you're done.
 
+Grant delivery is tracked on the public [Vellum Reputation Extension project](https://github.com/users/truthixify/projects/2), with repository issues grouped into M1-M3 milestones.
+
 The SDK now lives in the `@ckb-ccc/identity` package on a fork of [ckb-devrel/ccc](https://github.com/ckb-devrel/ccc), and the dashboard consumes it as a regular dependency. Source for the package: [`truthixify/ccc` `feat/identity-package` branch](https://github.com/truthixify/ccc/tree/feat/identity-package/packages/identity). Releases are published as GitHub Release assets on the fork; the dashboard pins one of those tarball URLs in its `package.json`.
 
 ## Status
 
-| Surface | State |
-|---|---|
-| `usevellum.xyz` public site | live, including testnet DID resolution |
-| `dashboard.usevellum.xyz` overview | design preview; reputation data is explicitly labeled |
-| `/claim` create flow | live, end-to-end on testnet and mainnet |
-| `/my` dashboard | live, with reverse-lookup, document body, lock script card, full operation history |
-| `/edit` document editor | live, every field editable, real on-chain update |
-| `/resolve` public lookup | live, resolves any `did:ckb` |
-| `/deactivate` burn flow | live, with 24h UI cool-down per DID |
-| `/docs/*` | live |
-| `/migrate` did:plc migration | preview only; SDK + UI scaffolding in progress |
-| Lock-script rotation | SDK supports it via `buildUpdateTx({ newLock })`; UI lands in a follow-up |
+| Surface                            | State                                                                              |
+| ---------------------------------- | ---------------------------------------------------------------------------------- |
+| `usevellum.xyz` public site        | live, including testnet DID resolution                                             |
+| `dashboard.usevellum.xyz` overview | design preview; reputation data is explicitly labeled                              |
+| `/claim` create flow               | live, end-to-end on testnet and mainnet                                            |
+| `/my` dashboard                    | live, with reverse-lookup, document body, lock script card, full operation history |
+| `/edit` document editor            | live, every field editable, real on-chain update                                   |
+| `/resolve` public lookup           | live, resolves any `did:ckb`                                                       |
+| `/deactivate` burn flow            | live, with 24h UI cool-down per DID                                                |
+| `/docs/*`                          | live                                                                               |
+| `/migrate` did:plc migration       | preview only; SDK + UI scaffolding in progress                                     |
+| Lock-script rotation               | SDK supports it via `buildUpdateTx({ newLock })`; UI lands in a follow-up          |
 
 ## Stack
 
@@ -32,8 +34,8 @@ The SDK now lives in the `@ckb-ccc/identity` package on a fork of [ckb-devrel/cc
 
 The deployed `did-ckb` Type Script:
 
-| Network | code_hash | tx_hash |
-|---|---|---|
+| Network | code_hash                                                            | tx_hash                                                              |
+| ------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Mainnet | `0x4a06164dc34dccade5afe3e847a97b6db743e79f5477fa3295acf02849c5984a` | `0xe2f74c56cdc610d2b9fe898a96a80118845f5278605d7f9ad535dad69ae015bf` |
 | Testnet | `0x510150477b10d6ab551a509b71265f3164e9fd4137fcb5a4322f49f03092c7c5` | `0x0e7a830e2d5ebd05cd45a55f93f94559edea0ef1237b7233f49f7facfb3d6a6c` |
 
@@ -43,19 +45,22 @@ Both `hash_type: type`, `index: 0x0`, `dep_type: code`. Source of truth is the u
 
 ```bash
 bun install
-bun --cwd apps/site run dev
-bun --cwd apps/dashboard run dev
+bun run dev:site
+bun run dev:dashboard
 ```
 
 The public site serves on `http://localhost:8081`; the dashboard serves on
 `http://localhost:8080`. Both are Vite apps with hot module replacement.
 
 ```bash
-bun --cwd apps/site run build
-bun --cwd apps/dashboard run build
-bun --cwd apps/dashboard run lint
-bun --cwd apps/dashboard x tsc --noEmit
+bun run format:check
+bun run lint
+bun run typecheck
+bun run test
+bun run build
 ```
+
+Run the same quality gates together with `bun run check`. Pre-commit hooks format and lint staged files, commit-message hooks enforce the repository subject style, and the pre-push hook runs the complete check.
 
 The dashboard defaults to **CKB testnet** so you can experiment without spending mainnet CKB. The wallet dropdown lets the holder switch to mainnet at any time.
 
@@ -89,21 +94,36 @@ The `did-ckb` module exports a small public surface anyone can build against. Ke
 ```ts
 import {
   // Constants
-  DID_CKB_MAINNET, DID_CKB_TESTNET, deploymentForClient,
+  DID_CKB_MAINNET,
+  DID_CKB_TESTNET,
+  deploymentForClient,
 
   // Identifier
-  computeDidArgs, argsToDid, didToArgs, isDidCkb,
+  computeDidArgs,
+  argsToDid,
+  didToArgs,
+  isDidCkb,
 
   // Document
-  buildDocument, encodeDocument, decodeDocument, extractProfile,
-  defaultAvatarUrl, isDefaultAvatar,
-  PROFILE_SERVICE_KEY, PROFILE_SERVICE_TYPE,
+  buildDocument,
+  encodeDocument,
+  decodeDocument,
+  extractProfile,
+  defaultAvatarUrl,
+  isDefaultAvatar,
+  PROFILE_SERVICE_KEY,
+  PROFILE_SERVICE_TYPE,
 
   // Transactions (need a Signer)
-  buildCreateTx, buildUpdateTx, buildDeactivateTx,
+  buildCreateTx,
+  buildUpdateTx,
+  buildDeactivateTx,
 
   // Resolver (read-only, needs a Client)
-  findDidCell, resolveDid, listDidsByLock, getDidHistory,
+  findDidCell,
+  resolveDid,
+  listDidsByLock,
+  getDidHistory,
 } from "@/lib/did-ckb";
 ```
 

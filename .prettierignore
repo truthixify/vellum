@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.output
+.vinxi
+bun.lock
+apps/dashboard/src/routeTree.gen.ts
+
+# Local planning and reference material must remain untouched.
+AGENTS.md
+research/
+tmp/

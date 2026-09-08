@@ -1,8 +1,45 @@
 {
   "name": "vellum",
   "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.9",
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "build": "bun run --cwd apps/site build && bun run --cwd apps/dashboard build",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "commitlint": "commitlint",
+    "dev:dashboard": "bun run --cwd apps/dashboard dev",
+    "dev:site": "bun run --cwd apps/site dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "lint-staged": "lint-staged",
+    "prepare": "husky",
+    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src",
+    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "20.5.3",
+    "@eslint/js": "9.32.0",
+    "eslint": "9.32.0",
+    "eslint-config-prettier": "10.1.1",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-react-refresh": "0.4.20",
+    "globals": "15.15.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
+    "prettier": "3.7.3",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.56.1"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx}": [
+      "eslint --fix --max-warnings 0",
+      "prettier --write"
+    ],
+    "*.{css,html,json,jsonc,md,yaml,yml}": "prettier --write"
+  }
 }
