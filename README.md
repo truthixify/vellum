@@ -1,158 +1,166 @@
 # Vellum
 
-The Vellum public site and identity dashboard for [`did:ckb`](https://github.com/web5fans/web5-wips/blob/master/01.md), the Decentralized Identifier method that lives on the Nervos CKB blockchain.
+[![CI](https://github.com/truthixify/vellum/actions/workflows/ci.yml/badge.svg)](https://github.com/truthixify/vellum/actions/workflows/ci.yml)
 
-Claim a DID, write a profile to it, rotate the keys that control it, look up any DID on the network, migrate an existing `did:plc` identity onto CKB, and deactivate when you're done.
+**Your reputation should travel with you.**
 
-Grant delivery is tracked on the public [Vellum Reputation Extension project](https://github.com/users/truthixify/projects/2), with repository issues grouped into M1-M3 milestones.
+Vellum takes its name from a material used for records meant to last. The project is built on the
+same idea: your identity and record of work should belong to you, not whichever platform happens to
+display them.
 
-The SDK now lives in the `@ckb-ccc/identity` package on a fork of [ckb-devrel/ccc](https://github.com/ckb-devrel/ccc), and the dashboard consumes it as a regular dependency. Source for the package: [`truthixify/ccc` `feat/identity-package` branch](https://github.com/truthixify/ccc/tree/feat/identity-package/packages/identity). Releases are published as GitHub Release assets on the fork; the dashboard pins one of those tarball URLs in its `package.json`.
+It starts with [`did:ckb`](https://github.com/web5fans/web5-wips/blob/master/01.md), an identifier a
+person controls on Nervos CKB instead of an account a platform controls for them.
 
-## Status
+The identity foundation exists today. The next step is to let communities and products attach
+signed records of real activity to that identity, so a builder's work can be verified and carried
+between apps instead of disappearing into separate databases.
 
-| Surface                            | State                                                                              |
-| ---------------------------------- | ---------------------------------------------------------------------------------- |
-| `usevellum.xyz` public site        | live, including testnet DID resolution                                             |
-| `dashboard.usevellum.xyz` overview | design preview; reputation data is explicitly labeled                              |
-| `/claim` create flow               | live, end-to-end on testnet and mainnet                                            |
-| `/my` dashboard                    | live, with reverse-lookup, document body, lock script card, full operation history |
-| `/edit` document editor            | live, every field editable, real on-chain update                                   |
-| `/resolve` public lookup           | live, resolves any `did:ckb`                                                       |
-| `/deactivate` burn flow            | live, with 24h UI cool-down per DID                                                |
-| `/docs/*`                          | live                                                                               |
-| `/migrate` did:plc migration       | preview only; SDK + UI scaffolding in progress                                     |
-| Lock-script rotation               | SDK supports it via `buildUpdateTx({ newLock })`; UI lands in a follow-up          |
+[Website](https://usevellum.xyz) | [Dashboard](https://dashboard.usevellum.xyz) |
+[Public roadmap](https://github.com/users/truthixify/projects/2)
 
-## Stack
+> **Where things stand:** Vellum's identity tools are live. The reputation extension is planned and
+> implementation has not started. Reputation scores, claims, activity, and governance data shown in
+> the current interfaces are previews, not live records.
 
-- TanStack Router (file-based routing, SPA mode, no SSR)
-- React 19, Vite 7, Tailwind v4 (CSS-first config)
-- shadcn/ui primitives + Vellum-specific components (`Manifest`, `IdTab`, `Brackets`, `Avatar`, `VButton`, `WalletButton`)
-- `@ckb-ccc/connector-react` for wallet integration (UTXO Global, JoyID, MetaMask CKB, etc.)
-- `@ckb-ccc/core` for transactions, signers, the CKB client, molecule codecs, and the type-id hash
-- `@ipld/dag-cbor` for the on-chain document encoding
+## Why Vellum
 
-The deployed `did-ckb` Type Script:
+A quest completed on CKBoost, work shipped on GitHub, attendance at a community event, and a grant
+delivered are all useful signals. Today, each one belongs to the platform that recorded it. Other
+applications cannot reliably verify it, and the person who earned it cannot take it elsewhere.
 
-| Network | code_hash                                                            | tx_hash                                                              |
+Vellum is designed to turn those signals into signed Claim Cells attached to a builder's `did:ckb`.
+Every claim names its issuer, subject, and schema. That makes the evidence portable without pretending
+that every issuer is equally trustworthy: the reader still decides whose claims to accept and how to
+use them.
+
+The planned reputation record lives in CKB Cells, not in a private Vellum database. If the Vellum
+interface disappears, another application can read the same record. The builder controls the Cells
+attached to their identity and can remove a claim they no longer want to keep. Issuers pay the CKB
+capacity needed to create the claims they make.
+
+CKBoost is the first intended product integration. Quest completions will become signed claims that
+can appear on a public builder profile and contribute to a transparent score. The same pattern can
+support event attendance, grant delivery, community roles, and governance eligibility without
+requiring those products to share one backend.
+
+## What exists today
+
+| Part                | Status                          | What that means                                                                                                 |
+| ------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
+| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
+| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
+| Reputation protocol | Planned                         | The on-chain claim model and its supporting SDK are still design work.                                          |
+| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
+
+The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
+the identity operations used by Vellum. The planned reputation work will extend that shared SDK so
+other CKB applications can read and write claims without depending on the Vellum interface.
+
+## What comes next
+
+The public roadmap moves from the primitive to real use:
+
+1. Define and deploy the Claim Cell Type Script on Testnet, add claim APIs to the shared SDK, publish
+   the schemas, and build the first verifiable social signals and scoring method.
+2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
+   participation signal.
+3. Show how other projects can use the record through claim issuance tools and a small governance
+   gating reference.
+
+The work is deliberately testnet-first. A formal audit and promotion of the reputation protocol to
+Mainnet are separate decisions, not implied by completing this roadmap.
+
+## Design principles
+
+- **Portable, not platform-bound.** The record should outlast any one interface, API, or company.
+- **Evidence before scores.** Profiles expose the claims behind a score, including who issued them.
+- **Reader-chosen trust.** Anyone may issue a claim; every consumer chooses the issuers and policies
+  it trusts.
+- **Holder control.** The person named by a claim controls whether that Cell remains part of their
+  public record.
+- **Open infrastructure.** The core protocol has no Vellum token, subscription, or protocol fee.
+
+Here, "lasting" does not mean a platform keeps your data forever. It means the record is yours,
+independently verifiable, and not tied to the application currently displaying it.
+
+## Repository
+
+```text
+.
+├── apps/
+│   ├── dashboard/                  identity dashboard and reputation previews
+│   └── site/                       public website, docs, and Testnet resolver
+└── packages/
+    ├── claim-cell-script/          placeholder for the planned CKB Type Script
+    ├── schemas/                    placeholder for canonical claim schemas
+    └── ui/                         shared design tokens and React components
+```
+
+Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard uses TanStack
+Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
+The claim script and schema packages are scaffolds only; their presence is not implementation
+evidence.
+
+## Run locally
+
+The workspace is pinned to Bun 1.3.9.
+
+```bash
+bun install
+```
+
+Run the two applications in separate terminals:
+
+```bash
+bun run dev:site       # http://localhost:8081
+bun run dev:dashboard  # http://localhost:8080
+```
+
+The site accepts `VITE_DASHBOARD_URL` and the dashboard accepts `VITE_SITE_URL` when their linked
+origins need to be overridden.
+
+## Quality checks
+
+```bash
+bun run check
+```
+
+The complete gate checks formatting, linting, TypeScript, tests, and production builds. Husky runs
+staged-file checks before a commit, validates commit messages, and runs the complete gate before a
+push.
+
+The test command is wired into the gate, but there are no automated test files yet. New behavior
+should arrive with focused tests rather than treating an empty test run as coverage.
+
+## Deployment
+
+The public site and dashboard deploy independently to Vercel from `apps/site` and `apps/dashboard`.
+Each app produces `dist` and includes an SPA rewrite for direct visits to client-side routes.
+
+### did:ckb contracts
+
+Vellum currently uses the upstream did:ckb Identity Type Script. These addresses do not represent
+the planned Claim Cell script.
+
+| Network | `code_hash`                                                          | Deployment transaction                                               |
 | ------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Mainnet | `0x4a06164dc34dccade5afe3e847a97b6db743e79f5477fa3295acf02849c5984a` | `0xe2f74c56cdc610d2b9fe898a96a80118845f5278605d7f9ad535dad69ae015bf` |
 | Testnet | `0x510150477b10d6ab551a509b71265f3164e9fd4137fcb5a4322f49f03092c7c5` | `0x0e7a830e2d5ebd05cd45a55f93f94559edea0ef1237b7233f49f7facfb3d6a6c` |
 
-Both `hash_type: type`, `index: 0x0`, `dep_type: code`. Source of truth is the upstream [`web5fans/did-ckb`](https://github.com/web5fans/did-ckb) README.
+Both use `hash_type: type`, output index `0x0`, and `dep_type: code`. The upstream
+[`web5fans/did-ckb`](https://github.com/web5fans/did-ckb) repository remains the source of truth for
+deployment details and protocol behavior.
 
-## Develop
+## Working on Vellum
 
-```bash
-bun install
-bun run dev:site
-bun run dev:dashboard
-```
+Repository issues are grouped into GitHub milestones and tracked on the public
+[Vellum Reputation Extension project](https://github.com/users/truthixify/projects/2). Each issue is
+developed on a focused branch and delivered through one pull request. The milestones and Project
+board show the larger delivery picture.
 
-The public site serves on `http://localhost:8081`; the dashboard serves on
-`http://localhost:8080`. Both are Vite apps with hot module replacement.
+## References
 
-```bash
-bun run format:check
-bun run lint
-bun run typecheck
-bun run test
-bun run build
-```
-
-Run the same quality gates together with `bun run check`. Pre-commit hooks format and lint staged files, commit-message hooks enforce the repository subject style, and the pre-push hook runs the complete check.
-
-The dashboard defaults to **CKB testnet** so you can experiment without spending mainnet CKB. The wallet dropdown lets the holder switch to mainnet at any time.
-
-## Deploy
-
-Each app deploys independently as a Vercel static site:
-
-- `usevellum.xyz`: root `apps/site`, build `bun install && bun run build`, output `dist`
-- `dashboard.usevellum.xyz`: root `apps/dashboard`, build `bun install && bun run build`, output `dist`
-
-Each app has its own `vercel.json` SPA fallback so direct route visits resolve through Vite's
-`index.html`.
-
-## Project layout
-
-```
-.
-├── README.md                 you are here
-├── apps/
-│   ├── site/                 public site for usevellum.xyz
-│   └── dashboard/            application for dashboard.usevellum.xyz
-├── packages/
-│   └── ui/                   shared design tokens and React primitives
-└── tmp/                      research clones (did-ckb, web5-wips), gitignored
-```
-
-## SDK conventions
-
-The `did-ckb` module exports a small public surface anyone can build against. Key entry points:
-
-```ts
-import {
-  // Constants
-  DID_CKB_MAINNET,
-  DID_CKB_TESTNET,
-  deploymentForClient,
-
-  // Identifier
-  computeDidArgs,
-  argsToDid,
-  didToArgs,
-  isDidCkb,
-
-  // Document
-  buildDocument,
-  encodeDocument,
-  decodeDocument,
-  extractProfile,
-  defaultAvatarUrl,
-  isDefaultAvatar,
-  PROFILE_SERVICE_KEY,
-  PROFILE_SERVICE_TYPE,
-
-  // Transactions (need a Signer)
-  buildCreateTx,
-  buildUpdateTx,
-  buildDeactivateTx,
-
-  // Resolver (read-only, needs a Client)
-  findDidCell,
-  resolveDid,
-  listDidsByLock,
-  getDidHistory,
-} from "@/lib/did-ckb";
-```
-
-### The profile convention
-
-DID Documents follow the `did:plc`-compatible shape from WIP-01: `verificationMethods`, `alsoKnownAs`, `services`. Vellum carries the human-friendly profile inline under `services.profile`:
-
-```json
-{
-  "verificationMethods": { "atproto": "did:key:..." },
-  "alsoKnownAs": ["at://alice.test"],
-  "services": {
-    "profile": {
-      "type": "VellumProfile",
-      "endpoint": "inline",
-      "displayName": "Margot Weil",
-      "avatar": "https://api.dicebear.com/9.x/pixel-art/png?seed=did:ckb:...",
-      "bio": "Conservation lab tech."
-    }
-  }
-}
-```
-
-When the holder doesn't provide an avatar, the SDK fills in a DiceBear pixel-art URL seeded on the DID itself. Stored verbatim in the on-chain document so any resolver (Vellum or otherwise) picks it up.
-
-### Capacity model
-
-A DID Metadata Cell on chain holds, at minimum, the storage rent for its contents: lock script + type script + cell framing + data. The SDK computes this exactly and adds a **200 CKB reserve** so the holder can grow the document on a future update without re-funding the cell. The exact figure depends on profile size; expect 300 to 600 CKB total. Recoverable on deactivation.
-
-## License
-
-MIT.
+- [`did:ckb` method specification](https://github.com/web5fans/web5-wips/blob/master/01.md)
+- [`web5fans/did-ckb`](https://github.com/web5fans/did-ckb)
+- [Common Chains Connector](https://github.com/ckb-devrel/ccc)
