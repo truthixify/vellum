@@ -7,33 +7,11 @@ import {
   type ReactNode,
 } from "react";
 
-export function VellumMark({
-  size = 20,
-  className = "",
-}: {
-  size?: number;
-  className?: string;
-}) {
+export function VellumMark({ size = 20, className = "" }: { size?: number; className?: string }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 20 20"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M6 2H2v16h4"
-        fill="none"
-        stroke="var(--primary)"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M14 2h4v16h-4"
-        fill="none"
-        stroke="var(--primary)"
-        strokeWidth="1.6"
-      />
+    <svg width={size} height={size} viewBox="0 0 20 20" className={className} aria-hidden="true">
+      <path d="M6 2H2v16h4" fill="none" stroke="var(--primary)" strokeWidth="1.6" />
+      <path d="M14 2h4v16h-4" fill="none" stroke="var(--primary)" strokeWidth="1.6" />
       <rect x="8" y="8" width="4" height="4" fill="var(--ink)" />
     </svg>
   );
@@ -43,17 +21,14 @@ export function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
     <span className="v-wordmark">
       <VellumMark size={compact ? 18 : 20} />
-      {!compact && <span>Vellum.</span>}
+      {!compact && <span>Vellum</span>}
     </span>
   );
 }
 
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger";
 
-export function buttonClassName(
-  variant: ButtonVariant = "secondary",
-  className = "",
-) {
+export function buttonClassName(variant: ButtonVariant = "secondary", className = "") {
   return `v-button v-button--${variant} ${className}`.trim();
 }
 
@@ -73,11 +48,7 @@ export function Button({
   );
 }
 
-export function NetworkStatus({
-  network = "CKB Testnet",
-}: {
-  network?: string;
-}) {
+export function NetworkStatus({ network = "CKB Testnet" }: { network?: string }) {
   return (
     <span className="v-network-status">
       <span aria-hidden="true" />
@@ -121,9 +92,7 @@ export function AvatarMark({
   children: ReactNode;
   size?: "small" | "medium" | "large";
 }) {
-  return (
-    <span className={`v-avatar-mark v-avatar-mark--${size}`}>{children}</span>
-  );
+  return <span className={`v-avatar-mark v-avatar-mark--${size}`}>{children}</span>;
 }
 
 export function SignalRail({
