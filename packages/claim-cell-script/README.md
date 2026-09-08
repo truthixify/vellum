@@ -1,16 +1,9 @@
-# claim-cell-script
+# Claim Cell script
 
-On-chain type script for the Vellum Claim Cell. Rust source compiled to a CKB script binary via the CKB script build toolchain (`ckb-std`, `ckb-script-templates`).
+This package will contain the Rust script and reproducible build files for Vellum Claim Cells.
 
-Not a JS package; the root Bun workspace ignores it because it has no `package.json`.
+- [Claim Cell protocol](../../docs/claim-cell.md)
+- [Canonical Molecule schema](./molecules/claim.mol)
 
-## Deployment
-
-Testnet and mainnet deployment addresses (type-id) live in `deployments/` once the script is deployed. The dashboard reads that file for the CellDep, no hardcoded strings.
-
-## Build
-
-```
-cd packages/claim-cell-script
-cargo build --release --target riscv64imac-unknown-none-elf
-```
+The script has not been implemented or deployed. Implementation begins after the protocol receives
+external CKB review.

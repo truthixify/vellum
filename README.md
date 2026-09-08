@@ -91,6 +91,7 @@ independently verifiable, and not tied to the application currently displaying i
 ├── apps/
 │   ├── dashboard/                  identity dashboard and reputation previews
 │   └── site/                       public website, docs, and Testnet resolver
+├── docs/                            protocol and integration documentation
 └── packages/
     ├── claim-cell-script/          placeholder for the planned CKB Type Script
     ├── schemas/                    placeholder for canonical claim schemas
