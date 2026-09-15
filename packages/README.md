@@ -6,7 +6,8 @@ Shared libraries consumed by apps in this workspace. Each subfolder is a Bun/Nod
 
 - `ui/` - shared Vellum design tokens and source-only React primitives used by both Vite apps.
 - `schemas/` — canonical claim payload schemas (JSON specs, TypeScript types, schema-hash helpers). Consumed by the dashboard, the scoring service, and any external issuer that wants to match Vellum's exact hashes.
-- `claim-cell-script/` — Rust source for the on-chain Claim Cell type script. Not a JS package; has its own Cargo toolchain.
+- `claim-cell-script/` - Rust source for the Claim Type and reusable DID Lock. Not a JS package; it
+  has its own Cargo toolchain.
 
 ## Naming
 

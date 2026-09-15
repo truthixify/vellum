@@ -1,32 +1,16 @@
 array Uint64 [byte; 8];
 array Byte20 [byte; 20];
 array Byte32 [byte; 32];
-array Byte64 [byte; 64];
-
-array Secp256k1PublicKey [byte; 33];
-array P256PublicKey [byte; 33];
 
 vector Bytes <byte>;
 option Uint64Opt (Uint64);
 
-union IssuerKey {
-    Secp256k1PublicKey,
-    P256PublicKey,
-}
-
-table ClaimStatementV1 {
-    issuer_key: IssuerKey,
-    subject_id: Byte20,
-    schema_hash: Byte32,
+table ClaimV1 {
+    issuer_id: Byte20,
     nonce: Byte32,
     issued_at: Uint64,
     expires_at: Uint64Opt,
     payload: Bytes,
-}
-
-table ClaimV1 {
-    statement: ClaimStatementV1,
-    signature: Byte64,
 }
 
 union ClaimData {
