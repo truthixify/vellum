@@ -63,3 +63,32 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  rust-contracts:
+    name: Claim Cell contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install RISC-V target
+        run: make -C packages/claim-cell-script prepare
+
+      - name: Check Rust formatting
+        run: make -C packages/claim-cell-script fmt
+
+      - name: Check Rust crates
+        run: make -C packages/claim-cell-script check
+
+      - name: Run Rust lints
+        run: make -C packages/claim-cell-script clippy
+
+      - name: Run VM tests
+        run: make -C packages/claim-cell-script test
+
+      - name: Report release sizes
+        run: make -C packages/claim-cell-script size
