@@ -1,0 +1,9 @@
+[package]
+name = "vellum-claim-tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ckb-testtool = "=1.1.1"
+molecule = { version = "=0.9.2", default-features = false }
+vellum-claim-types = { path = "../crates/claim-types" }
