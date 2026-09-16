@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/claim-types",
+    "contracts/claim-cell",
+    "contracts/did-lock",
+    "tests",
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+overflow-checks = true
+panic = "abort"
+strip = true
