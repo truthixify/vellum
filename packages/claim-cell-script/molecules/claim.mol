@@ -1,0 +1,18 @@
+array Uint64 [byte; 8];
+array Byte20 [byte; 20];
+array Byte32 [byte; 32];
+
+vector Bytes <byte>;
+option Uint64Opt (Uint64);
+
+table ClaimV1 {
+    issuer_id: Byte20,
+    nonce: Byte32,
+    issued_at: Uint64,
+    expires_at: Uint64Opt,
+    payload: Bytes,
+}
+
+union ClaimData {
+    ClaimV1,
+}

@@ -12,8 +12,8 @@ It starts with [`did:ckb`](https://github.com/web5fans/web5-wips/blob/master/01.
 person controls on Nervos CKB instead of an account a platform controls for them.
 
 The identity foundation exists today. The next step is to let communities and products attach
-signed records of real activity to that identity, so a builder's work can be verified and carried
-between apps instead of disappearing into separate databases.
+issuer-authorized records of real activity to that identity, so a builder's work can be verified and
+carried between apps instead of disappearing into separate databases.
 
 [Website](https://usevellum.xyz) | [Dashboard](https://dashboard.usevellum.xyz) |
 [Public roadmap](https://github.com/users/truthixify/projects/2)
@@ -28,20 +28,20 @@ A quest completed on CKBoost, work shipped on GitHub, attendance at a community 
 delivered are all useful signals. Today, each one belongs to the platform that recorded it. Other
 applications cannot reliably verify it, and the person who earned it cannot take it elsewhere.
 
-Vellum is designed to turn those signals into signed Claim Cells attached to a builder's `did:ckb`.
-Every claim names its issuer, subject, and schema. That makes the evidence portable without pretending
-that every issuer is equally trustworthy: the reader still decides whose claims to accept and how to
-use them.
+Vellum is designed to turn those signals into Claim Cells authorized by an issuer's `did:ckb` and
+held under a builder-controlled CKB lock. Every claim identifies its issuer and schema, while its
+output lock identifies the subject. That makes the evidence portable without pretending that every
+issuer is equally trustworthy: the reader still decides whose claims to accept and how to use them.
 
 The planned reputation record lives in CKB Cells, not in a private Vellum database. If the Vellum
 interface disappears, another application can read the same record. The builder controls the Cells
 attached to their identity and can remove a claim they no longer want to keep. Issuers pay the CKB
 capacity needed to create the claims they make.
 
-CKBoost is the first intended product integration. Quest completions will become signed claims that
-can appear on a public builder profile and contribute to a transparent score. The same pattern can
-support event attendance, grant delivery, community roles, and governance eligibility without
-requiring those products to share one backend.
+CKBoost is the first intended product integration. Quest completions will become issuer-authorized
+claims that can appear on a public builder profile and contribute to a transparent score. The same
+pattern can support event attendance, grant delivery, community roles, and governance eligibility
+without requiring those products to share one backend.
 
 ## What exists today
 
@@ -91,15 +91,16 @@ independently verifiable, and not tied to the application currently displaying i
 ├── apps/
 │   ├── dashboard/                  identity dashboard and reputation previews
 │   └── site/                       public website, docs, and Testnet resolver
+├── docs/                            protocol and integration documentation
 └── packages/
-    ├── claim-cell-script/          placeholder for the planned CKB Type Script
+    ├── claim-cell-script/          placeholder for the planned Claim Type and DID Lock
     ├── schemas/                    placeholder for canonical claim schemas
     └── ui/                         shared design tokens and React components
 ```
 
 Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard uses TanStack
 Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
-The claim script and schema packages are scaffolds only; their presence is not implementation
+The claim scripts and schema packages are scaffolds only; their presence is not implementation
 evidence.
 
 ## Run locally
