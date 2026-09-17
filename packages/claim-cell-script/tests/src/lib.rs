@@ -1,6 +1,6 @@
 #![cfg_attr(not(test), allow(dead_code, unused_imports))]
 
-use std::{env, fs, path::PathBuf};
+use std::{convert::TryInto, env, fs, path::PathBuf};
 
 use ckb_testtool::{
     builtin::ALWAYS_SUCCESS,
@@ -72,12 +72,28 @@ fn claim_type(
     issuer_type: &Script,
     schema_hash: [u8; 32],
 ) -> Script {
+    claim_type_with_hash_type(
+        context,
+        code,
+        issuer_type,
+        schema_hash,
+        ScriptHashType::Type,
+    )
+}
+
+fn claim_type_with_hash_type(
+    context: &mut Context,
+    code: &OutPoint,
+    issuer_type: &Script,
+    schema_hash: [u8; 32],
+    hash_type: ScriptHashType,
+) -> Script {
     let mut args = Vec::with_capacity(vellum_claim_types::CLAIM_TYPE_ARGS_LEN);
     args.extend_from_slice(issuer_type.code_hash().as_slice());
     args.push(issuer_type.hash_type().as_slice()[0]);
     args.extend_from_slice(&schema_hash);
     context
-        .build_script(code, Bytes::from(args))
+        .build_script_with_hash_type(code, hash_type, Bytes::from(args))
         .expect("claim type script")
 }
 
@@ -95,6 +111,19 @@ fn claim_data(issuer_id: [u8; 20], issued_at: u64, expires_at: Option<u64>) -> B
         .build();
     let value: entity::ClaimData = value.into();
     value.as_slice().to_vec().into()
+}
+
+fn claim_data_with_trailing_payload_byte(
+    issuer_id: [u8; 20],
+    issued_at: u64,
+    expires_at: Option<u64>,
+) -> Bytes {
+    let mut data = claim_data(issuer_id, issued_at, expires_at).to_vec();
+    let table_start = 4;
+    let total_size = u32::from_le_bytes(data[table_start..table_start + 4].try_into().unwrap()) + 1;
+    data.push(0);
+    data[table_start..table_start + 4].copy_from_slice(&total_size.to_le_bytes());
+    data.into()
 }
 
 fn did_output(capacity: u64, lock: Script, identity_type: Script) -> CellOutput {
@@ -138,11 +167,12 @@ fn claim_creation_uses_issuer_controller_and_arbitrary_subject_lock() {
     let issuer_type = issuer_type(&mut fixture.context, &fixture.always_success, issuer_id);
     let controller_lock = always_lock(&mut fixture.context, &fixture.always_success, 0x10);
     let subject_lock = always_lock(&mut fixture.context, &fixture.always_success, 0x20);
-    let claim_type = claim_type(
+    let claim_type = claim_type_with_hash_type(
         &mut fixture.context,
         &fixture.claim_cell,
         &issuer_type,
         [9u8; 32],
+        ScriptHashType::Data1,
     );
 
     let issuer_out_point = fixture.context.create_cell(
@@ -624,7 +654,13 @@ fn claim_rejects_malformed_and_expired_data() {
             issuer_type.clone(),
         ))
         .output(claim_output.clone())
-        .outputs_data([Bytes::new(), Bytes::from_static(&[1, 2, 3])].pack())
+        .outputs_data(
+            [
+                Bytes::new(),
+                claim_data_with_trailing_payload_byte(issuer_id, 10, None),
+            ]
+            .pack(),
+        )
         .build();
     let tx = fixture.context.complete_tx(tx);
     assert!(fixture.context.verify_tx(&tx, MAX_CYCLES).is_err());

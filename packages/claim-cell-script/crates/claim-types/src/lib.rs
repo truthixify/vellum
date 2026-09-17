@@ -57,6 +57,32 @@ pub fn parse_claim(data: &[u8]) -> Result<ParsedClaim, ParseError> {
     value.verify(false).map_err(|_| ParseError::Molecule)?;
 
     let lazy::ClaimData::ClaimV1(value) = value;
+    let issued_at_field = value
+        .cursor
+        .table_slice_by_index(2)
+        .map_err(|_| ParseError::Molecule)?;
+    lazy::Uint64::from(issued_at_field)
+        .verify(false)
+        .map_err(|_| ParseError::Molecule)?;
+
+    let expires_at_field = value
+        .cursor
+        .table_slice_by_index(3)
+        .map_err(|_| ParseError::Molecule)?;
+    if !expires_at_field.option_is_none() {
+        lazy::Uint64::from(expires_at_field)
+            .verify(false)
+            .map_err(|_| ParseError::Molecule)?;
+    }
+
+    let payload_field = value
+        .cursor
+        .table_slice_by_index(4)
+        .map_err(|_| ParseError::Molecule)?;
+    lazy::Bytes::from(payload_field)
+        .verify(false)
+        .map_err(|_| ParseError::Molecule)?;
+
     let issuer_id = value.issuer_id().map_err(|_| ParseError::Molecule)?;
     let nonce = value.nonce().map_err(|_| ParseError::Molecule)?;
     let issued_at = value.issued_at().map_err(|_| ParseError::Molecule)?;
@@ -86,6 +112,7 @@ pub fn parse_claim(data: &[u8]) -> Result<ParsedClaim, ParseError> {
 mod tests {
     use super::*;
     use alloc::{vec, vec::Vec};
+    use core::convert::TryInto;
     use molecule::prelude::{Builder, Entity};
 
     fn encoded_claim(issued_at: u64, expires_at: Option<u64>, payload: &[u8]) -> Vec<u8> {
@@ -106,6 +133,29 @@ mod tests {
             .build();
         let value: entity::ClaimData = value.into();
         value.as_slice().to_vec()
+    }
+
+    fn append_table_field_byte(mut data: Vec<u8>, field_index: usize) -> Vec<u8> {
+        assert!(field_index < 5);
+        let table_start = 4;
+        let next_offset = if field_index + 1 < 5 {
+            let position = 8 + (field_index + 1) * 4;
+            u32::from_le_bytes(data[position..position + 4].try_into().unwrap()) as usize
+        } else {
+            let position = table_start;
+            u32::from_le_bytes(data[position..position + 4].try_into().unwrap()) as usize
+        };
+        data.insert(table_start + next_offset, 0);
+
+        let total_size =
+            u32::from_le_bytes(data[table_start..table_start + 4].try_into().unwrap()) + 1;
+        data[table_start..table_start + 4].copy_from_slice(&total_size.to_le_bytes());
+        for index in (field_index + 1)..5 {
+            let position = 8 + index * 4;
+            let offset = u32::from_le_bytes(data[position..position + 4].try_into().unwrap()) + 1;
+            data[position..position + 4].copy_from_slice(&offset.to_le_bytes());
+        }
+        data
     }
 
     #[test]
@@ -144,5 +194,18 @@ mod tests {
 
         let oversized = vec![0u8; MAX_CLAIM_DATA_SIZE + 1];
         assert_eq!(parse_claim(&oversized), Err(ParseError::TooLarge));
+    }
+
+    #[test]
+    fn rejects_trailing_bytes_in_nested_fields() {
+        let cases = [
+            append_table_field_byte(encoded_claim(10, None, &[1]), 2),
+            append_table_field_byte(encoded_claim(10, Some(20), &[1]), 3),
+            append_table_field_byte(encoded_claim(10, None, &[1]), 4),
+        ];
+
+        for data in cases {
+            assert_eq!(parse_claim(&data), Err(ParseError::Molecule));
+        }
     }
 }
