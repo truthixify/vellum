@@ -2,7 +2,7 @@ MODE ?= release
 TARGET ?= riscv64imac-unknown-none-elf
 BUILD_DIR := build/$(MODE)
 TARGET_DIR := target/$(TARGET)/$(MODE)
-CONTRACT_RUSTFLAGS := $(strip $(RUSTFLAGS) -C target-feature=+zba,+zbb,+zbc,+zbs,-a)
+CONTRACT_RUSTFLAGS := $(strip $(RUSTFLAGS) -C target-feature=-a,-zba,-zbb,-zbc,-zbs)
 PROFILE_FLAG := $(if $(filter release,$(MODE)),--release,)
 
 .PHONY: build test check clippy fmt size prepare

@@ -22,10 +22,14 @@ make test
 make size
 ```
 
-`make build` creates release binaries in `build/release`. The test harness deploys those binaries
-into `ckb-testtool` and covers issuer resolution from inputs, outputs, and cell deps, controller
-authorization, arbitrary subject locks, destruction, malformed data, duplicate claims, and DID Lock
-rotation and recursion boundaries.
+`make build` creates release binaries in `build/release`. The package pins Rust 1.92.0, the toolchain
+used by `ckb-std` 1.1.0, and passes explicit compiler flags to avoid RISC-V A and B instructions in
+the emitted contracts. The test harness deploys those binaries into `ckb-testtool` and covers issuer
+resolution from inputs, outputs, and cell deps, controller authorization, arbitrary subject locks,
+destruction, malformed data, duplicate claims, and DID Lock rotation and recursion boundaries. The
+integration fixtures use `data1` and `type` script locators, which execute under CKB-VM version 1; a
+legacy `data` deployment needs a separately validated VM-0-compatible toolchain and is not covered
+by this package build.
 
 The VM fixtures use `ckb-testtool`'s `ALWAYS_SUCCESS` lock as a deterministic stand-in. Real wallet,
 multisig, and `did:ckb` controller authorization remains the responsibility of the lock scripts
@@ -42,11 +46,11 @@ workspace. They are reproducibility baselines, not protocol limits.
 
 | Artifact or path                           |    Measurement |
 | ------------------------------------------ | -------------: |
-| `claim-cell` binary                        |   38,368 bytes |
-| `did-lock` binary                          |   23,208 bytes |
-| Claim creation with issuer replacement     | 137,517 cycles |
-| Claim destruction                          |  12,603 cycles |
-| Claim creation from a live cell dep        | 116,864 cycles |
-| Claim creation with a new issuer DID       | 118,972 cycles |
-| DID Lock authorization from a cell dep     |  36,466 cycles |
-| DID Lock authorization with identity input |  34,931 cycles |
+| `claim-cell` binary                        |   48,064 bytes |
+| `did-lock` binary                          |   30,528 bytes |
+| Claim creation with issuer replacement     | 146,920 cycles |
+| Claim destruction                          |  15,042 cycles |
+| Claim creation from a live cell dep        | 126,218 cycles |
+| Claim creation with a new issuer DID       | 128,326 cycles |
+| DID Lock authorization from a cell dep     |  38,325 cycles |
+| DID Lock authorization with identity input |  36,784 cycles |

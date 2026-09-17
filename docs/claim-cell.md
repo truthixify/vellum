@@ -349,7 +349,9 @@ reconsideration before Mainnet.
 
 The Rust Claim Type and DID Lock contracts are built and exercised locally with `ckb-testtool`.
 Their release binaries and measured VM paths are documented in the package
-[`README`](../packages/claim-cell-script/README.md). No contract has been deployed to Testnet yet.
+[`README`](../packages/claim-cell-script/README.md). The current package build is validated with
+`data1` and `type` script locators under CKB-VM version 1; a legacy `data` deployment requires a
+separately validated VM-0-compatible toolchain. No contract has been deployed to Testnet yet.
 
 ## Implementation and review
 
