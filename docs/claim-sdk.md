@@ -151,11 +151,27 @@ export type WriteClaimProps<TPayload = unknown> = {
   tx?: ccc.TransactionLike;
 };
 
+export type ClaimIssuerSource =
+  | {
+      kind: "input";
+      inputIndex: number;
+      outputIndex: number;
+    }
+  | {
+      kind: "cell-dep";
+      cellDepIndex: number;
+    }
+  | {
+      kind: "output";
+      outputIndex: number;
+    };
+
 export type WriteClaimResult = {
   tx: ccc.Transaction;
   claimId: ccc.Hex;
   outputIndex: number;
-  issuerInputIndex: number;
+  issuerSource: ClaimIssuerSource;
+  controllerInputIndex: number;
 };
 
 export type ClaimSchema<TPayload> = {
@@ -205,9 +221,10 @@ additional Cells are retained in `duplicateCells` so callers can inspect the ano
 counting it more than once.
 
 An unknown schema hash is valid and returns `payload: unknown`. Invalid Molecule or DAG-CBOR data is
-isolated in `invalid`; it does not reject otherwise valid results. Indexer, RPC, and invalid caller
-configuration failures reject the complete operation because the SDK cannot claim that the query
-was complete.
+isolated in `invalid`; it does not reject otherwise valid results. Invalid caller configuration or a
+failure while scanning the subject's Claim Cells rejects the complete operation because the SDK
+cannot claim that the query was complete. A failure limited to resolving an issuer after that scan
+returns the affected claims with `issuerState.status: "unavailable"`.
 
 ### Verification fields
 
@@ -219,7 +236,8 @@ and does not establish that an application should trust the issuer.
 `issuerState` describes the issuer DID at read time. `deactivated` requires historical evidence that
 the DID existed and was consumed; `missing` means the reader has neither a live state nor sufficient
 history to make that stronger statement. `unavailable` is reserved for an operational failure and
-must not be collapsed into `missing`.
+must not be collapsed into `missing`. Authorization consumers must treat `unavailable` as a
+fail-closed state rather than accepting it as evidence of an active issuer.
 
 ### Time evaluation
 
@@ -249,24 +267,71 @@ The builder:
 1. validates the DID, schema hash, nonce, timestamps, and payload;
 2. encodes the payload as canonical DAG-CBOR and the claim as strict Molecule;
 3. derives the Claim Type arguments from the issuer DID deployment and schema hash;
-4. resolves exactly one current issuer DID Cell and its controller lock;
-5. requires `issuerSigner` to control that exact lock and adds a plain, lock-only authorization
-   input;
+4. selects one issuer authorization state using the same input, cell-dep, and output precedence as
+   Claim Type;
+5. derives the controller from that selected state and requires `issuerSigner` to control the exact
+   lock;
 6. uses the supplied subject lock or derives DID Lock for a `did:ckb` subject;
 7. calculates occupied capacity from the serialized output and data;
-8. adds the configured Claim Type, issuer DID, and optional DID Lock dependencies, while signer
-   preparation supplies the controller-lock dependency; and
-9. uses `payerSigner` for additional capacity and fee inputs when one is supplied.
+8. adds only the code and data dependencies required by scripts that execute in the transaction;
+   and
+9. prepares every required signer and uses `payerSigner` for additional capacity, fees, and change
+   when one is supplied.
 
-When issuer and payer differ, the builder preserves the capacity of the issuer's authorization
-input in an output controlled by the same issuer lock. The payer funds the Claim output and fee.
-This is an SDK construction policy, not an on-chain proof of economic attribution. If
-`payerSigner` is omitted, the issuer fills both roles. When both are present, their clients must
-target the same network.
+### Issuer source selection
 
-A supplied transaction may already contain an issuer DID input/output pair, a matching DID Cell
-dependency, or a newly created issuer DID output. The builder follows the Claim Type source
-selection rules and rejects an ambiguous combination instead of adding a second source silently.
+The builder inspects the supplied transaction before fetching or adding an issuer state:
+
+1. If it contains a matching issuer DID input, exactly one matching input and one matching output
+   must exist. The input Cell is selected, its lock is the authorizing controller, and matching cell
+   deps are ignored as required by Claim Type precedence.
+2. Otherwise, if it contains a matching issuer DID cell dep, exactly one matching cell dep and no
+   matching output may exist. The cell dep is selected and its lock is the controller.
+3. Otherwise, if it contains a matching issuer DID output, exactly one matching output must exist.
+   The output is selected and its lock is the controller.
+4. Otherwise, the builder resolves exactly one live issuer DID Cell, adds it as a cell dep, and
+   selects it. A missing or ambiguous live state fails.
+
+The builder then finds or adds an input with the selected controller's exact lock.
+`controllerInputIndex` identifies that input. For the input source, the issuer DID input itself
+satisfies authorization. For the cell-dep and output sources, a newly added authorization input must
+be plain, lock-only, and have empty data.
+
+This order matters during controller rotation: an issuer DID input authorizes with its input lock,
+not the new lock on the matching output. It also allows a DID and its first claims to be created in
+one transaction without requiring a pre-existing live DID Cell.
+
+### Dependencies
+
+Claim Type executes for every new Claim output, so its code dependency is always present. An issuer
+DID Cell selected as data through a cell dep does not execute its Type Script, and a DID Lock used
+only on a new output does not execute its Lock Script; neither case adds the corresponding code
+dependency.
+
+The issuer DID Type dependency is added only when the transaction contains a matching DID input or
+output. The DID Lock dependency is added only when a transaction input uses the configured DID Lock,
+such as an atomic claim replacement. CCC signer preparation supplies dependencies and witnesses for
+controller and payer input locks. Existing dependencies are deduplicated.
+
+### Payer and signing
+
+When issuer and payer differ, the builder mirrors any plain authorization input it adds with an
+equal-capacity output controlled by the same issuer lock. Pre-existing inputs and outputs in a
+supplied transaction are left unchanged. The payer supplies any additional capacity and the fee,
+and payer change is locked to the payer's recommended address. Existing excess input capacity may
+still contribute because CKB balances capacity transaction-wide. This is an SDK construction policy,
+not an on-chain proof of economic attribution. If `payerSigner` is omitted, the issuer fills both
+roles. When both are present, their clients must target the same network.
+
+When issuer and payer differ, `writeClaim` prepares the issuer lock group before calling CCC's fee
+completion with the payer. Fee completion prepares the payer as it collects inputs and calculates
+the final transaction size. When one signer fills both roles, fee completion performs the only
+preparation. The returned transaction is prepared and balanced but unsigned.
+
+Callers sign the prepared transaction with `signOnlyTransaction` once per distinct signer. Each
+signer must preserve witness groups it does not control. After every required lock group is signed,
+the caller broadcasts with `client.sendTransaction`; calling one signer's `sendTransaction` is not
+sufficient when issuer and payer differ.
 
 The output capacity defaults to the exact occupied capacity. A caller may request more, but a value
 below the occupied capacity fails before inputs are collected. The complete encoded Claim data must
@@ -321,22 +386,41 @@ const built = await writeClaim({
   },
 });
 
-const txHash = await issuerSigner.sendTransaction(built.tx);
+const signed = await issuerSigner.signOnlyTransaction(built.tx);
+const txHash = await issuerSigner.client.sendTransaction(signed);
 ```
 
 The returned `claimId` is available before submission. The on-chain locator after submission is
 `{ txHash, index: built.outputIndex }`.
+
+When another signer pays, both lock groups sign before broadcast:
+
+```ts
+const built = await writeClaim({
+  issuerSigner,
+  payerSigner,
+  scripts,
+  input,
+});
+
+let signed = await issuerSigner.signOnlyTransaction(built.tx);
+signed = await payerSigner.signOnlyTransaction(signed);
+const txHash = await issuerSigner.client.sendTransaction(signed);
+```
 
 ## Error boundaries
 
 Caller and transaction-construction errors reject with actionable messages. These include invalid
 identifier or hash lengths, invalid timestamp ordering, oversized data, absent DID Lock
 configuration, a missing or ambiguous issuer state, a signer that does not control the issuer,
-insufficient capacity, and conflicting issuer sources in a supplied transaction.
+signers connected to different networks, insufficient capacity, and conflicting issuer sources in
+a supplied transaction.
 
-Per-Cell decode failures are data-quality results and belong in `ReadClaimsResult.invalid`. Network
-or indexer failures reject `readClaims`; returning a partial array as though the query completed
-would be unsafe for scoring or authorization decisions.
+Per-Cell decode failures are data-quality results and belong in `ReadClaimsResult.invalid`. A network
+or indexer failure during the subject scan rejects `readClaims`; returning a partial array as though
+the query completed would be unsafe. A later issuer-resolution failure is represented explicitly as
+`unavailable`, allowing display callers to retain the claim while authorization callers fail
+closed.
 
 ## Non-goals
 
