@@ -18,9 +18,10 @@ carried between apps instead of disappearing into separate databases.
 [Website](https://usevellum.xyz) | [Dashboard](https://dashboard.usevellum.xyz) |
 [Public roadmap](https://github.com/users/truthixify/projects/2)
 
-> **Where things stand:** Vellum's identity tools are live. The reputation extension is planned and
-> implementation has not started. Reputation scores, claims, activity, and governance data shown in
-> the current interfaces are previews, not live records.
+> **Where things stand:** Vellum's identity tools are live, and the reputation extension is now in
+> implementation. Claim Cell contracts are being tested locally but are not deployed yet. Reputation
+> scores, claims, activity, and governance data shown in the current interfaces are previews, not live
+> records.
 
 ## Why Vellum
 
@@ -50,7 +51,7 @@ without requiring those products to share one backend.
 | `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
 | Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
 | Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
-| Reputation protocol | Planned                         | The on-chain claim model and its supporting SDK are still design work.                                          |
+| Reputation protocol | In implementation               | Claim Type and DID Lock are implemented and under review; SDK, schemas, scoring, and deployment remain.         |
 | Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
@@ -61,8 +62,8 @@ other CKB applications can read and write claims without depending on the Vellum
 
 The public roadmap moves from the primitive to real use:
 
-1. Define and deploy the Claim Cell Type Script on Testnet, add claim APIs to the shared SDK, publish
-   the schemas, and build the first verifiable social signals and scoring method.
+1. Deploy the Claim Cell contracts on Testnet, add claim APIs to the shared SDK, publish the schemas,
+   and build the first verifiable social signals and scoring method.
 2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
    participation signal.
 3. Show how other projects can use the record through claim issuance tools and a small governance
@@ -93,15 +94,15 @@ independently verifiable, and not tied to the application currently displaying i
 │   └── site/                       public website, docs, and Testnet resolver
 ├── docs/                            protocol and integration documentation
 └── packages/
-    ├── claim-cell-script/          placeholder for the planned Claim Type and DID Lock
+    ├── claim-cell-script/          Rust Claim Type, DID Lock, and local VM tests
     ├── schemas/                    placeholder for canonical claim schemas
     └── ui/                         shared design tokens and React components
 ```
 
 Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard uses TanStack
 Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
-The claim scripts and schema packages are scaffolds only; their presence is not implementation
-evidence.
+The claim scripts are tested locally with `ckb-testtool` but are not deployed. The schema package is
+still a placeholder for the canonical manifests and reader-facing registry.
 
 ## Run locally
 

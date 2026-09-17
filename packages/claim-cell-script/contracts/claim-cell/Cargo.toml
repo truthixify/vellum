@@ -1,0 +1,9 @@
+[package]
+name = "claim-cell"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ckb-hash = { version = "=1.1.0", default-features = false, features = ["ckb-contract"] }
+ckb-std = { version = "=1.1.0", default-features = false, features = ["allocator", "ckb-types", "dummy-atomic"] }
+vellum-claim-types = { path = "../../crates/claim-types" }

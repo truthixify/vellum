@@ -4,10 +4,11 @@ Claim Cells are on-chain assertions issued by a `did:ckb` identity to a subject-
 lock. The Claim Type validates fresh authorization from the issuer DID's current controller when a
 claim is created. The output lock controls later removal.
 
-The scripts have not been implemented or deployed. This document is the review draft shared by the
-on-chain scripts, `@ckb-ccc/did-ckb`, issuers, and readers. Rust implementation starts after the
-revised design receives external CKB review. The words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY
-are normative.
+The Rust implementation and local `ckb-testtool` harness live in
+[`packages/claim-cell-script`](../packages/claim-cell-script/). The contracts have not been
+deployed to CKB Testnet. This document is the accepted protocol shared by the on-chain scripts,
+`@ckb-ccc/did-ckb`, issuers, and readers. The words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are
+normative.
 
 The protocol proves that a DID controller authorized a structurally valid claim creation
 transaction. It does not decide whether an issuer is trustworthy, whether a payload is true, or how
@@ -343,6 +344,14 @@ an original Cell, its removal, and a later issuance.
 
 These limits must remain visible in SDK, UI, scoring, and governance behavior and require
 reconsideration before Mainnet.
+
+## Current implementation
+
+The Rust Claim Type and DID Lock contracts are built and exercised locally with `ckb-testtool`.
+Their release binaries and measured VM paths are documented in the package
+[`README`](../packages/claim-cell-script/README.md). The current package build is validated with
+`data1` and `type` script locators under CKB-VM version 1; a legacy `data` deployment requires a
+separately validated VM-0-compatible toolchain. No contract has been deployed to Testnet yet.
 
 ## Implementation and review
 
