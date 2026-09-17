@@ -18,12 +18,15 @@
     "lint": "eslint . --max-warnings 0",
     "lint-staged": "lint-staged",
     "prepare": "husky",
-    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src",
-    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json"
+    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src deployments",
+    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json && tsc --noEmit -p deployments/tsconfig.json",
+    "verify:testnet-deployment": "make -C packages/claim-cell-script build && bun run deployments/verify.ts"
   },
   "devDependencies": {
+    "@ckb-ccc/core": "1.19.1",
     "@commitlint/cli": "20.5.3",
     "@eslint/js": "9.32.0",
+    "bun-types": "1.4.2",
     "eslint": "9.32.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-plugin-react-hooks": "5.2.0",
