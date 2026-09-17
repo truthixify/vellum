@@ -7,7 +7,9 @@ Vellum Claim Cells and the reusable DID Lock.
 - [Canonical Molecule schema](./molecules/claim.mol)
 
 Claim Type and DID Lock are separate contracts with independent deployment identities. The contracts
-are tested locally with `ckb-testtool`; they have not been deployed to CKB Testnet.
+are tested locally with `ckb-testtool` and deployed as separate Type ID code cells on CKB Testnet.
+The canonical locators and binary hashes are published in
+[`deployments/testnet.json`](../../deployments/testnet.json).
 
 ## Checks
 
@@ -24,20 +26,21 @@ make size
 
 `make build` creates release binaries in `build/release`. The package pins Rust 1.92.0, the toolchain
 used by `ckb-std` 1.1.0, and passes explicit compiler flags to avoid RISC-V A and B instructions in
-the emitted contracts. The test harness deploys those binaries into `ckb-testtool` and covers issuer
-resolution from inputs, outputs, and cell deps, controller authorization, arbitrary subject locks,
-destruction, malformed data, duplicate claims, and DID Lock rotation and recursion boundaries. The
-integration fixtures use `data1` and `type` script locators, which execute under CKB-VM version 1; a
-legacy `data` deployment needs a separately validated VM-0-compatible toolchain and is not covered
-by this package build.
+the emitted contracts. Build paths are remapped to stable virtual prefixes so the release bytes do
+not depend on a contributor's workspace, Cargo cache, or Rust installation paths. The test harness
+deploys those binaries into `ckb-testtool` and covers issuer resolution from inputs, outputs, and cell
+deps, controller authorization, arbitrary subject locks, destruction, malformed data, duplicate
+claims, and DID Lock rotation and recursion boundaries. The integration fixtures use `data1` and
+`type` script locators, which execute under CKB-VM version 1; a legacy `data` deployment needs a
+separately validated VM-0-compatible toolchain and is not covered by this package build.
 
 The VM fixtures use `ckb-testtool`'s `ALWAYS_SUCCESS` lock as a deterministic stand-in. Real wallet,
 multisig, and `did:ckb` controller authorization remains the responsibility of the lock scripts
 deployed alongside a Claim Type.
 
-Binary size and cycle usage are optimization and deployment inputs, not evidence of Testnet
-deployment or production security review. The Claim Type remains above the earlier 30 KB soft size
-goal; reducing it further is a pre-deployment optimization task.
+Binary size and cycle usage are optimization and deployment inputs, not evidence of a production
+security review. The Claim Type remains within the 50 KB soft size target. The repository verifier
+compares fresh release builds with every byte of the live Testnet code cells.
 
 ## Local measurements
 
@@ -46,11 +49,11 @@ workspace. They are reproducibility baselines, not protocol limits.
 
 | Artifact or path                           |    Measurement |
 | ------------------------------------------ | -------------: |
-| `claim-cell` binary                        |   48,064 bytes |
-| `did-lock` binary                          |   30,528 bytes |
-| Claim creation with issuer replacement     | 146,920 cycles |
-| Claim destruction                          |  15,042 cycles |
-| Claim creation from a live cell dep        | 126,218 cycles |
-| Claim creation with a new issuer DID       | 128,326 cycles |
-| DID Lock authorization from a cell dep     |  38,325 cycles |
-| DID Lock authorization with identity input |  36,784 cycles |
+| `claim-cell` binary                        |   47,752 bytes |
+| `did-lock` binary                          |   30,336 bytes |
+| Claim creation with issuer replacement     | 146,842 cycles |
+| Claim destruction                          |  14,964 cycles |
+| Claim creation from a live cell dep        | 126,140 cycles |
+| Claim creation with a new issuer DID       | 128,248 cycles |
+| DID Lock authorization from a cell dep     |  38,277 cycles |
+| DID Lock authorization with identity input |  36,736 cycles |

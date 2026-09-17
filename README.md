@@ -19,9 +19,9 @@ carried between apps instead of disappearing into separate databases.
 [Public roadmap](https://github.com/users/truthixify/projects/2)
 
 > **Where things stand:** Vellum's identity tools are live, and the reputation extension is now in
-> implementation. Claim Cell contracts are being tested locally but are not deployed yet. Reputation
-> scores, claims, activity, and governance data shown in the current interfaces are previews, not live
-> records.
+> implementation. The Claim Type and DID Lock are deployed and byte-verified on CKB Testnet.
+> Reputation scores, claims, activity, and governance data shown in the current interfaces are still
+> previews, not live records.
 
 ## Why Vellum
 
@@ -51,7 +51,7 @@ without requiring those products to share one backend.
 | `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
 | Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
 | Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
-| Reputation protocol | In implementation               | Claim Type and DID Lock are implemented and under review; SDK, schemas, scoring, and deployment remain.         |
+| Reputation protocol | In implementation               | Claim Type and DID Lock are deployed on Testnet; SDK, schemas, scoring, and product integration remain.         |
 | Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
@@ -62,8 +62,8 @@ other CKB applications can read and write claims without depending on the Vellum
 
 The public roadmap moves from the primitive to real use:
 
-1. Deploy the Claim Cell contracts on Testnet, add claim APIs to the shared SDK, publish the schemas,
-   and build the first verifiable social signals and scoring method.
+1. Add claim APIs to the shared SDK, publish the schemas, and build the first verifiable social
+   signals and scoring method on the deployed Testnet contracts.
 2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
    participation signal.
 3. Show how other projects can use the record through claim issuance tools and a small governance
@@ -101,8 +101,8 @@ independently verifiable, and not tied to the application currently displaying i
 
 Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard uses TanStack
 Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
-The claim scripts are tested locally with `ckb-testtool` but are not deployed. The schema package is
-still a placeholder for the canonical manifests and reader-facing registry.
+The claim scripts are tested locally with `ckb-testtool` and deployed on CKB Testnet. The schema
+package is still a placeholder for the canonical manifests and reader-facing registry.
 
 ## Run locally
 
@@ -132,13 +132,50 @@ The complete gate checks formatting, linting, TypeScript, tests, and production 
 staged-file checks before a commit, validates commit messages, and runs the complete gate before a
 push.
 
-The test command is wired into the gate, but there are no automated test files yet. New behavior
-should arrive with focused tests rather than treating an empty test run as coverage.
+The test command covers the existing application, protocol, and deployment checks. New behavior
+should arrive with focused tests for both successful and rejected paths.
 
 ## Deployment
 
 The public site and dashboard deploy independently to Vercel from `apps/site` and `apps/dashboard`.
 Each app produces `dist` and includes an SPA rewrite for direct visits to client-side routes.
+
+### Claim contracts
+
+The Claim Type and DID Lock use separate, independently upgradable Type ID code cells on CKB
+Testnet. [`deployments/testnet.json`](./deployments/testnet.json) is the canonical machine-readable
+record; [`deployments/testnet.toml`](./deployments/testnet.toml) is the CKB CLI deployment config.
+
+Both current code cells were published by
+[transaction `0xaf693346...e2686c`](https://testnet.explorer.nervos.org/transaction/0xaf693346282063a5d51f79d180fc807cdba1b8ac9d7af30085ff0aa190e2686c):
+
+| Contract   | Output index | `code_hash`                                                          | `data_hash`                                                          |
+| ---------- | ------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Claim Type | `0x0`        | `0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157` | `0xb3bc4b7c775e65135fb03c690ee91193a85265643a4e7f2273d8a4259b900984` |
+| DID Lock   | `0x1`        | `0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d` | `0x40ff6cd22ee270a48881c869e6838d2aa5734e42b9704626c35cb3c56efe0b63` |
+
+Both locators use `hash_type: type` and `dep_type: code`. This is upgradable Testnet infrastructure,
+not a security audit or a Mainnet release.
+
+Build both release binaries and prepare a future deployment or upgrade transaction with CKB CLI
+2.0.0:
+
+```bash
+bun run prepare:testnet-deployment
+bun run view:testnet-deployment
+```
+
+The generated `deployments/info.json` remains local because it is the one-time transaction envelope.
+Committed migration snapshots preserve the Type ID history needed for future upgrades. Review the
+explained transaction before signing. Signing and `ckb-cli deploy apply-txs` are intentionally manual
+because they authorize and broadcast the Type ID deployment.
+
+Verify the committed cells, Type ID locators, hashes, capacities, and complete binary bytes against
+a fresh release build:
+
+```bash
+bun run verify:testnet-deployment
+```
 
 ### did:ckb contracts
 

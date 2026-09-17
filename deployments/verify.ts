@@ -32,6 +32,7 @@ type ContractDeployment = {
   dataHash: string;
   binarySha256: string;
   binarySize: number;
+  capacityShannons: string;
 };
 
 export type TestnetDeploymentRecord = {
@@ -76,6 +77,14 @@ function hexAt(value: unknown, bytes: number, path: string): string {
   return hex;
 }
 
+function positiveDecimalAt(value: unknown, path: string): string {
+  const decimal = stringAt(value, path);
+  if (!/^[1-9][0-9]*$/.test(decimal)) {
+    fail(`${path} must be a positive decimal string`);
+  }
+  return decimal;
+}
+
 function scriptAt(value: unknown, path: string): ScriptRecord {
   const script = objectAt(value, path);
   return {
@@ -108,6 +117,7 @@ function contractAt(value: unknown, path: string): ContractDeployment {
     dataHash: hexAt(contract.dataHash, 32, `${path}.dataHash`),
     binarySha256: hexAt(contract.binarySha256, 32, `${path}.binarySha256`),
     binarySize: Number(contract.binarySize),
+    capacityShannons: positiveDecimalAt(contract.capacityShannons, `${path}.capacityShannons`),
   };
 }
 
@@ -155,6 +165,7 @@ export function verifyDeploymentCell(
   assertEqual(sha256Hex(binary), deployment.binarySha256, `${name} binary SHA-256`);
   assertEqual(ccc.hashCkb(binary), deployment.dataHash, `${name} data hash`);
   assertEqual(cell.outputData, ccc.hexFrom(binary), `${name} on-chain bytes`);
+  assertEqual(cell.cellOutput.capacity.toString(), deployment.capacityShannons, `${name} capacity`);
 
   const type = cell.cellOutput.type ?? fail(`${name} code cell has no Type ID script`);
   assertEqual(type.codeHash, TYPE_ID_CODE_HASH, `${name} Type ID code hash`);

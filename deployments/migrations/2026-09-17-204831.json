@@ -1,0 +1,21 @@
+{
+  "cell_recipes": [
+    {
+      "name": "claim-type",
+      "tx_hash": "0xb6efdb43e88523fc7eaa41558d171dd79ad63e2b3f523b98e8de66ec5b9f9f5e",
+      "index": 0,
+      "occupied_capacity": 4819000000000,
+      "data_hash": "0xcd32d42d2dc5d98c31d8c925c4e5b988079865cd3dda70ce06fac61360d54346",
+      "type_id": "0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157"
+    },
+    {
+      "name": "did-lock",
+      "tx_hash": "0xb6efdb43e88523fc7eaa41558d171dd79ad63e2b3f523b98e8de66ec5b9f9f5e",
+      "index": 1,
+      "occupied_capacity": 3065400000000,
+      "data_hash": "0xa9bbef1c729cb3a8436734ac3a7884f647a9bd4134c65ce22b2e6392f47796a0",
+      "type_id": "0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d"
+    }
+  ],
+  "dep_group_recipes": []
+}

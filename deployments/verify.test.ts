@@ -32,6 +32,7 @@ function deploymentRecord(): TestnetDeploymentRecord {
     dataHash: ccc.hashCkb(BINARY),
     binarySha256: sha256Hex(BINARY),
     binarySize: BINARY.byteLength,
+    capacityShannons: "1000000000000",
   };
   return {
     version: 1,
