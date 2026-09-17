@@ -5,6 +5,7 @@ coverage
 .vinxi
 bun.lock
 apps/dashboard/src/routeTree.gen.ts
+deployments/info.json
 
 # Local planning and reference material must remain untouched.
 AGENTS.md

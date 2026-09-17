@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "network": "ckb_testnet",
+  "deployedAt": "2026-09-17T21:00:14.423Z",
+  "ckbCliVersion": "2.0.0",
+  "upgradeLock": {
+    "codeHash": "0x9bd7e06f3ecf4be0f2fcd2188b23f1b9fcc88e5d4b65a8637b17723bbda3cce8",
+    "hashType": "type",
+    "args": "0x0dd3e8efc533d4f43780fb94e87cbb3ef7279718"
+  },
+  "contracts": {
+    "claimType": {
+      "outPoint": {
+        "txHash": "0xaf693346282063a5d51f79d180fc807cdba1b8ac9d7af30085ff0aa190e2686c",
+        "index": "0x0"
+      },
+      "codeHash": "0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157",
+      "hashType": "type",
+      "depType": "code",
+      "typeIdArgs": "0x2daf70b4fe1a7a2acd65cfea78fdda250922478435e82ade83d60320bb0d0be0",
+      "dataHash": "0xb3bc4b7c775e65135fb03c690ee91193a85265643a4e7f2273d8a4259b900984",
+      "binarySha256": "0x381cdaf34296704992865d17bf8b1f9ba8b80fecd1a3dc6f64ad45ae75221b82",
+      "binarySize": 47752,
+      "capacityShannons": "4787800000000"
+    },
+    "didLock": {
+      "outPoint": {
+        "txHash": "0xaf693346282063a5d51f79d180fc807cdba1b8ac9d7af30085ff0aa190e2686c",
+        "index": "0x1"
+      },
+      "codeHash": "0xe1562cc57b4bd91619ada2f7e74d63805ea7038a7b6de0b18a529d51aa883d2d",
+      "hashType": "type",
+      "depType": "code",
+      "typeIdArgs": "0xbeb25c612d64b8e0c715d1dfddda93039a4acb731dc065a691152d1bed2a571c",
+      "dataHash": "0x40ff6cd22ee270a48881c869e6838d2aa5734e42b9704626c35cb3c56efe0b63",
+      "binarySha256": "0x43b10e17022213c38c052e69f487accd0c1eb8efaa1b9ffd30837f1350e7e0a8",
+      "binarySize": 30336,
+      "capacityShannons": "3046200000000"
+    }
+  }
+}

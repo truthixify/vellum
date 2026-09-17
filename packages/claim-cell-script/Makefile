@@ -2,7 +2,10 @@ MODE ?= release
 TARGET ?= riscv64imac-unknown-none-elf
 BUILD_DIR := build/$(MODE)
 TARGET_DIR := target/$(TARGET)/$(MODE)
-CONTRACT_RUSTFLAGS := $(strip $(RUSTFLAGS) -C target-feature=-a,-zba,-zbb,-zbc,-zbs)
+CARGO_CACHE_DIR := $(if $(CARGO_HOME),$(abspath $(CARGO_HOME)),$(abspath $(HOME)/.cargo))
+RUST_SYSROOT_DIR := $(shell rustc --print sysroot)
+PATH_REMAP_FLAGS := --remap-path-prefix=$(CURDIR)=/workspace --remap-path-prefix=$(CARGO_CACHE_DIR)=/cargo --remap-path-prefix=$(RUST_SYSROOT_DIR)=/rust
+CONTRACT_RUSTFLAGS := $(strip $(RUSTFLAGS) $(PATH_REMAP_FLAGS) -C target-feature=-a,-zba,-zbb,-zbc,-zbs)
 PROFILE_FLAG := $(if $(filter release,$(MODE)),--release,)
 
 .PHONY: build test check clippy fmt size prepare

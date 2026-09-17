@@ -18,12 +18,17 @@
     "lint": "eslint . --max-warnings 0",
     "lint-staged": "lint-staged",
     "prepare": "husky",
-    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src",
-    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json"
+    "prepare:testnet-deployment": "make -C packages/claim-cell-script build && mkdir -p deployments/migrations && cd deployments && ckb-cli --url https://testnet.ckbapp.dev --output-format json deploy gen-txs --deployment-config testnet.toml --migration-dir migrations --fee-rate 1200 --from-address ckt1qyqqm5lgalzn8485x7q0h98g0janaae8juvq9j3fte --info-file info.json",
+    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src deployments",
+    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json && tsc --noEmit -p deployments/tsconfig.json",
+    "verify:testnet-deployment": "make -C packages/claim-cell-script build && bun run deployments/verify.ts",
+    "view:testnet-deployment": "cd deployments && ckb-cli --url https://testnet.ckbapp.dev deploy explain-txs --info-file info.json"
   },
   "devDependencies": {
+    "@ckb-ccc/core": "1.19.1",
     "@commitlint/cli": "20.5.3",
     "@eslint/js": "9.32.0",
+    "bun-types": "1.4.2",
     "eslint": "9.32.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-plugin-react-hooks": "5.2.0",

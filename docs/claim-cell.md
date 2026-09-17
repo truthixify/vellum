@@ -5,10 +5,11 @@ lock. The Claim Type validates fresh authorization from the issuer DID's current
 claim is created. The output lock controls later removal.
 
 The Rust implementation and local `ckb-testtool` harness live in
-[`packages/claim-cell-script`](../packages/claim-cell-script/). The contracts have not been
-deployed to CKB Testnet. This document is the accepted protocol shared by the on-chain scripts,
-`@ckb-ccc/did-ckb`, issuers, and readers. The words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are
-normative.
+[`packages/claim-cell-script`](../packages/claim-cell-script/). The contracts are deployed as
+separate Type ID code cells on CKB Testnet, with canonical locators in
+[`deployments/testnet.json`](../deployments/testnet.json). This document is the accepted protocol
+shared by the on-chain scripts, `@ckb-ccc/did-ckb`, issuers, and readers. The words MUST, MUST NOT,
+SHOULD, SHOULD NOT, and MAY are normative.
 
 The protocol proves that a DID controller authorized a structurally valid claim creation
 transaction. It does not decide whether an issuer is trustworthy, whether a payload is true, or how
@@ -51,9 +52,9 @@ The protocol does not require Claim Type or DID Lock to use a particular `hash_t
 MAY choose `data`, `data1`, or `data2` to pin code bytes, or `type` to reference an upgradable Type
 ID code Cell. SDK configuration and deployment records MUST identify the complete script locator.
 
-Vellum's Testnet deployments are planned to use Type ID code Cells while the protocol is being
-implemented and reviewed. Every release MUST publish the code Cell outpoint and data hash. A future
-Mainnet deployment and its upgrade policy require a separate review.
+Vellum's Testnet deployments use Type ID code Cells while the protocol is being implemented and
+reviewed. Every release MUST publish the code Cell outpoint and data hash. A future Mainnet
+deployment and its upgrade policy require a separate review.
 
 An upgrade behind `hash_type: type` MUST preserve removal of existing Cells and decoding of every
 accepted data version unless a reviewed migration is already available. Claim Type and DID Lock
@@ -351,7 +352,10 @@ The Rust Claim Type and DID Lock contracts are built and exercised locally with 
 Their release binaries and measured VM paths are documented in the package
 [`README`](../packages/claim-cell-script/README.md). The current package build is validated with
 `data1` and `type` script locators under CKB-VM version 1; a legacy `data` deployment requires a
-separately validated VM-0-compatible toolchain. No contract has been deployed to Testnet yet.
+separately validated VM-0-compatible toolchain. The release binaries are deployed in separate Type
+ID code cells on CKB Testnet. The repository verifier rebuilds both binaries and checks their complete
+bytes, hashes, capacities, Type ID scripts, and upgrade locks against the live cells recorded in
+[`deployments/testnet.json`](../deployments/testnet.json).
 
 ## Implementation and review
 
