@@ -11,6 +11,9 @@ separate Type ID code cells on CKB Testnet, with canonical locators in
 shared by the on-chain scripts, `@ckb-ccc/did-ckb`, issuers, and readers. The words MUST, MUST NOT,
 SHOULD, SHOULD NOT, and MAY are normative.
 
+The companion [Claim SDK API](./claim-sdk.md) defines how readers and transaction builders expose
+this protocol through `@ckb-ccc/did-ckb`.
+
 The protocol proves that a DID controller authorized a structurally valid claim creation
 transaction. It does not decide whether an issuer is trustworthy, whether a payload is true, or how
 a claim affects a score.
