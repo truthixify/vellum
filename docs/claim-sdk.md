@@ -33,15 +33,24 @@ export type ClaimSubjectLike =
 export type ClaimDataV1Like<TPayload = unknown> = {
   issuerId: ccc.HexLike;
   nonce: ccc.HexLike;
+  /** Issuer-asserted Unix timestamp in seconds. */
   issuedAt: ccc.NumLike;
+  /** Optional expiry as a Unix timestamp in seconds. */
   expiresAt?: ccc.NumLike | null;
   payload: TPayload;
 };
 
-export type ClaimDataLike<TPayload = unknown> = {
-  type?: "v1";
-  value: ClaimDataV1Like<TPayload>;
-};
+export type ClaimDataLike<TPayload = unknown> =
+  | {
+      type?: "v1" | null;
+      value: ClaimDataV1Like<TPayload>;
+    }
+  | {
+      inner: {
+        type?: "v1" | null;
+        value: ClaimDataV1Like<TPayload>;
+      };
+    };
 
 export type ClaimTimeEvaluation =
   | {
@@ -49,6 +58,7 @@ export type ClaimTimeEvaluation =
     }
   | {
       status: "not-yet-active" | "active" | "expired";
+      /** Application-selected Unix timestamp in seconds. */
       evaluatedAt: ccc.Num;
     };
 
@@ -81,7 +91,9 @@ export type Claim<TPayload = unknown> = {
   subjectLockHash: ccc.Hex;
   schemaHash: ccc.Hex;
   nonce: ccc.Hex;
+  /** Issuer-asserted Unix timestamp in seconds. */
   issuedAt: ccc.Num;
+  /** Optional expiry as a Unix timestamp in seconds. */
   expiresAt?: ccc.Num;
   payload: TPayload;
   payloadBytes: ccc.Hex;
@@ -89,7 +101,7 @@ export type Claim<TPayload = unknown> = {
   duplicateCells: readonly ccc.Cell[];
   verification: {
     inclusion: "live";
-    issuerAuthorization: "validated-by-claim-type";
+    issuerAuthorization: "accepted-by-configured-claim-type";
     time: ClaimTimeEvaluation;
   };
 };
@@ -98,14 +110,16 @@ export type ClaimFilter = {
   subject: ClaimSubjectLike;
   issuerDid?: string;
   schemaHash?: ccc.HexLike;
-  /** No current-clock default is applied when this is omitted. */
+  /** Unix timestamp in seconds. No current-clock default is applied when omitted. */
   evaluationTime?: ccc.NumLike;
+  /** CKB indexer chain order; defaults to "asc". */
   order?: "asc" | "desc";
   /** Indexer page size, not a cap on the complete result. */
   pageSize?: number;
 };
 
 export type ClaimReadFailureCode =
+  | "unsupported-issuer-deployment"
   | "invalid-type-args"
   | "unsupported-data-version"
   | "invalid-claim-data"
@@ -134,7 +148,9 @@ export type WriteClaimInput<TPayload = unknown> = {
   issuerDid: string;
   schemaHash: ccc.HexLike;
   payload: TPayload;
+  /** Issuer-asserted Unix timestamp in seconds. */
   issuedAt: ccc.NumLike;
+  /** Optional expiry as a Unix timestamp in seconds. */
   expiresAt?: ccc.NumLike | null;
   /** Generated with a cryptographically secure random source when omitted. */
   nonce?: ccc.HexLike;
@@ -146,6 +162,8 @@ export type WriteClaimProps<TPayload = unknown> = {
   issuerSigner: ccc.Signer;
   /** Defaults to issuerSigner. */
   payerSigner?: ccc.Signer;
+  /** Signers required by pre-existing input lock groups in tx. */
+  additionalSigners?: readonly ccc.Signer[];
   scripts: ClaimScriptConfigLike;
   input: WriteClaimInput<TPayload>;
   tx?: ccc.TransactionLike;
@@ -192,17 +210,23 @@ export declare function parseClaimPayload<TPayload>(
 ): TPayload;
 ```
 
-The implementation may expose the Molecule-backed `ClaimDataV1` and `ClaimData` entity classes in
-addition to the `Like` types above, following the package's existing codec pattern. Their encoded
-field order must remain `issuer_id`, `nonce`, `issued_at`, `expires_at`, and `payload`.
+The package exports the Molecule-backed `ClaimDataV1` and `ClaimData` entity classes in addition to
+the `Like` types above, following the package's existing codec pattern. Their encoded field order
+must remain `issuer_id`, `nonce`, `issued_at`, `expires_at`, and `payload`.
 
 ## Read behavior
 
-`readClaims` performs one complete, internally paginated query for the exact subject lock. It then
-restricts results to the configured Claim Type `codeHash` and `hashType`, decodes the 65-byte Type
-arguments, and applies optional issuer and schema filters. An issuer DID filter uses the configured
-`didCkb` Script Info, or the client's `KnownScript.DidCkb` entry when no override is provided, so an
-identifier from another DID deployment cannot match accidentally.
+`readClaims` first resolves the configured `didCkb` Script Info, or the client's
+`KnownScript.DidCkb` entry when no override is provided. It then performs one complete, internally
+paginated on-chain query for the exact subject lock and configured Claim Type `codeHash` and
+`hashType`. The query must bypass any client cache that could merge results out of chain order.
+
+For every returned Cell, the reader decodes the 65-byte Type arguments and requires the issuer DID
+`codeHash` and `hashType` in the first 33 bytes to equal the resolved `didCkb` deployment. This check
+applies whether or not `filter.issuerDid` is present. A Cell from another issuer DID deployment is
+placed in `invalid` with `unsupported-issuer-deployment`; it is never returned as a claim under the
+configured deployment. The reader applies optional issuer-ID and schema filters only after this
+deployment check.
 
 For `{ lock }`, the supplied complete lock is the subject. For `{ did }`, the SDK:
 
@@ -212,13 +236,20 @@ For `{ lock }`, the supplied complete lock is the subject. For `{ did }`, the SD
 4. constructs the subject lock from the configured DID Lock Script Info.
 
 The DID convenience form fails before querying when `scripts.didLock` is absent. It never falls back
-to the current wallet lock.
+to the current wallet lock. Reading only derives the expected lock; it does not require the subject
+DID to remain live, so a caller can still inspect Cells stranded by subject deactivation.
 
 Every valid result includes the raw live Cell, the decoded payload, its canonical payload bytes,
 the reconstructed issuer Type Script, the complete subject lock, and the derived hashes. The reader
 recomputes `claimId` from the exact protocol preimage. Identical live IDs are returned once;
 additional Cells are retained in `duplicateCells` so callers can inspect the anomaly without
 counting it more than once.
+
+`order` defaults to `"asc"`. Ascending order is oldest to newest and descending order is newest to
+oldest according to the CKB indexer's chain order. The reader preserves the order of the uncached
+indexer pages; matching outputs from the same transaction follow their outpoint output index in the
+requested direction. For duplicate IDs, `cell` is the first occurrence in that order and
+`duplicateCells` contains the remaining occurrences in the same order.
 
 An unknown schema hash is valid and returns `payload: unknown`. Invalid Molecule or DAG-CBOR data is
 isolated in `invalid`; it does not reject otherwise valid results. Invalid caller configuration or a
@@ -229,9 +260,11 @@ returns the affected claims with `issuerState.status: "unavailable"`.
 ### Verification fields
 
 `inclusion: "live"` means the configured CKB indexer returned the Cell as live under the exact
-subject lock and Claim Type deployment. `issuerAuthorization: "validated-by-claim-type"` records
-that creation was accepted by that configured Type Script. It is not a detached-signature result
-and does not establish that an application should trust the issuer.
+subject lock and Claim Type deployment. `issuerAuthorization: "accepted-by-configured-claim-type"`
+means that the configured Type Script identity accepted the Cell's creation. With a `type` hash,
+that identity can refer to code that has been upgraded since creation, so the field does not prove
+which binary executed historically. It is not a detached-signature result and does not establish
+that an application should trust the issuer.
 
 `issuerState` describes the issuer DID at read time. `deactivated` requires historical evidence that
 the DID existed and was consumed; `missing` means the reader has neither a live state nor sufficient
@@ -240,6 +273,11 @@ must not be collapsed into `missing`. Authorization consumers must treat `unavai
 fail-closed state rather than accepting it as evidence of an active issuer.
 
 ### Time evaluation
+
+Every SDK timestamp is a Unix timestamp in seconds. JavaScript `Date.now()` and CKB block-header
+timestamps exposed by CCC are milliseconds; callers must divide those values by 1,000 with an
+intentional rounding policy before passing them to this API, for example
+`Math.floor(Date.now() / 1_000)`.
 
 The SDK never reads the local clock implicitly. With no `evaluationTime`, each claim reports
 `not-evaluated`. When a caller supplies a checkpoint, the result is:
@@ -258,9 +296,11 @@ separate CKB state and inclusion evidence.
 ## Write behavior
 
 `writeClaim` is a transaction builder, matching the existing CCC create and transfer helpers. It
-returns a prepared transaction plus stable output metadata, but does not sign or broadcast. The
-caller can inspect or compose the transaction, obtain every required signature, submit it with a
-CCC client, and retain the resulting transaction hash.
+returns a final prepared and balanced transaction plus stable output metadata, but does not sign or
+broadcast. The caller can inspect it, obtain every required signature, submit it with a CCC client,
+and retain the resulting transaction hash. Mutating the returned transaction invalidates its fee and
+witness-size assumptions; a caller that composes further changes must prepare every signer again and
+repeat fee completion before signing.
 
 The builder:
 
@@ -271,12 +311,13 @@ The builder:
    Claim Type;
 5. derives the controller from that selected state and requires `issuerSigner` to control the exact
    lock;
-6. uses the supplied subject lock or derives DID Lock for a `did:ckb` subject;
+6. uses the supplied subject lock or validates and anchors a DID state before deriving DID Lock for
+   a `did:ckb` subject;
 7. calculates occupied capacity from the serialized output and data;
-8. adds only the code and data dependencies required by scripts that execute in the transaction;
-   and
-9. prepares every required signer and uses `payerSigner` for additional capacity, fees, and change
-   when one is supplied.
+8. adds required code dependencies and any identity Cell used as a liveness anchor;
+9. validates signer coverage for every input lock group; and
+10. prepares every distinct supplied signer before using `payerSigner` for additional capacity,
+    fees, and change.
 
 ### Issuer source selection
 
@@ -301,17 +342,48 @@ This order matters during controller rotation: an issuer DID input authorizes wi
 not the new lock on the matching output. It also allows a DID and its first claims to be created in
 one transaction without requiring a pre-existing live DID Cell.
 
+### DID subject state
+
+A direct `{ lock }` subject is used as supplied and has no DID lifecycle check. For a `{ did }`
+subject, the builder derives the exact identity Type Script and selects a state before creating the
+DID Lock output:
+
+1. If the supplied transaction contains a matching identity input, exactly one matching input and
+   one matching output must exist. The output is the selected post-transaction state. A missing
+   output is a deactivation and fails; duplicate matching states also fail.
+2. Otherwise, if it contains a matching identity output, exactly one must exist and it is selected
+   as a same-transaction identity creation. A competing matching cell dep fails.
+3. Otherwise, if it contains the exact identity Cell as a direct cell dep, exactly one must exist and
+   it is selected.
+4. Otherwise, the builder resolves exactly one live identity Cell and adds that Cell as a direct
+   cell dep. A missing or ambiguous live state fails.
+
+For every source, the selected identity controller must not use the configured DID Lock's
+`codeHash` and `hashType` under any arguments. Rejecting that known direct recursion prevents the SDK
+from creating a Claim Cell that the current DID Lock rules could never spend. Other proxy-lock
+cycles cannot be proven absent by this check and remain an application trust-policy concern.
+
+The live subject Cell dep is intentionally retained as a liveness anchor even though its Type Script
+does not execute. If that identity is consumed before the transaction commits, the transaction can
+no longer resolve the dep instead of creating a newly stranded Claim Cell.
+
 ### Dependencies
 
 Claim Type executes for every new Claim output, so its code dependency is always present. An issuer
-DID Cell selected as data through a cell dep does not execute its Type Script, and a DID Lock used
-only on a new output does not execute its Lock Script; neither case adds the corresponding code
-dependency.
+DID Cell selected as data through a cell dep does not execute its Type Script. A DID Lock used only
+on a new output does not execute its Lock Script. Neither case adds the corresponding code
+dependency, although a subject identity Cell selected from live state remains present as the
+liveness anchor described above.
 
-The issuer DID Type dependency is added only when the transaction contains a matching DID input or
-output. The DID Lock dependency is added only when a transaction input uses the configured DID Lock,
-such as an atomic claim replacement. CCC signer preparation supplies dependencies and witnesses for
-controller and payer input locks. Existing dependencies are deduplicated.
+The configured DID Type dependency is added when the transaction contains a matching issuer or
+subject identity input or output. The DID Lock dependency is added when a transaction input uses the
+configured DID Lock, such as an atomic claim replacement. CCC signer preparation supplies
+dependencies and witnesses for controller and payer input locks. Existing dependencies are
+deduplicated.
+
+For scripts already present in a supplied transaction, the caller must provide any non-lock-script
+dependencies and non-lock witnesses that their validation requires. The builder preserves those
+fields and includes their bytes in fee calculation, but cannot infer arbitrary Type Script rules.
 
 ### Payer and signing
 
@@ -323,15 +395,32 @@ still contribute because CKB balances capacity transaction-wide. This is an SDK 
 not an on-chain proof of economic attribution. If `payerSigner` is omitted, the issuer fills both
 roles. When both are present, their clients must target the same network.
 
-When issuer and payer differ, `writeClaim` prepares the issuer lock group before calling CCC's fee
-completion with the payer. Fee completion prepares the payer as it collects inputs and calculates
-the final transaction size. When one signer fills both roles, fee completion performs the only
-preparation. The returned transaction is prepared and balanced but unsigned.
+`issuerSigner`, `payerSigner`, and every `additionalSigners` entry must use clients for the same
+network. Before fee completion, the builder requires every input lock group already present in the
+transaction to match at least one address returned by a supplied signer's `getAddressObjs()`.
+Configured DID Lock groups are the only exception: the builder instead validates their
+identity-state and controller-input authorization path and supplies the DID Lock dependency. An
+uncovered or unsupported lock group fails rather than returning a transaction with incomplete
+witness sizing.
 
-Callers sign the prepared transaction with `signOnlyTransaction` once per distinct signer. Each
-signer must preserve witness groups it does not control. After every required lock group is signed,
-the caller broadcasts with `client.sendTransaction`; calling one signer's `sendTransaction` is not
-sufficient when issuer and payer differ.
+For a pre-existing DID Lock input, the builder adds the required identity state when it can derive
+the complete identity Type Script from the requested subject. Otherwise, the supplied transaction
+must already contain a coherent matching identity input or cell dep. In either case, the transaction
+must contain the exact controller input and a supplied signer must cover that controller lock. The
+builder rejects a DID Lock group whose identity state or controller authorization cannot be proven
+from the completed transaction.
+
+The builder explicitly prepares each distinct issuer or additional signer other than the effective
+payer, then calls CCC's fee completion with that payer. Fee completion prepares the payer while
+collecting inputs and calculating final transaction size. The explicit preparation and later signing
+lists are deduplicated only by signer object identity. Separate signer objects are never deduplicated
+merely because they report the same lock Script; multisig participants may share a lock group while
+contributing different signatures. The returned transaction is prepared, balanced, and unsigned.
+
+Callers sign the prepared transaction with `signOnlyTransaction` once per distinct signer object.
+Each signer must preserve witness groups it does not control. After every required lock group is
+signed, the caller broadcasts with `client.sendTransaction`; calling one signer's `sendTransaction`
+is not sufficient when more than one signer is required.
 
 The output capacity defaults to the exact occupied capacity. A caller may request more, but a value
 below the occupied capacity fails before inputs are collected. The complete encoded Claim data must
@@ -393,18 +482,25 @@ const txHash = await issuerSigner.client.sendTransaction(signed);
 The returned `claimId` is available before submission. The on-chain locator after submission is
 `{ txHash, index: built.outputIndex }`.
 
-When another signer pays, both lock groups sign before broadcast:
+When another signer pays or a supplied transaction already has input lock groups, every distinct
+signer object prepares and signs before broadcast:
 
 ```ts
+const additionalSigners = [existingInputSigner];
 const built = await writeClaim({
   issuerSigner,
   payerSigner,
+  additionalSigners,
   scripts,
   input,
+  tx: composedTx,
 });
 
-let signed = await issuerSigner.signOnlyTransaction(built.tx);
-signed = await payerSigner.signOnlyTransaction(signed);
+const signers = new Set([issuerSigner, payerSigner, ...additionalSigners]);
+let signed = built.tx;
+for (const signer of signers) {
+  signed = await signer.signOnlyTransaction(signed);
+}
 const txHash = await issuerSigner.client.sendTransaction(signed);
 ```
 
@@ -412,8 +508,9 @@ const txHash = await issuerSigner.client.sendTransaction(signed);
 
 Caller and transaction-construction errors reject with actionable messages. These include invalid
 identifier or hash lengths, invalid timestamp ordering, oversized data, absent DID Lock
-configuration, a missing or ambiguous issuer state, a signer that does not control the issuer,
-signers connected to different networks, insufficient capacity, and conflicting issuer sources in
+configuration, a missing or ambiguous issuer or DID-subject state, subject deactivation or direct
+DID Lock recursion, a signer that does not control the issuer, an uncovered input lock group,
+signers connected to different networks, insufficient capacity, and conflicting identity sources in
 a supplied transaction.
 
 Per-Cell decode failures are data-quality results and belong in `ReadClaimsResult.invalid`. A network
@@ -429,4 +526,5 @@ closed.
 - No requirement that a subject use DID Lock.
 - No implicit trust list, score, schema registry, or wall-clock policy.
 - No historical-state claim based only on timestamp comparison.
+- No proof of the historical code binary behind an upgradable Type Script identity.
 - No automatic signing or transaction broadcast inside the builder.
