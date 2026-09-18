@@ -112,6 +112,19 @@
       "name": "@vellum/schemas",
       "version": "0.0.0",
     },
+    "packages/sdk": {
+      "name": "@vellum/sdk",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ckb-ccc/core": "1.19.1",
+        "@ckb-ccc/did-ckb": "0.2.9",
+        "@ipld/dag-cbor": "10.0.2",
+      },
+      "devDependencies": {
+        "bun-types": "1.4.2",
+        "typescript": "5.8.3",
+      },
+    },
     "packages/ui": {
       "name": "@vellum/ui",
       "version": "0.1.0",
@@ -651,6 +664,8 @@
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.56.1", "", { "dependencies": { "@typescript-eslint/types": "8.56.1", "eslint-visitor-keys": "^5.0.0" } }, "sha512-KiROIzYdEV85YygXw6BI/Dx4fnBlFQu6Mq4QE4MOH9fFnhohw6wX/OAvDY2/C+ut0I3RSPKenvZJIVYqJNkhEw=="],
 
     "@vellum/schemas": ["@vellum/schemas@workspace:packages/schemas"],
+
+    "@vellum/sdk": ["@vellum/sdk@workspace:packages/sdk"],
 
     "@vellum/ui": ["@vellum/ui@workspace:packages/ui"],
 

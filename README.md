@@ -96,6 +96,7 @@ independently verifiable, and not tied to the application currently displaying i
 └── packages/
     ├── claim-cell-script/          Rust Claim Type, DID Lock, and local VM tests
     ├── schemas/                    placeholder for canonical claim schemas
+    ├── sdk/                        typed Claim Cell codecs and APIs
     └── ui/                         shared design tokens and React components
 ```
 
