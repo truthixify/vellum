@@ -68,3 +68,12 @@ claim as `issuerState: { status: "unavailable", reason }` so authorization code 
 bun run --cwd packages/sdk typecheck
 bun run --cwd packages/sdk test
 ```
+
+The known-claim integration test reads the committed Testnet fixture at transaction
+[`0x9e32511b...ff91c`](https://testnet.explorer.nervos.org/transaction/0x9e32511bcaa49d89421d070d28eded7168fa9010a007659151e7f8928caff91c),
+output `1`. The fixture DID and Claim outputs must remain unspent. The live check is intentionally
+separate from the offline suite:
+
+```bash
+bun run --cwd packages/sdk test:testnet
+```
