@@ -2,6 +2,7 @@
   "name": "@vellum/sdk",
   "version": "0.1.0",
   "description": "Typed Claim Cell APIs for Vellum and CKB applications.",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

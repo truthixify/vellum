@@ -200,6 +200,10 @@ Repository issues are grouped into GitHub milestones and tracked on the public
 developed on a focused branch and delivered through one pull request. The milestones and Project
 board show the larger delivery picture.
 
+## License
+
+Vellum is available under the [MIT License](./LICENSE).
+
 ## References
 
 - [`did:ckb` method specification](https://github.com/web5fans/web5-wips/blob/master/01.md)
