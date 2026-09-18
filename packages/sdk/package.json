@@ -1,0 +1,26 @@
+{
+  "name": "@vellum/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed Claim Cell APIs for Vellum and CKB applications.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "test:testnet": "bun test testnet",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ckb-ccc/core": "1.19.1",
+    "@ckb-ccc/did-ckb": "0.2.9",
+    "@ipld/dag-cbor": "10.0.2"
+  },
+  "devDependencies": {
+    "bun-types": "1.4.2",
+    "typescript": "5.8.3"
+  }
+}

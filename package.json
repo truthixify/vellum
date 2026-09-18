@@ -19,8 +19,8 @@
     "lint-staged": "lint-staged",
     "prepare": "husky",
     "prepare:testnet-deployment": "make -C packages/claim-cell-script build && mkdir -p deployments/migrations && cd deployments && ckb-cli --url https://testnet.ckbapp.dev --output-format json deploy gen-txs --deployment-config testnet.toml --migration-dir migrations --fee-rate 1200 --from-address ckt1qyqqm5lgalzn8485x7q0h98g0janaae8juvq9j3fte --info-file info.json",
-    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/ui/src deployments",
-    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json && tsc --noEmit -p deployments/tsconfig.json",
+    "test": "bun test --pass-with-no-tests apps/dashboard/src apps/site/src packages/schemas/src packages/sdk/src packages/ui/src deployments",
+    "typecheck": "tsc --noEmit -p apps/site/tsconfig.json && tsc --noEmit -p apps/dashboard/tsconfig.json && tsc --noEmit -p packages/ui/tsconfig.json && tsc --noEmit -p packages/schemas/tsconfig.json && tsc --noEmit -p packages/sdk/tsconfig.json && tsc --noEmit -p deployments/tsconfig.json",
     "verify:testnet-deployment": "make -C packages/claim-cell-script build && bun run deployments/verify.ts",
     "view:testnet-deployment": "cd deployments && ckb-cli --url https://testnet.ckbapp.dev deploy explain-txs --info-file info.json"
   },
