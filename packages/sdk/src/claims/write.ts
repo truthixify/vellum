@@ -33,10 +33,17 @@ type LoadedCellDep = {
   cell: ccc.Cell;
 };
 
-type SubjectResolution = {
-  lock: ccc.Script;
-  identityType?: ccc.Script;
-};
+type SubjectResolution =
+  | {
+      lock: ccc.Script;
+      identityType?: never;
+      controller?: never;
+    }
+  | {
+      lock: ccc.Script;
+      identityType: ccc.Script;
+      controller: ccc.Script;
+    };
 
 type IssuerSelection = {
   source: ClaimIssuerSource;
@@ -294,6 +301,40 @@ function rejectDidLockController(controller: ccc.Script, didLock: ccc.ScriptInfo
   }
 }
 
+async function selectSubjectController(
+  tx: ccc.Transaction,
+  client: ccc.Client,
+  identityType: ccc.Script,
+): Promise<ccc.Script | undefined> {
+  const inputs = await loadInputs(tx, client);
+  const deps = await loadCellDeps(tx, client);
+  const inputMatches = inputs.filter(({ cell }) => cell.cellOutput.type?.eq(identityType));
+  const outputMatches = matchingOutputs(tx, identityType);
+
+  if (inputMatches.length > 0) {
+    if (inputMatches.length !== 1 || outputMatches.length !== 1) {
+      throw new Error(
+        "A subject DID input requires exactly one matching input and one post-transaction output",
+      );
+    }
+    return tx.outputs[outputMatches[0]].lock;
+  }
+
+  const depMatches = deps.filter(({ cell }) => cell.cellOutput.type?.eq(identityType));
+  if (outputMatches.length > 0) {
+    if (outputMatches.length !== 1 || depMatches.length !== 0) {
+      throw new Error("The subject did:ckb identity has conflicting transaction states");
+    }
+    return tx.outputs[outputMatches[0]].lock;
+  }
+  if (depMatches.length > 0) {
+    if (depMatches.length !== 1) {
+      throw new Error("The subject did:ckb identity has ambiguous cell-dep state");
+    }
+    return depMatches[0].cell.cellOutput.lock;
+  }
+}
+
 async function resolveSubject(
   tx: ccc.Transaction,
   client: ccc.Client,
@@ -318,45 +359,19 @@ async function resolveSubject(
     hashType: scripts.didCkb.hashType,
     args: subjectId,
   });
-  const inputs = await loadInputs(tx, client);
-  let deps = await loadCellDeps(tx, client);
-  const inputMatches = inputs.filter(({ cell }) => cell.cellOutput.type?.eq(identityType));
-  const outputMatches = matchingOutputs(tx, identityType);
-  let controller: ccc.Script;
-
-  if (inputMatches.length > 0) {
-    if (inputMatches.length !== 1 || outputMatches.length !== 1) {
-      throw new Error(
-        "A subject DID input requires exactly one matching input and one post-transaction output",
-      );
-    }
-    controller = tx.outputs[outputMatches[0]].lock;
-  } else {
-    const depMatches = deps.filter(({ cell }) => cell.cellOutput.type?.eq(identityType));
-    if (outputMatches.length > 0) {
-      if (outputMatches.length !== 1 || depMatches.length !== 0) {
-        throw new Error("The subject did:ckb identity has conflicting transaction states");
-      }
-      controller = tx.outputs[outputMatches[0]].lock;
-    } else if (depMatches.length > 0) {
-      if (depMatches.length !== 1) {
-        throw new Error("The subject did:ckb identity has ambiguous cell-dep state");
-      }
-      controller = depMatches[0].cell.cellOutput.lock;
-    } else {
-      const live = await findLiveIdentity(client, identityType, "subject");
-      addDirectCellDep(tx, live);
-      deps = await loadCellDeps(tx, client);
-      const added = deps.filter(({ cell }) => cell.cellOutput.type?.eq(identityType));
-      if (added.length !== 1) {
-        throw new Error("Unable to anchor exactly one live subject did:ckb state");
-      }
-      controller = added[0].cell.cellOutput.lock;
+  let controller = await selectSubjectController(tx, client, identityType);
+  if (!controller) {
+    const live = await findLiveIdentity(client, identityType, "subject");
+    addDirectCellDep(tx, live);
+    controller = await selectSubjectController(tx, client, identityType);
+    if (!controller) {
+      throw new Error("Unable to anchor exactly one live subject did:ckb state");
     }
   }
 
   rejectDidLockController(controller, scripts.didLock);
   return {
+    controller,
     identityType,
     lock: ccc.Script.from({
       codeHash: scripts.didLock.codeHash,
@@ -366,11 +381,11 @@ async function resolveSubject(
   };
 }
 
-async function selectIssuer(
+async function selectIssuerFromTransaction(
   tx: ccc.Transaction,
   client: ccc.Client,
   issuerType: ccc.Script,
-): Promise<IssuerSelection> {
+): Promise<IssuerSelection | undefined> {
   const inputs = await loadInputs(tx, client);
   const deps = await loadCellDeps(tx, client);
   const inputMatches = inputs.filter(({ cell }) => cell.cellOutput.type?.eq(issuerType));
@@ -411,6 +426,17 @@ async function selectIssuer(
       source: { kind: "output", outputIndex: outputMatches[0] },
       controller: tx.outputs[outputMatches[0]].lock,
     };
+  }
+}
+
+async function selectIssuer(
+  tx: ccc.Transaction,
+  client: ccc.Client,
+  issuerType: ccc.Script,
+): Promise<IssuerSelection> {
+  const selected = await selectIssuerFromTransaction(tx, client, issuerType);
+  if (selected) {
+    return selected;
   }
 
   const live = await findLiveIdentity(client, issuerType, "issuer");
@@ -697,6 +723,68 @@ function assertClaimOutput(tx: ccc.Transaction, outputIndex: number, built: Buil
   }
 }
 
+function sameIssuerSource(left: ClaimIssuerSource, right: ClaimIssuerSource): boolean {
+  if (left.kind === "input" && right.kind === "input") {
+    return left.inputIndex === right.inputIndex && left.outputIndex === right.outputIndex;
+  }
+  if (left.kind === "cell-dep" && right.kind === "cell-dep") {
+    return left.cellDepIndex === right.cellDepIndex;
+  }
+  if (left.kind === "output" && right.kind === "output") {
+    return left.outputIndex === right.outputIndex;
+  }
+  return false;
+}
+
+async function assertIdentityState(
+  tx: ccc.Transaction,
+  client: ccc.Client,
+  subject: SubjectResolution,
+  issuerType: ccc.Script,
+  issuer: IssuerSelection,
+  controllerInputIndex: number,
+): Promise<void> {
+  let selectedIssuer: IssuerSelection | undefined;
+  try {
+    selectedIssuer = await selectIssuerFromTransaction(tx, client, issuerType);
+  } catch (error) {
+    throw new Error(`A signer changed the selected issuer DID state: ${messageFrom(error)}`, {
+      cause: error,
+    });
+  }
+  if (
+    !selectedIssuer ||
+    !sameIssuerSource(selectedIssuer.source, issuer.source) ||
+    !selectedIssuer.controller.eq(issuer.controller)
+  ) {
+    throw new Error("A signer changed the selected issuer DID state");
+  }
+
+  const controllerInput = tx.inputs[controllerInputIndex];
+  if (!controllerInput) {
+    throw new Error("A signer changed the issuer controller authorization input");
+  }
+  const controllerCell = await controllerInput.getCell(client);
+  if (!controllerCell.cellOutput.lock.eq(issuer.controller)) {
+    throw new Error("A signer changed the issuer controller authorization input");
+  }
+
+  if (!subject.identityType) {
+    return;
+  }
+  let subjectController: ccc.Script | undefined;
+  try {
+    subjectController = await selectSubjectController(tx, client, subject.identityType);
+  } catch (error) {
+    throw new Error(`A signer changed the selected subject DID state: ${messageFrom(error)}`, {
+      cause: error,
+    });
+  }
+  if (!subjectController || !subjectController.eq(subject.controller)) {
+    throw new Error("A signer changed the selected subject DID state");
+  }
+}
+
 export async function writeClaim<TPayload = unknown>(
   props: WriteClaimProps<TPayload>,
 ): Promise<WriteClaimResult> {
@@ -763,6 +851,7 @@ export async function writeClaim<TPayload = unknown>(
 
   await validateInputCoverage(tx, client, scripts.didLock, addresses);
   assertClaimOutput(tx, outputIndex, built);
+  await assertIdentityState(tx, client, subject, issuerType, issuer, controllerInputIndex);
 
   return {
     tx,

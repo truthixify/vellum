@@ -201,6 +201,7 @@ function fakeSigner(
   client: ccc.Client,
   locks: readonly ccc.Script[],
   spendable: readonly ccc.Cell[],
+  changePrepared?: (tx: ccc.Transaction) => void,
 ): FakeSigner {
   let prepareCount = 0;
   const addresses = locks.map((script) =>
@@ -218,7 +219,9 @@ function fakeSigner(
       })(),
     prepareTransaction: async (tx: ccc.TransactionLike) => {
       prepareCount += 1;
-      return ccc.Transaction.from(tx);
+      const prepared = ccc.Transaction.from(tx);
+      changePrepared?.(prepared);
+      return prepared;
     },
     prepareCount: () => prepareCount,
   } as unknown as FakeSigner;
@@ -492,6 +495,25 @@ describe("writeClaim issuer authorization", () => {
       writeClaim({ issuerSigner: wrongSigner, scripts: SCRIPTS, input: BASE_INPUT }),
     ).rejects.toThrow("issuerSigner does not control");
   });
+
+  test("rejects a signer that changes the selected issuer state", async () => {
+    const identity = cell({ byte: 0x47, type: issuerType() });
+    const funding = cell({ byte: 0x48, capacity: 100_000_000_000n });
+    const { client } = fakeClient({ cells: [identity, funding], liveCells: [identity] });
+    const issuerSigner = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
+    const changingSigner = fakeSigner(client, [PAYER_LOCK], [], (tx) => {
+      tx.cellDeps = tx.cellDeps.filter(({ outPoint }) => !outPoint.eq(identity.outPoint));
+    });
+
+    await expect(
+      writeClaim({
+        issuerSigner,
+        additionalSigners: [changingSigner],
+        scripts: SCRIPTS,
+        input: BASE_INPUT,
+      }),
+    ).rejects.toThrow("A signer changed the selected issuer DID state");
+  });
 });
 
 describe("writeClaim subjects and input authorization", () => {
@@ -617,6 +639,34 @@ describe("writeClaim subjects and input authorization", () => {
         tx: { inputs: [locked] },
       }),
     ).rejects.toThrow("exactly one identity cell-dep state");
+  });
+
+  test("rejects a signer that replaces the subject identity anchor", async () => {
+    const issuer = cell({ byte: 0x49, type: issuerType() });
+    const subject = cell({ byte: 0x4a, type: subjectType() });
+    const funding = cell({ byte: 0x4b, capacity: 100_000_000_000n });
+    const replacement = cell({ byte: 0x4c, lock: SUBJECT_LOCK });
+    const { client } = fakeClient({
+      cells: [issuer, subject, funding, replacement],
+      liveCells: [issuer, subject],
+    });
+    const issuerSigner = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
+    const changingSigner = fakeSigner(client, [PAYER_LOCK], [], (tx) => {
+      tx.cellDeps = tx.cellDeps.map((cellDep) =>
+        cellDep.outPoint.eq(subject.outPoint)
+          ? ccc.CellDep.from({ outPoint: replacement.outPoint, depType: "code" })
+          : cellDep,
+      );
+    });
+
+    await expect(
+      writeClaim({
+        issuerSigner,
+        additionalSigners: [changingSigner],
+        scripts: SCRIPTS,
+        input: { ...BASE_INPUT, subject: { did: SUBJECT_DID } },
+      }),
+    ).rejects.toThrow("A signer changed the selected subject DID state");
   });
 });
 
