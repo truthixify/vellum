@@ -1,8 +1,12 @@
 # Claim SDK API
 
-This document defines the public Claim Cell API intended for `@ckb-ccc/did-ckb`. It maps directly
-to the [Claim Cell protocol](./claim-cell.md) and follows the existing CCC convention of accepting
-one properties object and returning transaction builders without signing or broadcasting them.
+This document defines the public Claim Cell API for the Vellum SDK. It maps directly to the
+[Claim Cell protocol](./claim-cell.md) and follows the existing CCC convention of accepting one
+properties object and returning transaction builders without signing or broadcasting them.
+
+Vellum owns the Claim Cell codec, reader, transaction builder, and application policy.
+`@ckb-ccc/did-ckb` remains an identity dependency for DID parsing and identity primitives; Claim
+Cell APIs do not become part of that package.
 
 The SDK remains deployment-neutral. Applications provide the Claim Type and optional DID Lock
 script information for the network they use. A direct subject lock does not require DID Lock;
@@ -210,9 +214,9 @@ export declare function parseClaimPayload<TPayload>(
 ): TPayload;
 ```
 
-The package exports the Molecule-backed `ClaimDataV1` and `ClaimData` entity classes in addition to
-the `Like` types above, following the package's existing codec pattern. Their encoded field order
-must remain `issuer_id`, `nonce`, `issued_at`, `expires_at`, and `payload`.
+The Vellum SDK exports the Molecule-backed `ClaimDataV1` and `ClaimData` entity classes in addition
+to the `Like` types above, following CCC's entity codec pattern. Their encoded field order must
+remain `issuer_id`, `nonce`, `issued_at`, `expires_at`, and `payload`.
 
 ## Read behavior
 

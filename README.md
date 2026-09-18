@@ -55,7 +55,7 @@ without requiring those products to share one backend.
 | Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
-the identity operations used by Vellum. The planned reputation work will extend that shared SDK so
+the identity operations used by Vellum. The Vellum SDK will build on those identity primitives so
 other CKB applications can read and write claims without depending on the Vellum interface.
 
 ## What comes next
