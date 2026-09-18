@@ -1,12 +1,16 @@
 import type { ccc } from "@ckb-ccc/core";
 
+/** Script deployments used to read or create Claim Cells. */
 export type ClaimScriptConfigLike = {
+  /** Claim Type deployment for the selected CKB network. */
   claimType: ccc.ScriptInfoLike;
+  /** DID Lock deployment, required when a subject is supplied as a DID. */
   didLock?: ccc.ScriptInfoLike;
   /** Defaults to the client's KnownScript.DidCkb entry. */
   didCkb?: ccc.ScriptInfoLike;
 };
 
+/** A claim subject expressed as either a complete CKB lock or a did:ckb identifier. */
 export type ClaimSubjectLike =
   | {
       lock: ccc.ScriptLike;
@@ -17,6 +21,7 @@ export type ClaimSubjectLike =
       lock?: never;
     };
 
+/** Input accepted by the V1 Claim Cell Molecule codec. */
 export type ClaimDataV1Like<TPayload = unknown> = {
   issuerId: ccc.HexLike;
   nonce: ccc.HexLike;
@@ -27,6 +32,7 @@ export type ClaimDataV1Like<TPayload = unknown> = {
   payload: TPayload;
 };
 
+/** Versioned Claim Cell data accepted by {@link ClaimData.from}. */
 export type ClaimDataLike<TPayload = unknown> =
   | {
       type?: "v1" | null;
@@ -39,6 +45,7 @@ export type ClaimDataLike<TPayload = unknown> =
       };
     };
 
+/** Result of evaluating issuer-asserted claim timestamps at an explicit checkpoint. */
 export type ClaimTimeEvaluation =
   | {
       status: "not-evaluated";
@@ -49,6 +56,7 @@ export type ClaimTimeEvaluation =
       evaluatedAt: ccc.Num;
     };
 
+/** Current on-chain state resolved for a claim's issuing did:ckb identity. */
 export type ClaimIssuerState =
   | {
       status: "active";
@@ -67,6 +75,7 @@ export type ClaimIssuerState =
       reason: string;
     };
 
+/** A decoded live Claim Cell and the verification evidence collected by the reader. */
 export type Claim<TPayload = unknown> = {
   version: "v1";
   claimId: ccc.Hex;
@@ -93,6 +102,7 @@ export type Claim<TPayload = unknown> = {
   };
 };
 
+/** Exact subject query and optional filters applied by {@link readClaims}. */
 export type ClaimFilter = {
   subject: ClaimSubjectLike;
   issuerDid?: string;
@@ -105,6 +115,7 @@ export type ClaimFilter = {
   pageSize?: number;
 };
 
+/** Stable category for a Claim Cell that could not be accepted by the reader. */
 export type ClaimReadFailureCode =
   | "unsupported-issuer-deployment"
   | "invalid-type-args"
@@ -113,23 +124,27 @@ export type ClaimReadFailureCode =
   | "invalid-dag-cbor"
   | "non-canonical-dag-cbor";
 
+/** A malformed or unsupported live Cell isolated from otherwise valid results. */
 export type ClaimReadFailure = {
   cell: ccc.Cell;
   code: ClaimReadFailureCode;
   message: string;
 };
 
+/** Complete result of a subject scan, including isolated invalid Cells. */
 export type ReadClaimsResult = {
   claims: Claim[];
   invalid: ClaimReadFailure[];
 };
 
+/** Inputs for {@link readClaims}. */
 export type ReadClaimsProps = {
   client: ccc.Client;
   scripts: ClaimScriptConfigLike;
   filter: ClaimFilter;
 };
 
+/** Claim content and output policy used by {@link writeClaim}. */
 export type WriteClaimInput<TPayload = unknown> = {
   subject: ClaimSubjectLike;
   issuerDid: string;
@@ -145,6 +160,7 @@ export type WriteClaimInput<TPayload = unknown> = {
   capacity?: ccc.NumLike;
 };
 
+/** Signers, deployments, and optional base transaction used by {@link writeClaim}. */
 export type WriteClaimProps<TPayload = unknown> = {
   issuerSigner: ccc.Signer;
   /** Defaults to issuerSigner. */
@@ -156,6 +172,7 @@ export type WriteClaimProps<TPayload = unknown> = {
   tx?: ccc.TransactionLike;
 };
 
+/** Location of the issuer DID state selected for Claim Type authorization. */
 export type ClaimIssuerSource =
   | {
       kind: "input";
@@ -171,6 +188,7 @@ export type ClaimIssuerSource =
       outputIndex: number;
     };
 
+/** Prepared unsigned transaction and stable metadata returned by {@link writeClaim}. */
 export type WriteClaimResult = {
   tx: ccc.Transaction;
   claimId: ccc.Hex;
@@ -179,6 +197,7 @@ export type WriteClaimResult = {
   controllerInputIndex: number;
 };
 
+/** Application parser bound to one canonical claim schema hash. */
 export type ClaimSchema<TPayload> = {
   id: string;
   hash: ccc.HexLike;

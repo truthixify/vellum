@@ -1,18 +1,45 @@
 {
   "name": "@vellum/sdk",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "description": "Typed Claim Cell APIs for Vellum and CKB applications.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "homepage": "https://github.com/truthixify/vellum#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/truthixify/vellum.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/truthixify/vellum/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --entry-naming index.js --target=browser --format=esm --packages=external --sourcemap=external && tsc -p tsconfig.build.json",
+    "example": "bun run examples/api.ts",
+    "prepack": "bun run build",
     "test": "bun test src",
     "test:testnet": "bun test testnet",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:package": "tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts"
   },
   "dependencies": {
     "@ckb-ccc/core": "1.19.1",

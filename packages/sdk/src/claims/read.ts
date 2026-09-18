@@ -460,6 +460,12 @@ async function resolveIssuerStates(
   return issuerStates;
 }
 
+/**
+ * Reads every live Claim Cell under one exact subject lock.
+ *
+ * Invalid Cells are isolated in `invalid`. A subject-scan failure rejects the operation because a
+ * partial result cannot prove completeness.
+ */
 export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResult> {
   const claimType = ccc.ScriptInfo.from(props.scripts.claimType);
   const didCkb = props.scripts.didCkb
@@ -541,6 +547,7 @@ export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResu
   };
 }
 
+/** Validates a claim's schema hash before parsing its untrusted payload. */
 export function parseClaimPayload<TPayload>(claim: Claim, schema: ClaimSchema<TPayload>): TPayload {
   const schemaHash = requireByteLength(schema.hash, 32, `schema ${schema.id} hash`);
   if (claim.schemaHash !== schemaHash) {

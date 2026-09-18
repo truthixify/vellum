@@ -8,8 +8,8 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "bun run --cwd apps/site build && bun run --cwd apps/dashboard build",
-    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "build": "bun run --cwd packages/sdk build && bun run --cwd apps/site build && bun run --cwd apps/dashboard build",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build && bun run --cwd packages/sdk verify:package",
     "commitlint": "commitlint",
     "dev:dashboard": "bun run --cwd apps/dashboard dev",
     "dev:site": "bun run --cwd apps/site dev",

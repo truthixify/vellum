@@ -793,6 +793,12 @@ async function assertIdentityState(
   return { issuer: selectedIssuer, controllerInputIndex };
 }
 
+/**
+ * Builds and balances an unsigned Claim Cell transaction.
+ *
+ * The caller remains responsible for inspecting, signing, and broadcasting the returned
+ * transaction.
+ */
 export async function writeClaim<TPayload = unknown>(
   props: WriteClaimProps<TPayload>,
 ): Promise<WriteClaimResult> {
