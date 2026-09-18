@@ -593,6 +593,19 @@ describe("readClaims", () => {
       status: "unavailable",
       reason: "issuer indexer unavailable",
     });
+
+    const mismatchedIssuerCells = new Map<ccc.Hex, ccc.Cell[]>([
+      [issuerType().hash(), [identityCell({ outPointByte: 0x57, issuerId: OTHER_ISSUER_ID })]],
+    ]);
+    const mismatched = await readClaims({
+      client: fakeClient({ claimCells: [cell], issuerCells: mismatchedIssuerCells }).client,
+      scripts: SCRIPTS,
+      filter: { subject: { lock: SUBJECT_LOCK } },
+    });
+    expect(mismatched.claims[0].issuerState).toEqual({
+      status: "unavailable",
+      reason: "CKB indexer returned a Cell outside the exact issuer Type query",
+    });
   });
 
   test("proves deactivation from a complete issuer transaction history", async () => {
@@ -613,8 +626,20 @@ describe("readClaims", () => {
       outputsData: ["0x"],
     });
     const genesisHash = genesis.hash();
-    const deactivation = ccc.Transaction.from({
+    const rotation = ccc.Transaction.from({
       inputs: [{ previousOutput: { txHash: genesisHash, index: 0 } }],
+      outputs: [
+        {
+          capacity: 20_000_000_000n,
+          lock: CONTROLLER_LOCK,
+          type,
+        },
+      ],
+      outputsData: ["0x"],
+    });
+    const rotationHash = rotation.hash();
+    const deactivation = ccc.Transaction.from({
+      inputs: [{ previousOutput: { txHash: rotationHash, index: 0 } }],
       outputs: [
         {
           capacity: 10_000_000_000n,
@@ -635,8 +660,17 @@ describe("readClaims", () => {
             cells: [{ isInput: false, cellIndex: 0n }],
           },
           {
-            txHash: deactivationHash,
+            txHash: rotationHash,
             blockNumber: 2n,
+            txIndex: 0n,
+            cells: [
+              { isInput: true, cellIndex: 0n },
+              { isInput: false, cellIndex: 0n },
+            ],
+          },
+          {
+            txHash: deactivationHash,
+            blockNumber: 3n,
             txIndex: 0n,
             cells: [{ isInput: true, cellIndex: 0n }],
           },
@@ -647,6 +681,10 @@ describe("readClaims", () => {
       [
         genesisHash,
         ccc.ClientTransactionResponse.from({ transaction: genesis, status: "committed" }),
+      ],
+      [
+        rotationHash,
+        ccc.ClientTransactionResponse.from({ transaction: rotation, status: "committed" }),
       ],
       [
         deactivationHash,
@@ -718,6 +756,77 @@ describe("readClaims", () => {
     expect(result.claims[0].issuerState).toEqual({
       status: "unavailable",
       reason: `Issuer transaction ${recordHash} has mismatched contents`,
+    });
+  });
+
+  test("uses committed transaction outputs when reconstructing issuer history", async () => {
+    const type = issuerType();
+    const creation = ccc.Transaction.from({
+      outputs: [
+        {
+          capacity: 20_000_000_000n,
+          lock: CONTROLLER_LOCK,
+          type,
+        },
+      ],
+      outputsData: ["0x"],
+    });
+    const creationHash = creation.hash();
+    const rotation = ccc.Transaction.from({
+      inputs: [{ previousOutput: { txHash: creationHash, index: 0 } }],
+      outputs: [
+        {
+          capacity: 20_000_000_000n,
+          lock: CONTROLLER_LOCK,
+          type,
+        },
+      ],
+      outputsData: ["0x"],
+    });
+    const rotationHash = rotation.hash();
+    const history = new Map<ccc.Hex, GroupedTransaction[]>([
+      [
+        type.hash(),
+        [
+          {
+            txHash: creationHash,
+            blockNumber: 1n,
+            txIndex: 0n,
+            cells: [{ isInput: false, cellIndex: 0n }],
+          },
+          {
+            txHash: rotationHash,
+            blockNumber: 2n,
+            txIndex: 0n,
+            cells: [{ isInput: true, cellIndex: 0n }],
+          },
+        ],
+      ],
+    ]);
+    const transactions = new Map<ccc.Hex, ccc.ClientTransactionResponse>([
+      [
+        creationHash,
+        ccc.ClientTransactionResponse.from({ transaction: creation, status: "committed" }),
+      ],
+      [
+        rotationHash,
+        ccc.ClientTransactionResponse.from({ transaction: rotation, status: "committed" }),
+      ],
+    ]);
+
+    const result = await readClaims({
+      client: fakeClient({
+        claimCells: [claimCell({ outPointByte: 0x59 })],
+        history,
+        transactions,
+      }).client,
+      scripts: SCRIPTS,
+      filter: { subject: { lock: SUBJECT_LOCK } },
+    });
+
+    expect(result.claims[0].issuerState).toEqual({
+      status: "unavailable",
+      reason: `Issuer history has mismatched outputs at ${rotationHash}`,
     });
   });
 
@@ -831,6 +940,29 @@ describe("readClaims", () => {
     ).rejects.toThrow("subject indexer unavailable");
   });
 
+  test("rejects a Cell outside the exact subject lock query", async () => {
+    const fake = fakeClient({
+      claimCells: [
+        claimCell({
+          outPointByte: 0x58,
+          subjectLock: ccc.Script.from({
+            codeHash: repeatedHex(0x90, 32),
+            hashType: "type",
+            args: "0x",
+          }),
+        }),
+      ],
+    });
+
+    await expect(
+      readClaims({
+        client: fake.client,
+        scripts: SCRIPTS,
+        filter: { subject: { lock: SUBJECT_LOCK } },
+      }),
+    ).rejects.toThrow("outside the configured subject lock query");
+  });
+
   test("rejects a stalled subject pagination cursor", async () => {
     const fake = fakeClient({
       claimCells: [claimCell({ outPointByte: 0x55 })],
@@ -875,6 +1007,33 @@ describe("readClaims", () => {
         },
       }),
     ).rejects.toThrow('order must be either "asc" or "desc"');
+
+    await expect(
+      readClaims({
+        client: fake.client,
+        scripts: SCRIPTS,
+        filter: { subject: { lock: SUBJECT_LOCK }, issuerDid: "" },
+      }),
+    ).rejects.toThrow("Expected did:ckb");
+
+    await expect(
+      readClaims({
+        client: fake.client,
+        scripts: SCRIPTS,
+        filter: { subject: { lock: SUBJECT_LOCK }, schemaHash: "" },
+      }),
+    ).rejects.toThrow("schemaHash must be 32 bytes");
+
+    await expect(
+      readClaims({
+        client: fake.client,
+        scripts: SCRIPTS,
+        filter: {
+          subject: { lock: SUBJECT_LOCK },
+          evaluationTime: Number.MAX_SAFE_INTEGER + 1,
+        },
+      }),
+    ).rejects.toThrow("evaluationTime numbers must be safe integers");
   });
 });
 

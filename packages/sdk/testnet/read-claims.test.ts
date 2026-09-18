@@ -12,6 +12,8 @@ const FIXTURE = {
   claimId: "0xbb3f7a46f7aef44dd53c2cd8f863fd39f046242f3453416219b7a9e47cdd3b5e",
   subjectLockHash: "0x8d00643a80a7e397f25a0cf16374d5bde394d63c82a966ef0914f43db196fbec",
   schemaHash: "0xee63f8c811694ae206a49b681dfd336caa92b27384284398124e7b53f92d5f2b",
+  schemaManifest:
+    '{"fields":{"fixture":{"type":"string"},"network":{"type":"string"},"version":{"type":"integer"}},"name":"vellum.sdk.read-claims.fixture","version":1}',
   nonce: "0xde80a26a4458dcaa1fee2b002c174359da92c0e30739aef98446d64a30005b34",
   issuedAt: 1_789_764_803n,
   payload: {
@@ -39,6 +41,8 @@ function scriptInfo(
 }
 
 test("reads the known Claim Cell from CKB Testnet", async () => {
+  expect(ccc.hashCkb(new TextEncoder().encode(FIXTURE.schemaManifest))).toBe(FIXTURE.schemaHash);
+
   const client = new ccc.ClientPublicTestnet({
     url: process.env.CKB_RPC_URL ?? "https://testnet.ckbapp.dev",
   });

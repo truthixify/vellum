@@ -28,6 +28,7 @@ type DecodedClaim = Omit<Claim, "duplicateCells" | "issuerState"> & {
 type DecodeContext = {
   claimType: ccc.ScriptInfo;
   didCkb: ccc.ScriptInfo;
+  subjectLock: ccc.Script;
   evaluationTime?: ccc.Num;
   issuerId?: ccc.Hex;
   schemaHash?: ccc.Hex;
@@ -56,6 +57,9 @@ function validatePageSize(value: number | undefined): number {
 function validateEvaluationTime(value: ccc.NumLike | undefined): ccc.Num | undefined {
   if (value === undefined) {
     return undefined;
+  }
+  if (typeof value === "number" && !Number.isSafeInteger(value)) {
+    throw new Error("evaluationTime numbers must be safe integers; use bigint for larger values");
   }
 
   const timestamp = ccc.numFrom(value);
@@ -132,11 +136,11 @@ async function resolveSubject(props: ReadClaimsProps, didCkb: ccc.ScriptInfo): P
     throw new Error("scripts.didLock is required for a did:ckb subject");
   }
 
-  const issuerId = requireByteLength(didToArgs(subject.did), 20, "subject DID ID");
+  const subjectId = requireByteLength(didToArgs(subject.did), 20, "subject DID ID");
   const identityType = ccc.Script.from({
     codeHash: didCkb.codeHash,
     hashType: didCkb.hashType,
-    args: issuerId,
+    args: subjectId,
   });
   const didLock = ccc.ScriptInfo.from(props.scripts.didLock);
 
@@ -151,6 +155,10 @@ function decodeCell(
   cell: ccc.Cell,
   context: DecodeContext,
 ): DecodedClaim | ClaimReadFailure | undefined {
+  if (!cell.cellOutput.lock.eq(context.subjectLock)) {
+    throw new Error("CKB indexer returned a Cell outside the configured subject lock query");
+  }
+
   const type = cell.cellOutput.type;
   if (
     !type ||
@@ -318,30 +326,51 @@ async function resolveIssuerHistory(
       throw new Error(`Issuer transaction ${record.txHash} has mismatched contents`);
     }
 
-    const inputs = record.cells.filter((cell) => cell.isInput);
-    const outputs = record.cells.filter((cell) => !cell.isInput);
-    if (inputs.length > 1 || outputs.length > 1 || inputs.length + outputs.length === 0) {
+    const recordedInputIndexes = record.cells.flatMap((cell) =>
+      cell.isInput ? [ccc.numFrom(cell.cellIndex)] : [],
+    );
+    const recordedOutputIndexes = record.cells.flatMap((cell) =>
+      cell.isInput ? [] : [ccc.numFrom(cell.cellIndex)],
+    );
+    const connectedInputIndexes = response.transaction.inputs.flatMap((input, index) =>
+      liveOutPoints.has(outPointKey(input.previousOutput)) ? [BigInt(index)] : [],
+    );
+    const matchingOutputIndexes = response.transaction.outputs.flatMap((output, index) =>
+      output.type?.eq(issuerType) ? [BigInt(index)] : [],
+    );
+    if (
+      recordedInputIndexes.length !== connectedInputIndexes.length ||
+      recordedInputIndexes.some((index, position) => index !== connectedInputIndexes[position])
+    ) {
+      throw new Error(`Issuer history has a disconnected input at ${record.txHash}`);
+    }
+    if (
+      recordedOutputIndexes.length !== matchingOutputIndexes.length ||
+      recordedOutputIndexes.some((index, position) => index !== matchingOutputIndexes[position])
+    ) {
+      throw new Error(`Issuer history has mismatched outputs at ${record.txHash}`);
+    }
+    if (
+      connectedInputIndexes.length > 1 ||
+      matchingOutputIndexes.length > 1 ||
+      connectedInputIndexes.length + matchingOutputIndexes.length === 0
+    ) {
       throw new Error(`Issuer history is ambiguous at transaction ${record.txHash}`);
     }
 
-    if (inputs.length === 0) {
-      if (sawOutput || liveOutPoints.size !== 0 || outputs.length !== 1) {
+    if (connectedInputIndexes.length === 0) {
+      if (sawOutput || liveOutPoints.size !== 0 || matchingOutputIndexes.length !== 1) {
         throw new Error(`Issuer history has an invalid creation at ${record.txHash}`);
       }
     } else {
-      const inputIndex = Number(inputs[0].cellIndex);
-      const input = response.transaction.inputs[inputIndex];
+      const input = response.transaction.inputs[Number(connectedInputIndexes[0])];
       if (!input || !liveOutPoints.delete(outPointKey(input.previousOutput))) {
         throw new Error(`Issuer history has a disconnected input at ${record.txHash}`);
       }
     }
 
-    if (outputs.length === 1) {
-      const outputIndex = Number(outputs[0].cellIndex);
-      const output = response.transaction.outputs[outputIndex];
-      if (!output?.type?.eq(issuerType)) {
-        throw new Error(`Issuer history has a mismatched output at ${record.txHash}`);
-      }
+    if (matchingOutputIndexes.length === 1) {
+      const outputIndex = matchingOutputIndexes[0];
       const outputKey = outPointKey({ txHash: record.txHash, index: outputIndex });
       if (liveOutPoints.has(outputKey)) {
         throw new Error(`Issuer history repeated an output at ${record.txHash}`);
@@ -381,6 +410,9 @@ async function resolveIssuerState(
       "asc",
       pageSize,
     );
+    if (cells.some((cell) => !cell.cellOutput.type?.eq(issuerType))) {
+      throw new Error("CKB indexer returned a Cell outside the exact issuer Type query");
+    }
 
     if (cells.length === 1) {
       return {
@@ -406,12 +438,14 @@ export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResu
   const subjectLock = await resolveSubject(props, didCkb);
   const pageSize = validatePageSize(props.filter.pageSize);
   const order = validateOrder(props.filter.order);
-  const issuerId = props.filter.issuerDid
-    ? requireByteLength(didToArgs(props.filter.issuerDid), 20, "issuer DID ID")
-    : undefined;
-  const schemaHash = props.filter.schemaHash
-    ? requireByteLength(props.filter.schemaHash, 32, "schemaHash")
-    : undefined;
+  const issuerId =
+    props.filter.issuerDid === undefined
+      ? undefined
+      : requireByteLength(didToArgs(props.filter.issuerDid), 20, "issuer DID ID");
+  const schemaHash =
+    props.filter.schemaHash === undefined
+      ? undefined
+      : requireByteLength(props.filter.schemaHash, 32, "schemaHash");
   const evaluationTime = validateEvaluationTime(props.filter.evaluationTime);
 
   const cells = await collectCells(
@@ -439,6 +473,7 @@ export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResu
   const context: DecodeContext = {
     claimType,
     didCkb,
+    subjectLock,
     evaluationTime,
     issuerId,
     schemaHash,
