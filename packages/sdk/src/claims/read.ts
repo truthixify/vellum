@@ -19,6 +19,7 @@ const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
 const MAX_UINT64 = (1n << 64n) - 1n;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 100;
+const MAX_CONCURRENT_ISSUER_LOOKUPS = 8;
 const CLAIM_ID_DOMAIN = "0x56454c4c554d5f434c41494d5f563100" satisfies ccc.Hex;
 
 type DecodedClaim = Omit<Claim, "duplicateCells" | "issuerState"> & {
@@ -430,6 +431,35 @@ async function resolveIssuerState(
   }
 }
 
+async function resolveIssuerStates(
+  client: ccc.Client,
+  claims: readonly DecodedClaim[],
+  pageSize: number,
+): Promise<Map<ccc.Hex, ClaimIssuerState>> {
+  const issuerTypes = new Map<ccc.Hex, ccc.Script>();
+  for (const claim of claims) {
+    const key = claim.issuerType.hash();
+    if (!issuerTypes.has(key)) {
+      issuerTypes.set(key, claim.issuerType);
+    }
+  }
+
+  const entries = [...issuerTypes.entries()];
+  const issuerStates = new Map<ccc.Hex, ClaimIssuerState>();
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < entries.length) {
+      const [key, issuerType] = entries[nextIndex++];
+      issuerStates.set(key, await resolveIssuerState(client, issuerType, pageSize));
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(MAX_CONCURRENT_ISSUER_LOOKUPS, entries.length) }, worker),
+  );
+  return issuerStates;
+}
+
 export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResult> {
   const claimType = ccc.ScriptInfo.from(props.scripts.claimType);
   const didCkb = props.scripts.didCkb
@@ -498,22 +528,14 @@ export async function readClaims(props: ReadClaimsProps): Promise<ReadClaimsResu
     claims.push(result);
   }
 
-  const issuerStates = new Map<ccc.Hex, Promise<ClaimIssuerState>>();
-  for (const claim of claims) {
-    const key = claim.issuerType.hash();
-    if (!issuerStates.has(key)) {
-      issuerStates.set(key, resolveIssuerState(props.client, claim.issuerType, pageSize));
-    }
-  }
+  const issuerStates = await resolveIssuerStates(props.client, claims, pageSize);
 
   return {
-    claims: await Promise.all(
-      claims.map(
-        async (claim): Promise<Claim> => ({
-          ...claim,
-          issuerState: await issuerStates.get(claim.issuerType.hash())!,
-        }),
-      ),
+    claims: claims.map(
+      (claim): Claim => ({
+        ...claim,
+        issuerState: issuerStates.get(claim.issuerType.hash())!,
+      }),
     ),
     invalid,
   };

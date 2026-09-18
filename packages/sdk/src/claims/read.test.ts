@@ -138,6 +138,7 @@ type FakeClientOptions = {
   failSubjectScan?: boolean;
   failIssuerScan?: boolean;
   stallSubjectCursor?: boolean;
+  issuerScanDelayMs?: number;
 };
 
 function fakeClient(options: FakeClientOptions = {}) {
@@ -148,6 +149,8 @@ function fakeClient(options: FakeClientOptions = {}) {
     after: string | undefined;
   }[] = [];
   let issuerScanCount = 0;
+  let activeIssuerScanCount = 0;
+  let maxConcurrentIssuerScanCount = 0;
 
   const client = {
     getKnownScript: async () => ccc.ScriptInfo.from(DID_CKB_INFO),
@@ -171,12 +174,24 @@ function fakeClient(options: FakeClientOptions = {}) {
         cursorPrefix = "claims";
       } else {
         issuerScanCount += 1;
-        if (options.failIssuerScan) {
-          throw new Error("issuer indexer unavailable");
+        activeIssuerScanCount += 1;
+        maxConcurrentIssuerScanCount = Math.max(
+          maxConcurrentIssuerScanCount,
+          activeIssuerScanCount,
+        );
+        try {
+          if (options.issuerScanDelayMs !== undefined) {
+            await Bun.sleep(options.issuerScanDelayMs);
+          }
+          if (options.failIssuerScan) {
+            throw new Error("issuer indexer unavailable");
+          }
+          const keyHash = ccc.Script.from(key.script).hash();
+          cells = options.issuerCells?.get(keyHash) ?? [];
+          cursorPrefix = keyHash;
+        } finally {
+          activeIssuerScanCount -= 1;
         }
-        const keyHash = ccc.Script.from(key.script).hash();
-        cells = options.issuerCells?.get(keyHash) ?? [];
-        cursorPrefix = keyHash;
       }
 
       const orderedCells = order === "desc" ? [...cells].reverse() : cells;
@@ -203,6 +218,7 @@ function fakeClient(options: FakeClientOptions = {}) {
     client,
     queries,
     issuerScanCount: () => issuerScanCount,
+    maxConcurrentIssuerScanCount: () => maxConcurrentIssuerScanCount,
   };
 }
 
@@ -533,6 +549,30 @@ describe("readClaims", () => {
     expect(result.claims[0].cell.outPoint.eq(first.outPoint)).toBe(true);
     expect(result.claims[0].duplicateCells).toHaveLength(1);
     expect(result.claims[0].duplicateCells[0].outPoint.eq(duplicate.outPoint)).toBe(true);
+  });
+
+  test("bounds concurrent issuer lookups", async () => {
+    const issuerIds = Array.from({ length: 12 }, (_, index) => repeatedHex(0x80 + index, 20));
+    const fake = fakeClient({
+      claimCells: issuerIds.map((issuerId, index) =>
+        claimCell({ outPointByte: 0xa0 + index, issuerId }),
+      ),
+      issuerCells: activeIssuerMap(
+        ...issuerIds.map((issuerId, index) =>
+          identityCell({ outPointByte: 0xc0 + index, issuerId }),
+        ),
+      ),
+      issuerScanDelayMs: 5,
+    });
+
+    const result = await readClaims({
+      client: fake.client,
+      scripts: SCRIPTS,
+      filter: { subject: { lock: SUBJECT_LOCK } },
+    });
+
+    expect(result.claims).toHaveLength(issuerIds.length);
+    expect(fake.maxConcurrentIssuerScanCount()).toBe(8);
   });
 
   test("derives the default DID Lock from a did:ckb subject", async () => {

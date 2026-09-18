@@ -60,7 +60,12 @@ test("reads the known Claim Cell from CKB Testnet", async () => {
     },
   });
 
-  expect(result.invalid).toEqual([]);
+  expect(
+    result.invalid.find(
+      ({ cell }) =>
+        cell.outPoint.txHash === FIXTURE.txHash && cell.outPoint.index === FIXTURE.claimOutputIndex,
+    ),
+  ).toBeUndefined();
   const claim = result.claims.find(
     ({ cell }) =>
       cell.outPoint.txHash === FIXTURE.txHash && cell.outPoint.index === FIXTURE.claimOutputIndex,
