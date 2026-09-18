@@ -33,13 +33,14 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --entry-naming index.js --target=browser --format=esm --packages=external --sourcemap=external && tsc -p tsconfig.build.json",
+    "build": "bun run clean && bun build ./src/index.ts --outdir ./dist --entry-naming index.js --target=browser --format=esm --packages=external --sourcemap=external && tsc -p tsconfig.build.json",
+    "clean": "rm -rf ./dist",
     "example": "bun run examples/api.ts",
     "prepack": "bun run build",
     "test": "bun test src",
     "test:testnet": "bun test testnet",
     "typecheck": "tsc --noEmit",
-    "verify:package": "tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts"
+    "verify:package": "bun run build && tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts"
   },
   "dependencies": {
     "@ckb-ccc/core": "1.19.1",

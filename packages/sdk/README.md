@@ -166,9 +166,11 @@ inspection with:
 ```bash
 bun run --cwd packages/sdk test
 bun run --cwd packages/sdk typecheck
-bun run --cwd packages/sdk build
 bun run --cwd packages/sdk verify:package
 ```
+
+`verify:package` starts from a clean build, type-checks and runs the example, then inspects the
+publishable tarball.
 
 The network-dependent suite reads committed Testnet fixtures, covers a claim whose issuer and
 subject are different DIDs, proves a destroyed claim's capacity returned to the subject controller,
@@ -179,7 +181,8 @@ bun run --cwd packages/sdk test:testnet
 ```
 
 These checks use public RPC and indexer state, so they remain separate from the deterministic CI
-suite. The live read fixtures are anchored at transactions
+suite. The fixture DIDs and live Claim outputs must remain unspent. The live reads are anchored at
+transactions
 [`0x9e32511b...ff91c`](https://testnet.explorer.nervos.org/transaction/0x9e32511bcaa49d89421d070d28eded7168fa9010a007659151e7f8928caff91c),
 [`0xbbe64d73...a4142`](https://testnet.explorer.nervos.org/transaction/0xbbe64d73351dbe0faa617f8d5ac0d9624845c329e1d5d7b722a90456cfea4142),
 and

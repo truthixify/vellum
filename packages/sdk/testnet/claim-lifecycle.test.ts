@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
 
 import deployment from "../../../deployments/testnet.json";
-import { readClaims } from "../src";
+import { ClaimData, readClaims } from "../src";
+
+const CLAIM_ID_DOMAIN = "0x56454c4c554d5f434c41494d5f563100" satisfies ccc.Hex;
 
 const FIXTURE = {
   schemaManifest:
@@ -32,7 +34,10 @@ const FIXTURE = {
     creationBlockNumber: 22_463_646n,
     outputIndex: 0n,
     claimId: "0x59af15603f373aa6c2a471e731b8c6dfe8ced328d4355cbbad4e5b1f32d85ad4",
+    nonce: "0x48d5f307512879980f65cd582c761b213a62513ce01f7802cad58869a317173e",
+    issuedAt: 1_789_774_146n,
     capacity: 31_700_000_000n,
+    payload: { fixture: "destroy-reclaim", network: "ckb_testnet", version: 1 },
     spendTxHash: "0x647a5253321acb45e8aa07195f0414678831f955610bdfcce59efa1107638816",
     spendBlockNumber: 22_463_649n,
     fee: 17_209n,
@@ -73,6 +78,7 @@ test("reads a live claim issued to a different did:ckb subject", async () => {
   const transaction = await client.getTransaction(FIXTURE.crossIssuer.txHash);
   expect(transaction?.status).toBe("committed");
   expect(transaction?.blockNumber).toBe(FIXTURE.crossIssuer.blockNumber);
+  expect(transaction?.transaction.hash()).toBe(FIXTURE.crossIssuer.txHash);
   expect(transaction?.transaction.outputs[Number(FIXTURE.crossIssuer.outputIndex)].capacity).toBe(
     FIXTURE.crossIssuer.capacity,
   );
@@ -133,8 +139,10 @@ test("proves Claim Cell destruction and capacity recovery", async () => {
 
   expect(creation?.status).toBe("committed");
   expect(creation?.blockNumber).toBe(FIXTURE.reclaim.creationBlockNumber);
+  expect(creation?.transaction.hash()).toBe(FIXTURE.reclaim.creationTxHash);
   expect(spend?.status).toBe("committed");
   expect(spend?.blockNumber).toBe(FIXTURE.reclaim.spendBlockNumber);
+  expect(spend?.transaction.hash()).toBe(FIXTURE.reclaim.spendTxHash);
   expect(liveCell).toBeUndefined();
   if (!creation || !spend) {
     throw new Error("Claim lifecycle fixture transactions are unavailable");
@@ -145,9 +153,24 @@ test("proves Claim Cell destruction and capacity recovery", async () => {
     index: FIXTURE.reclaim.outputIndex,
   });
   const claimOutput = creation.transaction.outputs[Number(FIXTURE.reclaim.outputIndex)];
+  const claimData = creation.transaction.outputsData[Number(FIXTURE.reclaim.outputIndex)];
   const controllerOutput = creation.transaction.outputs[1];
+  const claimType = ccc.ScriptInfo.from(scriptInfo(deployment.contracts.claimType));
   expect(claimOutput.capacity).toBe(FIXTURE.reclaim.capacity);
   expect(claimOutput.lock.hash()).toBe(FIXTURE.subjectLockHash);
+  expect(claimOutput.type).toBeDefined();
+  expect(claimOutput.type?.codeHash).toBe(claimType.codeHash);
+  expect(claimOutput.type?.hashType).toBe(claimType.hashType);
+  expect(ccc.hexFrom(ccc.bytesFrom(claimOutput.type!.args).slice(33))).toBe(FIXTURE.schemaHash);
+  expect(
+    ccc.hashCkb(CLAIM_ID_DOMAIN, claimOutput.type!.hash(), claimOutput.lock.hash(), claimData),
+  ).toBe(FIXTURE.reclaim.claimId);
+  expect(ClaimData.decode(claimData).value).toMatchObject({
+    issuerId: FIXTURE.issuerId,
+    nonce: FIXTURE.reclaim.nonce,
+    issuedAt: FIXTURE.reclaim.issuedAt,
+    payload: FIXTURE.reclaim.payload,
+  });
   expect(spend.transaction.inputs[0].previousOutput).toEqual(claimOutPoint);
   expect(spend.transaction.inputs[1].previousOutput).toEqual(
     ccc.OutPoint.from({ txHash: FIXTURE.reclaim.creationTxHash, index: 1 }),
@@ -172,6 +195,10 @@ test("proves Claim Cell destruction and capacity recovery", async () => {
     deployment.contracts.didLock.outPoint,
   ].map((outPoint) => ccc.OutPoint.from(outPoint));
   for (const required of requiredDeps) {
-    expect(spend.transaction.cellDeps.some(({ outPoint }) => outPoint.eq(required))).toBe(true);
+    expect(
+      spend.transaction.cellDeps.some(
+        ({ outPoint, depType }) => depType === "code" && outPoint.eq(required),
+      ),
+    ).toBe(true);
   }
 }, 30_000);

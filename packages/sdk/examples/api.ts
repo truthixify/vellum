@@ -76,8 +76,15 @@ const data = ClaimDataV1.from({
   payload: { account: "truthixify" },
 });
 const decoded = ClaimData.decode(ClaimData.fromV1(data).toBytes());
+const decodedPayload = decoded.value.payload;
 
-if (decoded.type !== "v1" || decoded.value.payload === null) {
+if (
+  decoded.type !== "v1" ||
+  typeof decodedPayload !== "object" ||
+  decodedPayload === null ||
+  !("account" in decodedPayload) ||
+  decodedPayload.account !== "truthixify"
+) {
   throw new Error("Claim codec example failed");
 }
 
