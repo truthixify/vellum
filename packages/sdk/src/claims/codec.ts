@@ -1,7 +1,7 @@
 import { ccc } from "@ckb-ccc/core";
 import { decode as decodeDagCbor, encode as encodeDagCbor } from "@ipld/dag-cbor";
 
-import type { ClaimDataLike, ClaimDataV1Like } from "./types";
+import type { ClaimDataLike, ClaimDataV1Like } from "./types.js";
 
 const Byte20 = ccc.Codec.from<ccc.HexLike, ccc.Hex>({
   byteLength: 20,

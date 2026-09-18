@@ -2,7 +2,7 @@ import { ccc } from "@ckb-ccc/core";
 import { argsToDid, didToArgs } from "@ckb-ccc/did-ckb";
 import { decode as decodeDagCbor, encode as encodeDagCbor } from "@ipld/dag-cbor";
 
-import { decodeClaimDataRaw } from "./codec";
+import { decodeClaimDataRaw } from "./codec.js";
 import type {
   Claim,
   ClaimIssuerState,
@@ -12,7 +12,7 @@ import type {
   ClaimTimeEvaluation,
   ReadClaimsProps,
   ReadClaimsResult,
-} from "./types";
+} from "./types.js";
 
 const CLAIM_TYPE_ARGS_LENGTH = 65;
 const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
