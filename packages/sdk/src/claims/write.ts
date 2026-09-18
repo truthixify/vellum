@@ -48,6 +48,7 @@ type SubjectResolution =
 type IssuerSelection = {
   source: ClaimIssuerSource;
   controller: ccc.Script;
+  stateKey: string;
 };
 
 export type BuildClaimCellProps<TPayload = unknown> = {
@@ -105,6 +106,13 @@ function outPointKey(value: ccc.OutPointLike): string {
 
 function claimId(type: ccc.Script, lock: ccc.Script, outputData: ccc.HexLike): ccc.Hex {
   return ccc.hashCkb(CLAIM_ID_DOMAIN, type.hash(), lock.hash(), outputData);
+}
+
+function outputStateKey(tx: ccc.Transaction, outputIndex: number): string {
+  return `output:${ccc.hashCkb(
+    tx.outputs[outputIndex].toBytes(),
+    tx.outputsData[outputIndex] ?? "0x",
+  )}`;
 }
 
 function claimTypeScript(
@@ -405,6 +413,7 @@ async function selectIssuerFromTransaction(
         outputIndex: outputMatches[0],
       },
       controller: inputMatches[0].cell.cellOutput.lock,
+      stateKey: `input:${outPointKey(inputMatches[0].cell.outPoint)}`,
     };
   }
 
@@ -415,6 +424,7 @@ async function selectIssuerFromTransaction(
     return {
       source: { kind: "cell-dep", cellDepIndex: depMatches[0].cellDepIndex },
       controller: depMatches[0].cell.cellOutput.lock,
+      stateKey: `cell-dep:${outPointKey(depMatches[0].cell.outPoint)}`,
     };
   }
 
@@ -425,6 +435,7 @@ async function selectIssuerFromTransaction(
     return {
       source: { kind: "output", outputIndex: outputMatches[0] },
       controller: tx.outputs[outputMatches[0]].lock,
+      stateKey: outputStateKey(tx, outputMatches[0]),
     };
   }
 }
@@ -444,6 +455,7 @@ async function selectIssuer(
   return {
     source: { kind: "cell-dep", cellDepIndex },
     controller: live.cellOutput.lock,
+    stateKey: `cell-dep:${outPointKey(live.outPoint)}`,
   };
 }
 
@@ -723,17 +735,12 @@ function assertClaimOutput(tx: ccc.Transaction, outputIndex: number, built: Buil
   }
 }
 
-function sameIssuerSource(left: ClaimIssuerSource, right: ClaimIssuerSource): boolean {
-  if (left.kind === "input" && right.kind === "input") {
-    return left.inputIndex === right.inputIndex && left.outputIndex === right.outputIndex;
-  }
-  if (left.kind === "cell-dep" && right.kind === "cell-dep") {
-    return left.cellDepIndex === right.cellDepIndex;
-  }
-  if (left.kind === "output" && right.kind === "output") {
-    return left.outputIndex === right.outputIndex;
-  }
-  return false;
+function sameIssuerState(left: IssuerSelection, right: IssuerSelection): boolean {
+  return (
+    left.source.kind === right.source.kind &&
+    left.stateKey === right.stateKey &&
+    left.controller.eq(right.controller)
+  );
 }
 
 async function assertIdentityState(
@@ -742,8 +749,8 @@ async function assertIdentityState(
   subject: SubjectResolution,
   issuerType: ccc.Script,
   issuer: IssuerSelection,
-  controllerInputIndex: number,
-): Promise<void> {
+  controllerInputOutPoint: ccc.OutPoint,
+): Promise<{ issuer: IssuerSelection; controllerInputIndex: number }> {
   let selectedIssuer: IssuerSelection | undefined;
   try {
     selectedIssuer = await selectIssuerFromTransaction(tx, client, issuerType);
@@ -752,25 +759,25 @@ async function assertIdentityState(
       cause: error,
     });
   }
-  if (
-    !selectedIssuer ||
-    !sameIssuerSource(selectedIssuer.source, issuer.source) ||
-    !selectedIssuer.controller.eq(issuer.controller)
-  ) {
+  if (!selectedIssuer || !sameIssuerState(selectedIssuer, issuer)) {
     throw new Error("A signer changed the selected issuer DID state");
   }
 
-  const controllerInput = tx.inputs[controllerInputIndex];
-  if (!controllerInput) {
+  const controllerInputIndexes = tx.inputs.flatMap(({ previousOutput }, index) =>
+    previousOutput.eq(controllerInputOutPoint) ? [index] : [],
+  );
+  if (controllerInputIndexes.length !== 1) {
     throw new Error("A signer changed the issuer controller authorization input");
   }
+  const controllerInputIndex = controllerInputIndexes[0];
+  const controllerInput = tx.inputs[controllerInputIndex];
   const controllerCell = await controllerInput.getCell(client);
   if (!controllerCell.cellOutput.lock.eq(issuer.controller)) {
     throw new Error("A signer changed the issuer controller authorization input");
   }
 
   if (!subject.identityType) {
-    return;
+    return { issuer: selectedIssuer, controllerInputIndex };
   }
   let subjectController: ccc.Script | undefined;
   try {
@@ -783,6 +790,7 @@ async function assertIdentityState(
   if (!subjectController || !subjectController.eq(subject.controller)) {
     throw new Error("A signer changed the selected subject DID state");
   }
+  return { issuer: selectedIssuer, controllerInputIndex };
 }
 
 export async function writeClaim<TPayload = unknown>(
@@ -810,7 +818,7 @@ export async function writeClaim<TPayload = unknown>(
   if (scripts.didLock) {
     rejectDidLockController(issuer.controller, scripts.didLock);
   }
-  const controllerInputIndex = await ensureControllerInput(
+  const initialControllerInputIndex = await ensureControllerInput(
     tx,
     client,
     issuer,
@@ -818,6 +826,10 @@ export async function writeClaim<TPayload = unknown>(
     addresses,
     payerSigner !== props.issuerSigner,
   );
+  const controllerInputOutPoint = tx.inputs[initialControllerInputIndex]?.previousOutput.clone();
+  if (!controllerInputOutPoint) {
+    throw new Error("Unable to locate the issuer controller authorization input");
+  }
 
   const built = buildClaimCell({
     claimType: scripts.claimType,
@@ -851,13 +863,20 @@ export async function writeClaim<TPayload = unknown>(
 
   await validateInputCoverage(tx, client, scripts.didLock, addresses);
   assertClaimOutput(tx, outputIndex, built);
-  await assertIdentityState(tx, client, subject, issuerType, issuer, controllerInputIndex);
+  const finalState = await assertIdentityState(
+    tx,
+    client,
+    subject,
+    issuerType,
+    issuer,
+    controllerInputOutPoint,
+  );
 
   return {
     tx,
     claimId: built.claimId,
     outputIndex,
-    issuerSource: issuer.source,
-    controllerInputIndex,
+    issuerSource: finalState.issuer.source,
+    controllerInputIndex: finalState.controllerInputIndex,
   };
 }

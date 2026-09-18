@@ -446,6 +446,30 @@ describe("writeClaim issuer authorization", () => {
     expect(result.issuerSource).toEqual({ kind: "cell-dep", cellDepIndex: 0 });
   });
 
+  test("returns the final issuer dep index after signer preparation", async () => {
+    const identity = cell({ byte: 0x4d, type: issuerType() });
+    const funding = cell({ byte: 0x4e, capacity: 100_000_000_000n });
+    const prependedDep = cell({ byte: 0x4f, lock: SUBJECT_LOCK });
+    const { client } = fakeClient({
+      cells: [identity, funding, prependedDep],
+      liveCells: [identity],
+    });
+    const issuerSigner = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
+    const preparingSigner = fakeSigner(client, [PAYER_LOCK], [], (tx) => {
+      tx.addCellDepsAtStart({ outPoint: prependedDep.outPoint, depType: "code" });
+    });
+
+    const result = await writeClaim({
+      issuerSigner,
+      additionalSigners: [preparingSigner],
+      scripts: SCRIPTS,
+      input: BASE_INPUT,
+    });
+
+    expect(result.issuerSource).toEqual({ kind: "cell-dep", cellDepIndex: 1 });
+    expect(result.tx.cellDeps[1].outPoint).toEqual(identity.outPoint);
+  });
+
   test("rejects missing, ambiguous, and malformed issuer state combinations", async () => {
     const funding = cell({ byte: 0x0b, capacity: 100_000_000_000n });
     const missing = fakeClient({ cells: [funding] });
@@ -780,6 +804,34 @@ describe("writeClaim funding and composition", () => {
     });
     expect(additionalSigner.prepareCount()).toBe(1);
     expect(result.tx.inputs[0].previousOutput).toEqual(unrelated.outPoint);
+  });
+
+  test("returns the final controller index when signer preparation moves the input", async () => {
+    const identity = cell({ byte: 0x50, type: issuerType() });
+    const funding = cell({ byte: 0x51, capacity: 100_000_000_000n });
+    const prependedInput = cell({
+      byte: 0x52,
+      capacity: 10_000_000_000n,
+      lock: PAYER_LOCK,
+    });
+    const { client } = fakeClient({
+      cells: [identity, funding, prependedInput],
+      liveCells: [identity],
+    });
+    const issuerSigner = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
+    const preparingSigner = fakeSigner(client, [PAYER_LOCK], [], (tx) => {
+      tx.inputs.unshift(ccc.CellInput.from(prependedInput));
+    });
+
+    const result = await writeClaim({
+      issuerSigner,
+      additionalSigners: [preparingSigner],
+      scripts: SCRIPTS,
+      input: BASE_INPUT,
+    });
+
+    expect(result.controllerInputIndex).toBe(1);
+    expect(result.tx.inputs[1].previousOutput).toEqual(funding.outPoint);
   });
 });
 

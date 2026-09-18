@@ -23,7 +23,11 @@ const built = await writeClaim({
   },
 });
 
+const preparedHash = built.tx.hash();
 const signed = await issuerSigner.signOnlyTransaction(built.tx);
+if (signed.hash() !== preparedHash) {
+  throw new Error("Signer changed the prepared transaction");
+}
 const txHash = await issuerSigner.client.sendTransaction(signed);
 const claimOutPoint = { txHash, index: built.outputIndex };
 ```
@@ -32,6 +36,10 @@ The issuer must control the current `did:ckb` controller lock. By default the is
 Claim Cell and transaction fee; pass `payerSigner` to fund them separately. Pass
 `additionalSigners` when a supplied transaction already contains other input lock groups, and have
 each distinct signer sign the returned transaction before broadcasting it.
+
+Capture `built.tx.hash()` before signing and require the same hash after every signature. CKB
+witness signatures do not change the transaction hash, so a mismatch means the signer changed the
+prepared inputs, outputs, or dependencies and the transaction must not be broadcast.
 
 Output capacity defaults to the exact occupied capacity of the serialized Claim Cell. Applications
 may request more with `input.capacity`, but cannot request less. Use `subject: { lock }` for any
