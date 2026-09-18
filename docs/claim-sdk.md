@@ -270,11 +270,18 @@ that identity can refer to code that has been upgraded since creation, so the fi
 which binary executed historically. It is not a detached-signature result and does not establish
 that an application should trust the issuer.
 
-`issuerState` describes the issuer DID at read time. `deactivated` requires historical evidence that
-the DID existed and was consumed; `missing` means the reader has neither a live state nor sufficient
-history to make that stronger statement. `unavailable` is reserved for an operational failure and
-must not be collapsed into `missing`. Authorization consumers must treat `unavailable` as a
-fail-closed state rather than accepting it as evidence of an active issuer.
+`issuerState` describes the issuer DID at read time. For each distinct issuer Type Script, the
+reader first performs an exact live-Cell lookup. Exactly one Cell is `active`; more than one is
+`ambiguous`. When no live Cell exists, the reader exhausts an ascending, grouped
+`client.findTransactionsByType` query for that exact Script and fetches the referenced committed
+transactions needed to connect each matching output to a later input.
+
+`deactivated` requires a complete, coherent single-state history whose final transition consumes
+the issuer Cell without creating a replacement. `missing` requires a successfully completed history
+query with no matching issuer output at any point. An unsupported history query, pagination or
+network failure, unavailable referenced transaction, or inconsistent state chain produces
+`unavailable` with a reason; it must never be treated as `missing`. Authorization consumers must
+treat `unavailable` as a fail-closed state rather than accepting it as evidence of an active issuer.
 
 ### Time evaluation
 
@@ -308,9 +315,11 @@ repeat fee completion before signing.
 
 The builder:
 
-1. validates the DID, schema hash, nonce, timestamps, and payload;
+1. resolves the configured `didCkb` Script Info and validates the DID, schema hash, nonce,
+   timestamps, and payload;
 2. encodes the payload as canonical DAG-CBOR and the claim as strict Molecule;
-3. derives the Claim Type arguments from the issuer DID deployment and schema hash;
+3. derives the issuer Type Script and Claim Type arguments from only the resolved `didCkb`
+   deployment, decoded issuer ID, and schema hash;
 4. selects one issuer authorization state using the same input, cell-dep, and output precedence as
    Claim Type;
 5. derives the controller from that selected state and requires `issuerSigner` to control the exact
@@ -322,6 +331,13 @@ The builder:
 9. validates signer coverage for every input lock group; and
 10. prepares every distinct supplied signer before using `payerSigner` for additional capacity,
     fees, and change.
+
+The `did:ckb` identifier carries the issuer's 20-byte ID, not a deployment. `writeClaim` binds that
+ID exclusively to the resolved `scripts.didCkb` override or the client's `KnownScript.DidCkb`
+entry. It never infers the issuer deployment from a Cell already present in `tx`. Every issuer
+input, output, cell dep, and Claim Type argument is matched or built from that exact configured
+`codeHash` and `hashType`, so a transaction built by `writeClaim` cannot later be rejected by
+`readClaims` as `unsupported-issuer-deployment` under the same configuration.
 
 ### Issuer source selection
 
@@ -345,6 +361,20 @@ be plain, lock-only, and have empty data.
 This order matters during controller rotation: an issuer DID input authorizes with its input lock,
 not the new lock on the matching output. It also allows a DID and its first claims to be created in
 one transaction without requiring a pre-existing live DID Cell.
+
+### Existing Claim outputs
+
+Before appending the new output, the builder inspects every existing output in `tx` whose complete
+Type Script equals the new Claim Type Script. It strictly decodes each output's Claim data and
+requires its `issuer_id` to equal the ID decoded from `input.issuerDid`; a different issuer fails
+because this call prepares authorization for only one issuer. Valid distinct claims remain in the
+transaction and share the selected issuer authorization source.
+
+The builder computes IDs for those existing outputs from their exact Type Script, lock, and data,
+then computes the new output's ID. A malformed existing output or any repeated ID, whether between
+existing outputs or against the new output, fails before signer preparation or capacity collection.
+Outputs outside the new output's complete Claim Type Script group remain the caller's composition
+responsibility described under Dependencies.
 
 ### DID subject state
 
@@ -500,7 +530,10 @@ const built = await writeClaim({
   tx: composedTx,
 });
 
-const signers = new Set([issuerSigner, payerSigner, ...additionalSigners]);
+const signers = new Set([issuerSigner, ...additionalSigners]);
+if (payerSigner) {
+  signers.add(payerSigner);
+}
 let signed = built.tx;
 for (const signer of signers) {
   signed = await signer.signOnlyTransaction(signed);
@@ -513,9 +546,10 @@ const txHash = await issuerSigner.client.sendTransaction(signed);
 Caller and transaction-construction errors reject with actionable messages. These include invalid
 identifier or hash lengths, invalid timestamp ordering, oversized data, absent DID Lock
 configuration, a missing or ambiguous issuer or DID-subject state, subject deactivation or direct
-DID Lock recursion, a signer that does not control the issuer, an uncovered input lock group,
-signers connected to different networks, insufficient capacity, and conflicting identity sources in
-a supplied transaction.
+DID Lock recursion, a malformed, differently issued, or ID-duplicate Claim output in the target
+group, a signer that does not control the issuer, an uncovered input lock group, signers connected
+to different networks, insufficient capacity, and conflicting identity sources in a supplied
+transaction.
 
 Per-Cell decode failures are data-quality results and belong in `ReadClaimsResult.invalid`. A network
 or indexer failure during the subject scan rejects `readClaims`; returning a partial array as though
