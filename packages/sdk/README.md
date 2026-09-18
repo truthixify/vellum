@@ -2,6 +2,50 @@
 
 Typed Claim Cell codecs and APIs for Vellum and other CKB applications.
 
+## Write claims
+
+`writeClaim` builds and balances a Claim Cell transaction. It returns the unsigned transaction and
+stable claim metadata so applications can inspect it, collect every required signature, and submit
+it explicitly.
+
+```ts
+import { writeClaim } from "@vellum/sdk";
+
+const built = await writeClaim({
+  issuerSigner,
+  scripts,
+  input: {
+    subject: { did: subjectDid },
+    issuerDid,
+    schemaHash,
+    payload,
+    issuedAt,
+  },
+});
+
+const preparedHash = built.tx.hash();
+const signed = await issuerSigner.signOnlyTransaction(built.tx);
+if (signed.hash() !== preparedHash) {
+  throw new Error("Signer changed the prepared transaction");
+}
+const txHash = await issuerSigner.client.sendTransaction(signed);
+const claimOutPoint = { txHash, index: built.outputIndex };
+```
+
+The issuer must control the current `did:ckb` controller lock. By default the issuer also funds the
+Claim Cell and transaction fee; pass `payerSigner` to fund them separately. Pass
+`additionalSigners` when a supplied transaction already contains other input lock groups, and have
+each distinct signer sign the returned transaction before broadcasting it.
+
+Capture `built.tx.hash()` before signing and require the same hash after every signature. CKB
+witness signatures do not change the transaction hash, so a mismatch means the signer changed the
+prepared inputs, outputs, or dependencies and the transaction must not be broadcast.
+
+Output capacity defaults to the exact occupied capacity of the serialized Claim Cell. Applications
+may request more with `input.capacity`, but cannot request less. Use `subject: { lock }` for any
+complete CKB lock, or configure `scripts.didLock` and use `subject: { did }` to bind the claim to a
+live `did:ckb` identity.
+
 ## Read claims
 
 `readClaims` scans every live Claim Cell under one exact subject lock. A `did:ckb` subject can be
@@ -69,9 +113,12 @@ bun run --cwd packages/sdk typecheck
 bun run --cwd packages/sdk test
 ```
 
-The known-claim integration test reads the committed Testnet fixture at transaction
-[`0x9e32511b...ff91c`](https://testnet.explorer.nervos.org/transaction/0x9e32511bcaa49d89421d070d28eded7168fa9010a007659151e7f8928caff91c),
-output `1`. The fixture DID and Claim outputs must remain unspent. The live check is intentionally
+The live integration suite reads committed Testnet fixtures at transactions
+[`0x9e32511b...ff91c`](https://testnet.explorer.nervos.org/transaction/0x9e32511bcaa49d89421d070d28eded7168fa9010a007659151e7f8928caff91c)
+and
+[`0xbbe64d73...a4142`](https://testnet.explorer.nervos.org/transaction/0xbbe64d73351dbe0faa617f8d5ac0d9624845c329e1d5d7b722a90456cfea4142).
+It also prepares a fresh unsigned `writeClaim` transaction against current Testnet state. The
+fixture DID and Claim outputs must remain unspent. These network-dependent checks are intentionally
 separate from the offline suite:
 
 ```bash

@@ -358,6 +358,10 @@ The builder then finds or adds an input with the selected controller's exact loc
 satisfies authorization. For the cell-dep and output sources, a newly added authorization input must
 be plain, lock-only, and have empty data.
 
+The returned issuer-source and controller-input indices refer to the final prepared transaction.
+Signer preparation may prepend dependencies or inputs, so the builder tracks the selected Cells by
+identity and recalculates their positions before returning.
+
 This order matters during controller rotation: an issuer DID input authorizes with its input lock,
 not the new lock on the matching output. It also allows a DID and its first claims to be created in
 one transaction without requiring a pre-existing live DID Cell.
@@ -456,6 +460,10 @@ Each signer must preserve witness groups it does not control. After every requir
 signed, the caller broadcasts with `client.sendTransaction`; calling one signer's `sendTransaction`
 is not sufficient when more than one signer is required.
 
+The caller must capture `built.tx.hash()` before signing and require the same hash after every
+signature. Witness changes do not affect the CKB transaction hash; a mismatch means a signer changed
+the prepared raw transaction and the result must not be broadcast.
+
 The output capacity defaults to the exact occupied capacity. A caller may request more, but a value
 below the occupied capacity fails before inputs are collected. The complete encoded Claim data must
 remain within the protocol's 16,384-byte limit.
@@ -509,7 +517,11 @@ const built = await writeClaim({
   },
 });
 
+const preparedHash = built.tx.hash();
 const signed = await issuerSigner.signOnlyTransaction(built.tx);
+if (signed.hash() !== preparedHash) {
+  throw new Error("Signer changed the prepared transaction");
+}
 const txHash = await issuerSigner.client.sendTransaction(signed);
 ```
 
@@ -535,8 +547,12 @@ if (payerSigner) {
   signers.add(payerSigner);
 }
 let signed = built.tx;
+const preparedHash = built.tx.hash();
 for (const signer of signers) {
   signed = await signer.signOnlyTransaction(signed);
+  if (signed.hash() !== preparedHash) {
+    throw new Error("Signer changed the prepared transaction");
+  }
 }
 const txHash = await issuerSigner.client.sendTransaction(signed);
 ```

@@ -130,6 +130,55 @@ export type ReadClaimsProps = {
   filter: ClaimFilter;
 };
 
+export type WriteClaimInput<TPayload = unknown> = {
+  subject: ClaimSubjectLike;
+  issuerDid: string;
+  schemaHash: ccc.HexLike;
+  payload: TPayload;
+  /** Issuer-asserted Unix timestamp in seconds. */
+  issuedAt: ccc.NumLike;
+  /** Optional expiry as a Unix timestamp in seconds. */
+  expiresAt?: ccc.NumLike | null;
+  /** Generated with a cryptographically secure random source when omitted. */
+  nonce?: ccc.HexLike;
+  /** Output capacity in shannons; defaults to the exact occupied capacity. */
+  capacity?: ccc.NumLike;
+};
+
+export type WriteClaimProps<TPayload = unknown> = {
+  issuerSigner: ccc.Signer;
+  /** Defaults to issuerSigner. */
+  payerSigner?: ccc.Signer;
+  /** Signers required by pre-existing input lock groups in tx. */
+  additionalSigners?: readonly ccc.Signer[];
+  scripts: ClaimScriptConfigLike;
+  input: WriteClaimInput<TPayload>;
+  tx?: ccc.TransactionLike;
+};
+
+export type ClaimIssuerSource =
+  | {
+      kind: "input";
+      inputIndex: number;
+      outputIndex: number;
+    }
+  | {
+      kind: "cell-dep";
+      cellDepIndex: number;
+    }
+  | {
+      kind: "output";
+      outputIndex: number;
+    };
+
+export type WriteClaimResult = {
+  tx: ccc.Transaction;
+  claimId: ccc.Hex;
+  outputIndex: number;
+  issuerSource: ClaimIssuerSource;
+  controllerInputIndex: number;
+};
+
 export type ClaimSchema<TPayload> = {
   id: string;
   hash: ccc.HexLike;
