@@ -20,8 +20,9 @@ carried between apps instead of disappearing into separate databases.
 
 > **Where things stand:** Vellum's identity tools are live, and the reputation extension is now in
 > implementation. The Claim Type and DID Lock are deployed and byte-verified on CKB Testnet.
-> Reputation scores, claims, activity, and governance data shown in the current interfaces are still
-> previews, not live records.
+> GitHub claims are live, and the first deterministic scoring policy and backend are implemented.
+> Scores, activity, and governance data shown in the current interfaces are still previews until
+> those screens are connected to the live services.
 
 ## Why Vellum
 
@@ -46,13 +47,13 @@ without requiring those products to share one backend.
 
 ## What exists today
 
-| Part                | Status                          | What that means                                                                                                        |
-| ------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                                 |
-| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                              |
-| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable.        |
-| Reputation protocol | In implementation               | Claim contracts are live on Testnet and the core SDK is implemented; schemas, scoring, and product integration remain. |
-| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                        |
+| Part                | Status                          | What that means                                                                                                 |
+| ------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
+| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
+| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
+| Reputation protocol | In implementation               | Claim contracts, the core SDK, GitHub verification, and the first scoring API are implemented on Testnet.       |
+| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
 the identity operations used by Vellum. The Vellum SDK builds on those primitives with Claim Cell
@@ -97,6 +98,7 @@ independently verifiable, and not tied to the application currently displaying i
 └── packages/
     ├── claim-cell-script/          Rust Claim Type, DID Lock, and local VM tests
     ├── schemas/                    canonical claim manifests, hashes, and payload parsers
+    ├── scoring/                    deterministic scoring policies and evidence selection
     ├── sdk/                        typed Claim Cell codecs and APIs
     └── ui/                         shared design tokens and React components
 ```
@@ -142,7 +144,8 @@ should arrive with focused tests for both successful and rejected paths.
 The public site and dashboard deploy independently to Vercel from `apps/site` and `apps/dashboard`.
 Each app produces `dist` and includes an SPA rewrite for direct visits to client-side routes. The
 dashboard deployment also serves the stateless verification API described in
-[`docs/verification-service.md`](./docs/verification-service.md).
+[`docs/verification-service.md`](./docs/verification-service.md) and the read-only reputation API
+described in [`docs/reputation-scoring.md`](./docs/reputation-scoring.md).
 
 ### Claim contracts
 
