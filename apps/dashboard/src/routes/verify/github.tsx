@@ -17,7 +17,12 @@ import { useEffect, useState } from "react";
 
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
-import { confirmGithubClaim, type GithubClaimConfirmation } from "@/lib/github-claim-reader";
+import {
+  confirmGithubClaim,
+  readGithubAccountClaims,
+  type GithubAccountClaim,
+  type GithubClaimConfirmation,
+} from "@/lib/github-claim-reader";
 import {
   GithubVerificationRequestError,
   fetchPublicIssuerMetadata,
@@ -42,9 +47,10 @@ function shorten(value: string, start = 16, end = 8): string {
 }
 
 function GithubVerificationPage() {
-  useDocumentTitle("Connect GitHub");
+  useDocumentTitle("GitHub verification");
   const search = Route.useSearch();
   const submission = githubSubmissionFromSearch(search);
+  const [existingClaimCount, setExistingClaimCount] = useState(0);
   const [reportedConfirmation, setReportedConfirmation] = useState<{
     transactionHash: ccc.Hex;
     result?: GithubClaimConfirmation;
@@ -64,15 +70,18 @@ function GithubVerificationPage() {
           <span className="github-verification-kicker">
             <Github size={15} aria-hidden="true" /> GitHub verification
           </span>
-          <h1>Connect GitHub</h1>
-          <p>Attach a verified GitHub account to a did:ckb identity you control.</p>
+          <h1>GitHub verification</h1>
+          <p>Review or add GitHub account claims for a did:ckb identity you control.</p>
         </div>
         <StatusMark tone="info" icon={false}>
           CKB Testnet
         </StatusMark>
       </header>
 
-      <VerificationSteps confirmation={submission ? confirmation : null} />
+      <VerificationSteps
+        confirmation={submission ? confirmation : null}
+        hasExistingClaim={!submission && existingClaimCount > 0}
+      />
 
       <div className="github-verification-workspace">
         <main className="github-verification-primary">
@@ -87,6 +96,7 @@ function GithubVerificationPage() {
             <ConnectionPanel
               callbackError={search.status === "error" ? search.code : undefined}
               retryAt={search.retryAt}
+              onExistingClaimsChange={setExistingClaimCount}
             />
           )}
         </main>
@@ -98,12 +108,21 @@ function GithubVerificationPage() {
 
 function VerificationSteps({
   confirmation,
+  hasExistingClaim,
 }: {
   confirmation: GithubClaimConfirmation | null | undefined;
+  hasExistingClaim: boolean;
 }) {
-  const completed = confirmation === null ? 0 : confirmation?.state === "confirmed" ? 3 : 1;
-  const active =
-    confirmation === null
+  const completed = hasExistingClaim
+    ? 3
+    : confirmation === null
+      ? 0
+      : confirmation?.state === "confirmed"
+        ? 3
+        : 1;
+  const active = hasExistingClaim
+    ? -1
+    : confirmation === null
       ? 0
       : confirmation?.state === "indexing"
         ? 2
@@ -147,9 +166,11 @@ function VerificationSteps({
 function ConnectionPanel({
   callbackError,
   retryAt,
+  onExistingClaimsChange,
 }: {
   callbackError?: GithubVerificationErrorCode;
   retryAt?: number;
+  onExistingClaimsChange: (count: number) => void;
 }) {
   const signer = useSigner();
   const { open } = useCcc();
@@ -199,6 +220,24 @@ function ConnectionPanel({
       setSelectedDid(records[0].did);
     }
   }, [identities.data, selectedDid]);
+
+  const issuer = useQuery({
+    queryKey: ["verification-issuer"],
+    queryFn: () => fetchPublicIssuerMetadata(),
+    enabled: !!selectedDid,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const existingClaims = useQuery({
+    queryKey: ["github-account-claims", selectedDid, issuer.data?.did],
+    queryFn: () => readGithubAccountClaims(TESTNET_CLIENT, selectedDid, issuer.data!),
+    enabled: !!selectedDid && !!issuer.data,
+    retry: false,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    onExistingClaimsChange(existingClaims.data?.length ?? 0);
+  }, [existingClaims.data, onExistingClaimsChange, selectedDid]);
 
   async function startVerification() {
     if (!selectedDid || starting) return;
@@ -298,7 +337,11 @@ function ConnectionPanel({
               <select
                 id="github-subject"
                 value={selectedDid}
-                onChange={(event) => setSelectedDid(event.target.value)}
+                onChange={(event) => {
+                  onExistingClaimsChange(0);
+                  setSelectedDid(event.target.value);
+                  if (issuer.isError) void issuer.refetch();
+                }}
               >
                 {records.map((record) => (
                   <option value={record.did} key={record.did}>
@@ -317,23 +360,134 @@ function ConnectionPanel({
           )}
           <small>The issued Claim Cell will be locked to this identity.</small>
 
-          <div className="github-verification-action">
-            <button
-              className="v-button v-button--primary"
-              type="button"
-              disabled={!selectedDid || starting}
-              aria-busy={starting}
-              onClick={() => void startVerification()}
+          {issuer.isError || existingClaims.isError ? (
+            <div
+              className="github-verification-alert github-verification-alert--inline"
+              role="alert"
             >
-              <Github size={15} aria-hidden="true" />
-              {starting ? "Opening GitHub..." : "Continue with GitHub"}
-            </button>
-            <span>Authorization expires after five minutes.</span>
-          </div>
+              <AlertCircle size={18} aria-hidden="true" />
+              <div>
+                <strong>GitHub claim status unavailable</strong>
+                <p>Vellum could not check this identity's active GitHub claims.</p>
+                <button
+                  className="v-button v-button--quiet"
+                  type="button"
+                  onClick={() =>
+                    void (issuer.isError ? issuer.refetch() : existingClaims.refetch())
+                  }
+                >
+                  <RefreshCw size={14} aria-hidden="true" /> Retry
+                </button>
+              </div>
+            </div>
+          ) : issuer.isPending || existingClaims.isPending ? (
+            <div className="github-verification-claim-loading" role="status" aria-live="polite">
+              <span className="pulse-dot" aria-hidden="true" />
+              Checking existing GitHub claims for {shorten(selectedDid)}
+            </div>
+          ) : existingClaims.data.length > 0 ? (
+            <ExistingGithubClaims
+              claims={existingClaims.data}
+              starting={starting}
+              onVerifyAgain={() => void startVerification()}
+            />
+          ) : (
+            <div className="github-verification-action">
+              <button
+                className="v-button v-button--primary"
+                type="button"
+                disabled={!selectedDid || starting}
+                aria-busy={starting}
+                onClick={() => void startVerification()}
+              >
+                <Github size={15} aria-hidden="true" />
+                {starting ? "Opening GitHub..." : "Continue with GitHub"}
+              </button>
+              <span>Authorization expires after five minutes.</span>
+            </div>
+          )}
         </div>
       )}
     </section>
   );
+}
+
+function ExistingGithubClaims({
+  claims,
+  starting,
+  onVerifyAgain,
+}: {
+  claims: GithubAccountClaim[];
+  starting: boolean;
+  onVerifyAgain: () => void;
+}) {
+  return (
+    <div className="github-verification-existing">
+      <div className="github-verification-existing__heading">
+        <span aria-hidden="true">
+          <Check size={18} />
+        </span>
+        <div>
+          <StatusMark tone="positive">Verified on-chain</StatusMark>
+          <p>
+            {claims.length === 1
+              ? "This DID already has an active GitHub account claim."
+              : `This DID already has ${claims.length} active GitHub account claims.`}
+          </p>
+        </div>
+      </div>
+
+      <ul className="github-verification-account-list">
+        {claims.map((claim) => (
+          <li key={claim.claimId}>
+            <div className="github-verification-account-list__identity">
+              <Github size={18} strokeWidth={1.7} aria-hidden="true" />
+              <span>
+                <strong>@{claim.account.login}</strong>
+                <small>Verified {formatGithubClaimDate(claim.account.verified_at)}</small>
+              </span>
+            </div>
+            <div className="github-verification-account-list__actions">
+              <a
+                className="v-button v-button--quiet"
+                href={claim.account.profile_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Profile <ExternalLink size={13} aria-hidden="true" />
+              </a>
+              <a
+                className="v-button v-button--quiet"
+                href={`${TESTNET_EXPLORER}/transaction/${claim.transactionHash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Transaction <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="github-verification-existing__footer">
+        <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found on CKB Testnet.</span>
+        <button
+          className="v-button v-button--secondary"
+          type="button"
+          disabled={starting}
+          aria-busy={starting}
+          onClick={onVerifyAgain}
+        >
+          <Github size={14} aria-hidden="true" />
+          {starting ? "Opening GitHub..." : "Verify again"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function formatGithubClaimDate(timestamp: number): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(timestamp * 1_000);
 }
 
 function SubmittedVerification({

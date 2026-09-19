@@ -302,9 +302,9 @@ function AccountsTable() {
       name: "GitHub",
       method: "OAuth account claim",
       state: "Available",
-      action: "Connect",
+      action: "View status",
       to: "/verify/github",
-      added: "Not connected",
+      added: "Check live claim",
     },
     {
       name: "ckb1qzda\u20264mns9f0",

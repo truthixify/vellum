@@ -2040,6 +2040,10 @@
   margin-top: 12px;
 }
 
+.github-verification-alert--inline {
+  margin-top: 24px;
+}
+
 .github-verification-empty {
   min-height: 260px;
   display: flex;
@@ -2083,11 +2087,25 @@
 }
 
 .github-verification-loading .pulse-dot,
+.github-verification-claim-loading .pulse-dot,
 .github-verification-status > .pulse-dot {
   width: 8px;
   height: 8px;
   display: block;
   background: var(--info);
+}
+
+.github-verification-claim-loading {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink-secondary);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
 }
 
 .github-verification-form {
@@ -2149,6 +2167,112 @@
 }
 
 .github-verification-action > span {
+  color: var(--ink-secondary);
+  font-size: 11px;
+}
+
+.github-verification-existing {
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.github-verification-existing__heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 0;
+}
+
+.github-verification-existing__heading > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.github-verification-existing__heading p {
+  margin: 6px 0 0;
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.github-verification-account-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.github-verification-account-list > li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.github-verification-account-list__identity,
+.github-verification-account-list__actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.github-verification-account-list__identity {
+  gap: 10px;
+}
+
+.github-verification-account-list__identity > svg {
+  flex: none;
+  color: var(--ink-secondary);
+}
+
+.github-verification-account-list__identity span,
+.github-verification-account-list__identity strong,
+.github-verification-account-list__identity small {
+  min-width: 0;
+  display: block;
+}
+
+.github-verification-account-list__identity strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.github-verification-account-list__identity small {
+  margin-top: 3px;
+  color: var(--ink-secondary);
+  font-size: 10px;
+}
+
+.github-verification-account-list__actions {
+  flex: none;
+  gap: 8px;
+}
+
+.github-verification-account-list__actions .v-button {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.github-verification-existing__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.github-verification-existing__footer > span {
   color: var(--ink-secondary);
   font-size: 11px;
 }
@@ -2682,6 +2806,20 @@
   }
 
   .github-verification-action .v-button {
+    width: 100%;
+  }
+
+  .github-verification-account-list > li,
+  .github-verification-existing__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .github-verification-account-list__actions {
+    flex-wrap: wrap;
+  }
+
+  .github-verification-existing__footer .v-button {
     width: 100%;
   }
 

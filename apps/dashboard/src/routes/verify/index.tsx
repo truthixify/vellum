@@ -78,7 +78,7 @@ function VerificationPage() {
             </span>
           </span>
           <span className="verification-source__action">
-            Connect GitHub <ArrowRight size={15} aria-hidden="true" />
+            View GitHub status <ArrowRight size={15} aria-hidden="true" />
           </span>
         </Link>
       </section>
