@@ -59,6 +59,7 @@
         "@tanstack/react-router": "^1.168.25",
         "@tanstack/router-plugin": "^1.167.28",
         "@vellum/schemas": "workspace:*",
+        "@vellum/scoring": "workspace:*",
         "@vellum/sdk": "workspace:*",
         "@vellum/ui": "workspace:*",
         "class-variance-authority": "^0.7.1",
@@ -118,6 +119,18 @@
       },
       "devDependencies": {
         "bun-types": "1.4.2",
+      },
+    },
+    "packages/scoring": {
+      "name": "@vellum/scoring",
+      "version": "0.1.0",
+      "dependencies": {
+        "@vellum/schemas": "workspace:*",
+        "@vellum/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "bun-types": "1.4.2",
+        "typescript": "5.8.3",
       },
     },
     "packages/sdk": {
@@ -672,6 +685,8 @@
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.56.1", "", { "dependencies": { "@typescript-eslint/types": "8.56.1", "eslint-visitor-keys": "^5.0.0" } }, "sha512-KiROIzYdEV85YygXw6BI/Dx4fnBlFQu6Mq4QE4MOH9fFnhohw6wX/OAvDY2/C+ut0I3RSPKenvZJIVYqJNkhEw=="],
 
     "@vellum/schemas": ["@vellum/schemas@workspace:packages/schemas"],
+
+    "@vellum/scoring": ["@vellum/scoring@workspace:packages/scoring"],
 
     "@vellum/sdk": ["@vellum/sdk@workspace:packages/sdk"],
 
