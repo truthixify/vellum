@@ -1,5 +1,7 @@
 import { handleIssuerRequest } from "../server/verification/http.js";
 
 export default {
-  fetch: handleIssuerRequest,
+  fetch(request: Request): Response | Promise<Response> {
+    return handleIssuerRequest(request);
+  },
 };
