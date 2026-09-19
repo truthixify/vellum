@@ -127,5 +127,4 @@ export type ReputationResult = AvailableReputationResult | UnavailableReputation
 export type ScoreReputationInput = {
   claims: ReadClaimsResult;
   evaluatedAt: number;
-  policy?: ReputationPolicy;
 };

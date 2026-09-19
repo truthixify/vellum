@@ -4,7 +4,20 @@ import type { ReputationPolicy } from "./types.js";
 
 const DAY_SECONDS = 86_400;
 
-export const VELLUM_REPUTATION_POLICY_V1 = {
+function freezePolicy<T extends ReputationPolicy>(policy: T): T {
+  for (const category of policy.categories) Object.freeze(category);
+  for (const band of policy.github.tenureBands) Object.freeze(band);
+  for (const band of policy.github.recencyBands) Object.freeze(band);
+  Object.freeze(policy.categories);
+  Object.freeze(policy.github.issuerDids);
+  Object.freeze(policy.github.schema);
+  Object.freeze(policy.github.tenureBands);
+  Object.freeze(policy.github.recencyBands);
+  Object.freeze(policy.github);
+  return Object.freeze(policy);
+}
+
+export const VELLUM_REPUTATION_POLICY_V1 = freezePolicy({
   version: "vellum.reputation.v1",
   minimum: 0,
   maximum: 1_000,
@@ -38,4 +51,4 @@ export const VELLUM_REPUTATION_POLICY_V1 = {
       { maximumAgeSecondsExclusive: 365 * DAY_SECONDS, points: 25 },
     ],
   },
-} as const satisfies ReputationPolicy;
+} as const satisfies ReputationPolicy);

@@ -4,7 +4,6 @@ import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
 
 import { VELLUM_REPUTATION_POLICY_V1 } from "./policy";
 import { scoreReputation } from "./score";
-import type { ReputationPolicy } from "./types";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
@@ -213,6 +212,8 @@ describe("vellum.reputation.v1", () => {
           githubClaim({ id: 5, issuerState: { status: "deactivated" } }),
           githubClaim({ id: 6, payload: { nope: true } }),
           githubClaim({ id: 7, verifiedAt: EVALUATED_AT - 11 * DAY }),
+          githubClaim({ id: 8, issuerState: { status: "missing" } }),
+          githubClaim({ id: 9, issuerState: { status: "ambiguous", cells: [] } }),
         ],
         [{ cell: invalidCell, code: "invalid-claim-data", message: "invalid fixture" }],
       ),
@@ -228,6 +229,8 @@ describe("vellum.reputation.v1", () => {
         "expired",
         "not-yet-active",
         "issuer-deactivated",
+        "issuer-missing",
+        "issuer-ambiguous",
         "malformed-payload",
         "timestamp-mismatch",
         "invalid-claim",
@@ -265,15 +268,13 @@ describe("vellum.reputation.v1", () => {
     expect(result).toMatchObject({ status: "available", overall: { score: 0 } });
   });
 
-  test("rejects invalid evaluation times and malformed policy configuration", () => {
+  test("rejects invalid evaluation times and freezes the versioned policy", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-
-    const policy = structuredClone(VELLUM_REPUTATION_POLICY_V1) as ReputationPolicy;
-    policy.categories[0].maximum = 301;
-    expect(() =>
-      scoreReputation({ claims: readResult([]), evaluatedAt: EVALUATED_AT, policy }),
-    ).toThrow("category caps do not match");
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.github.tenureBands)).toBe(true);
   });
 });

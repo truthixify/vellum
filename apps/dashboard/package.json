@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "bun test src/lib server api",
+    "test:reputation:testnet": "bun test testnet/reputation.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

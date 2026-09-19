@@ -229,7 +229,7 @@ function emptyCategories(policy: ReputationPolicy): AvailableReputationResult["c
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = input.policy ?? VELLUM_REPUTATION_POLICY_V1;
+  const policy = VELLUM_REPUTATION_POLICY_V1;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 
@@ -238,7 +238,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     reason: "invalid-claim",
     message: failure.message,
   }));
-  const trustedIssuers = new Set(policy.github.issuerDids);
+  const trustedIssuers = new Set<string>(policy.github.issuerDids);
   const candidates: GithubCandidate[] = [];
 
   for (const claim of canonicalClaims(input.claims.claims, excluded)) {
