@@ -11,5 +11,11 @@
   },
   "scripts": {
     "test": "bun test"
+  },
+  "dependencies": {
+    "@ckb-ccc/core": "1.19.1"
+  },
+  "devDependencies": {
+    "bun-types": "1.4.2"
   }
 }
