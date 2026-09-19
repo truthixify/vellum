@@ -1,21 +1,20 @@
-import { AlertCircle, Clock, ExternalLink } from "lucide-react";
-import { PreviewBadge } from "@vellum/ui";
+import { Check, ExternalLink } from "lucide-react";
+import { StatusMark } from "@vellum/ui";
 
 export function Transparency() {
   return (
     <div className="transparency-page">
       <section className="transparency-hero site-content">
-        <PreviewBadge label="Planned reputation method" />
+        <StatusMark tone="positive">Live on CKB Testnet</StatusMark>
         <h1>Method and service record</h1>
         <p>
-          What Vellum intends to measure, from which sources, and what it will not claim. The
-          reputation extension is not deployed; the records below document the proposed, reviewable
-          methodology.
+          What Vellum measures, which evidence contributes, and what the score does not claim. Every
+          response names the policy version and evaluation time used for that result.
         </p>
       </section>
       <section className="transparency-section transparency-section--strong">
         <div className="site-content">
-          <h2>Proposed method versions</h2>
+          <h2>Published method</h2>
           <div className="method-table">
             <div className="method-table__head">
               <span>Version</span>
@@ -23,19 +22,11 @@ export function Transparency() {
               <span>Change</span>
             </div>
             <div>
-              <span className="mono">v0.4.1</span>
-              <span>Design candidate</span>
-              <span>Self-declared account links do not contribute to account coverage.</span>
-            </div>
-            <div>
-              <span className="mono">v0.4.0</span>
-              <span>Research iteration</span>
-              <span>Category maxima defined; expired claims decay instead of disappearing.</span>
-            </div>
-            <div>
-              <span className="mono">v0.3.2</span>
-              <span>Research iteration</span>
-              <span>Contribution and credential categories introduced.</span>
+              <span className="mono">vellum.reputation.v1</span>
+              <span>Live on Testnet</span>
+              <span>
+                Scores active GitHub account claims by account tenure and verification recency.
+              </span>
             </div>
           </div>
         </div>
@@ -43,30 +34,32 @@ export function Transparency() {
       <section className="transparency-section">
         <div className="site-content service-grid">
           <div>
-            <small>Issuer registry source</small>
-            <strong>Not deployed</strong>
+            <small>Issuer state</small>
+            <strong>Resolved on CKB Testnet</strong>
             <span>
-              <Clock size={12} />
-              Planned as a published allowlist
+              <Check size={12} />
+              Trusted issuer and current DID state are checked during evaluation
             </span>
           </div>
           <div>
-            <small>Reputation indexer status</small>
-            <strong>Not deployed</strong>
+            <small>Reputation service</small>
+            <strong>Public endpoint available</strong>
             <span>
-              <AlertCircle size={12} />
-              No score is calculated from live data
+              <Check size={12} />
+              Returns the aggregate, categories, and evidence for a did:ckb subject
             </span>
           </div>
           <div>
-            <small>Coverage statistics</small>
-            <strong>Not available</strong>
-            <span>No aggregate reporting endpoint exists. This page does not estimate one.</span>
+            <small>Score range</small>
+            <strong>0 to 1000</strong>
+            <span>Five fixed categories with published maxima; v1 currently scores two.</span>
           </div>
           <div>
-            <small>Uptime history</small>
-            <strong>Not available</strong>
-            <span>Monitoring will be published when the service exists.</span>
+            <small>Failure behavior</small>
+            <strong>No guessed scores</strong>
+            <span>
+              Unavailable chain or issuer evidence produces an unavailable result, not zero.
+            </span>
           </div>
         </div>
       </section>
@@ -75,20 +68,18 @@ export function Transparency() {
           <div>
             <h2>Known limitations</h2>
             <ul>
-              <li>An index cannot prove uniqueness, humanity, honesty, or intent.</li>
-              <li>
-                Issuer listing only describes a registry decision; it does not make a claim true.
-              </li>
-              <li>Claims may be revoked after a cached calculation.</li>
-              <li>Any initial reputation work is testnet-only and must remain reproducible.</li>
+              <li>The current policy and service operate on CKB Testnet.</li>
+              <li>Version 1 recognizes the published GitHub schema and trusted issuer.</li>
+              <li>A score does not prove uniqueness, humanity, honesty, or intent.</li>
+              <li>Applications decide whether and how a Vellum score affects access.</li>
             </ul>
           </div>
           <div>
             <h2>Current sources</h2>
             <ul className="source-list">
               <li>
-                <a href="https://github.com/ckb-devrel/ccc/tree/master/packages/did-ckb">
-                  did:ckb implementation <ExternalLink size={13} />
+                <a href="https://github.com/truthixify/vellum/tree/main/packages/scoring">
+                  Reputation policy implementation <ExternalLink size={13} />
                 </a>
               </li>
               <li>
@@ -97,8 +88,8 @@ export function Transparency() {
                 </a>
               </li>
               <li>
-                <a href="/resolve">
-                  Live identity resolver <ExternalLink size={13} />
+                <a href="https://dashboard.usevellum.xyz/reputation">
+                  Live reputation explorer <ExternalLink size={13} />
                 </a>
               </li>
             </ul>

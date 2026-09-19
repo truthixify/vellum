@@ -1,5 +1,5 @@
 import { ArrowRight, Check, Copy, ShieldCheck } from "lucide-react";
-import { AvatarMark, PreviewBadge, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
+import { AvatarMark, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
 import { useState } from "react";
 import { dashboardUrl } from "../config";
 
@@ -25,7 +25,7 @@ const RECORDS: RecordNode[] = [
     key: "github",
     id: "github.com/rmaddox",
     title: "GitHub account",
-    source: "Signed gist proof",
+    source: "OAuth-backed Claim Cell",
     issuer: "Vellum verifier",
     time: "2026-02-11 16:40 UTC",
   },
@@ -141,7 +141,7 @@ function RegistryScene() {
                 onSelect={setSelected}
               >
                 <strong>GitHub &middot; @rmaddox</strong>
-                <small className="positive">Verified &middot; signed gist</small>
+                <small className="positive">Verified &middot; issuer-backed claim</small>
               </NodeButton>
               <NodeButton
                 record={byKey("address")}
@@ -289,29 +289,15 @@ function ClaimsLedger() {
     <div className="ledger">
       <div className="ledger__bar">
         <strong>Attached evidence</strong>
-        <span>3 records</span>
+        <span>1 accepted claim</span>
       </div>
       {[
         [
-          "Protocol contribution",
-          "vellum.contribution/1",
-          "CKBoost \u00b7 listed",
-          "2026-06-02",
+          "GitHub account",
+          "vellum.social.github.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
           "Verified",
-        ],
-        [
-          "Education credential",
-          "vellum.credential.education/1",
-          "Nervos Academy \u00b7 listed",
-          "2026-07-19",
-          "Verified",
-        ],
-        [
-          "Peer review attestation",
-          "vellum.attestation.review/2",
-          "Not in registry",
-          "2026-08-21",
-          "Unknown issuer",
         ],
       ].map(([title, schema, issuer, date, state]) => (
         <div className="ledger__row" key={schema}>
@@ -339,23 +325,23 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">Grants council v3 \u2014 eligibility</div>
+        <div className="policy-card__bar">Vellum reputation v1 \u2014 evaluation</div>
         <div className="policy-card__result">
-          <StatusMark tone="positive">Eligible</StatusMark>
-          <span>Evaluated 2026-09-05 14:02 UTC</span>
+          <StatusMark tone="positive">Available</StatusMark>
+          <span>Deterministic Testnet result</span>
         </div>
         <dl>
           <div>
-            <dt>Minimum index 40</dt>
-            <dd>68 {"\u00b7"} pass</dd>
+            <dt>Aggregate score</dt>
+            <dd>200 of 1000</dd>
           </div>
           <div>
-            <dt>Contribution category present</dt>
-            <dd>2 claims {"\u00b7"} pass</dd>
+            <dt>GitHub tenure</dt>
+            <dd>100 of 100</dd>
           </div>
           <div>
-            <dt>Registry issuer required</dt>
-            <dd>1 of 1 {"\u00b7"} pass</dd>
+            <dt>Verification recency</dt>
+            <dd>100 of 100</dd>
           </div>
         </dl>
       </div>
@@ -371,19 +357,19 @@ function PolicyExamples() {
             <small className="mono">did:ckb:0x8f2a\u2026c41d</small>
           </span>
           <strong className="embed-score">
-            68<small>/100</small>
+            200<small>/1000</small>
           </strong>
         </div>
         <div className="embed-rails">
           <span>
-            Contribution <b className="mono">28/40</b>
+            Tenure <b className="mono">100/100</b>
           </span>
-          <SignalRail value={28} max={40} label="Contribution 28 of 40" />
+          <SignalRail value={100} max={100} label="Tenure 100 of 100" />
           <span>
-            Credentials <b className="mono">22/30</b>
+            Recency <b className="mono">100/100</b>
           </span>
-          <SignalRail value={22} max={30} label="Credentials 22 of 30" />
-          <small>6 claims {"\u00b7"} last calculated 18 minutes ago</small>
+          <SignalRail value={100} max={100} label="Recency 100 of 100" />
+          <small>1 accepted claim {"\u00b7"} evaluated on request</small>
         </div>
       </div>
     </div>
@@ -453,7 +439,7 @@ export function Home() {
               Issuers write claims against published schemas. Every record keeps its issuer, dates,
               and trust boundary in view.
             </p>
-            <PreviewBadge label="Testnet preview" />
+            <StatusMark tone="positive">Live on Testnet</StatusMark>
           </div>
         </div>
       </section>
@@ -463,11 +449,11 @@ export function Home() {
             <span className="section-number">03</span>
             <h2>Use it elsewhere</h2>
             <p>
-              Applications read the same evidence and apply their own published policy. Vellum
-              interprets; it never decides for them.
+              Applications can read a score together with its accepted and excluded evidence. Vellum
+              publishes the policy; each application still chooses how to use the result.
             </p>
-            <a className="v-button v-button--secondary" href={dashboardUrl("/governance")}>
-              Open governance demo
+            <a className="v-button v-button--secondary" href={dashboardUrl("/reputation")}>
+              Inspect a reputation score
             </a>
           </div>
           <PolicyExamples />
@@ -475,7 +461,7 @@ export function Home() {
       </section>
       <section className="method-band">
         <div className="site-content">
-          <PreviewBadge label="Planned testnet method" />
+          <StatusMark tone="positive">Live Testnet policy</StatusMark>
           <h2>Portable evidence. Transparent interpretation.</h2>
           <p>
             A Vellum index is one reading of the evidence attached to an identity. The method is
@@ -485,11 +471,11 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0\u2013100 {"\u00b7"} method v0.4.1</strong>
+              <strong className="mono">0\u20131000 {"\u00b7"} vellum.reputation.v1</strong>
             </div>
             <div>
               <small>Contributing categories</small>
-              <strong>Contribution, credentials, account coverage, longevity</strong>
+              <strong>Technical, contribution, community, tenure, recency</strong>
             </div>
             <div>
               <small>Issuer visibility</small>
@@ -497,7 +483,7 @@ export function Home() {
             </div>
             <div>
               <small>Scope</small>
-              <strong className="warning">Reputation surfaces are preview-only</strong>
+              <strong className="positive">Live on CKB Testnet</strong>
             </div>
           </div>
           <a className="v-button v-button--secondary method-band__link" href="/transparency">
@@ -510,8 +496,8 @@ export function Home() {
           <div className="feature-copy">
             <h2>Resolve any identity</h2>
             <p>
-              Use the current did:ckb package to read a DID document directly from CKB. Identity
-              resolution is live; reputation extensions remain clearly separated as preview data.
+              Read a DID document directly from CKB, then inspect the claims recognized by the
+              current reputation policy. Identity resolution and scoring are live on Testnet.
             </p>
             <div className="button-row">
               <a className="v-button v-button--primary" href="/docs">

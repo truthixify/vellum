@@ -18,11 +18,10 @@ carried between apps instead of disappearing into separate databases.
 [Website](https://usevellum.xyz) | [Dashboard](https://dashboard.usevellum.xyz) |
 [Public roadmap](https://github.com/users/truthixify/projects/2)
 
-> **Where things stand:** Vellum's identity tools are live, and the reputation extension is now in
-> implementation. The Claim Type and DID Lock are deployed and byte-verified on CKB Testnet.
-> GitHub claims are live, and the first deterministic scoring policy and backend are implemented.
-> Scores, activity, and governance data shown in the current interfaces are still previews until
-> those screens are connected to the live services.
+> **Where things stand:** Vellum's identity tools, Claim contracts, GitHub verification, and first
+> deterministic reputation policy are live on CKB Testnet. The dashboard reads the public scoring
+> service and shows the score together with the evidence that produced it. Activity and governance
+> remain separate demonstration surfaces.
 
 ## Why Vellum
 
@@ -35,10 +34,10 @@ held under a builder-controlled CKB lock. Every claim identifies its issuer and 
 output lock identifies the subject. That makes the evidence portable without pretending that every
 issuer is equally trustworthy: the reader still decides whose claims to accept and how to use them.
 
-The planned reputation record lives in CKB Cells, not in a private Vellum database. If the Vellum
-interface disappears, another application can read the same record. The builder controls the Cells
-attached to their identity and can remove a claim they no longer want to keep. Issuers pay the CKB
-capacity needed to create the claims they make.
+The evidence behind reputation lives in CKB Cells, not in a private Vellum database. If the Vellum
+interface disappears, another application can read the same claims and apply the published policy.
+The builder controls the Cells attached to their identity and can remove a claim they no longer
+want to keep. Issuers pay the CKB capacity needed to create the claims they make.
 
 CKBoost is the first intended product integration. Quest completions will become issuer-authorized
 claims that can appear on a public builder profile and contribute to a transparent score. The same
@@ -47,13 +46,13 @@ without requiring those products to share one backend.
 
 ## What exists today
 
-| Part                | Status                          | What that means                                                                                                 |
-| ------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
-| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
-| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
-| Reputation protocol | In implementation               | Claim contracts, the core SDK, GitHub verification, and the first scoring API are implemented on Testnet.       |
-| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
+| Part                 | Status                          | What that means                                                                                                 |
+| -------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `did:ckb` identity   | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
+| Vellum website       | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
+| Vellum dashboard     | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
+| Reputation protocol  | Live on CKB Testnet             | Claim contracts, the core SDK, GitHub verification, and the first versioned scoring API are available.          |
+| Reputation dashboard | Live on CKB Testnet             | Scores, categories, contributing evidence, exclusions, and share cards come from the scoring service.           |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
 the identity operations used by Vellum. The Vellum SDK builds on those primitives with Claim Cell
@@ -64,8 +63,7 @@ without depending on the Vellum interface.
 
 The public roadmap moves from the primitive to real use:
 
-1. Publish the schemas and build the first verifiable social signals and scoring method on the
-   deployed Testnet contracts and Claim SDK.
+1. Expand the published schema set and scoring policy beyond the first GitHub signal.
 2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
    participation signal.
 3. Show how other projects can use the record through claim issuance tools and a small governance
@@ -92,7 +90,7 @@ independently verifiable, and not tied to the application currently displaying i
 ```text
 .
 ├── apps/
-│   ├── dashboard/                  identity dashboard, verification API, and reputation previews
+│   ├── dashboard/                  identity dashboard, verification API, and reputation service
 │   └── site/                       public website, docs, and Testnet resolver
 ├── docs/                            protocol and integration documentation
 └── packages/
@@ -186,8 +184,8 @@ bun run verify:testnet-deployment
 
 ### did:ckb contracts
 
-Vellum currently uses the upstream did:ckb Identity Type Script. These addresses do not represent
-the planned Claim Cell script.
+Vellum currently uses the upstream did:ckb Identity Type Script. These deployments are separate
+from Vellum's Claim Type and DID Lock listed above.
 
 | Network | `code_hash`                                                          | Deployment transaction                                               |
 | ------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |

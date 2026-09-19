@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <rect width="1200" height="630" fill="#f4f5ef"/>
+  <rect x="32" y="32" width="1136" height="566" fill="none" stroke="#101814" stroke-width="2"/>
+
+  <g transform="translate(72 70)">
+    <rect width="28" height="28" fill="#147a49"/>
+    <text x="14" y="20" text-anchor="middle" font-family="ui-monospace, monospace" font-size="14" font-weight="700" fill="#ffffff">V</text>
+    <text x="42" y="21" font-family="ui-monospace, monospace" font-size="18" font-weight="600" fill="#101814">VELLUM</text>
+    <text x="1056" y="21" text-anchor="end" font-family="ui-monospace, monospace" font-size="14" fill="#526058">BUILT ON NERVOS CKB</text>
+  </g>
+
+  <text x="72" y="225" font-family="system-ui, sans-serif" font-size="78" font-weight="600" fill="#101814">Your reputation</text>
+  <text x="72" y="310" font-family="system-ui, sans-serif" font-size="78" font-weight="600" fill="#101814">should travel with you.</text>
+  <text x="72" y="370" font-family="system-ui, sans-serif" font-size="25" fill="#526058">Portable identity and verifiable evidence on CKB.</text>
+
+  <g transform="translate(72 438)">
+    <rect width="326" height="80" fill="#ffffff" stroke="#cbd1ca"/>
+    <text x="22" y="29" font-family="ui-monospace, monospace" font-size="11" fill="#526058">IDENTITY</text>
+    <text x="22" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#101814">Wallet-controlled did:ckb</text>
+    <rect x="365" width="326" height="80" fill="#ffffff" stroke="#cbd1ca"/>
+    <text x="387" y="29" font-family="ui-monospace, monospace" font-size="11" fill="#526058">EVIDENCE</text>
+    <text x="387" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#101814">Issuer-authorized claims</text>
+    <rect x="730" width="326" height="80" fill="#ffffff" stroke="#cbd1ca"/>
+    <text x="752" y="29" font-family="ui-monospace, monospace" font-size="11" fill="#526058">REPUTATION</text>
+    <text x="752" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#147a49">Transparent policy output</text>
+  </g>
+
+  <text x="72" y="560" font-family="ui-monospace, monospace" font-size="14" fill="#526058">USEVELLUM.XYZ</text>
+  <text x="1128" y="560" text-anchor="end" font-family="ui-monospace, monospace" font-size="14" fill="#147a49">LIVE ON CKB TESTNET</text>
+</svg>
