@@ -98,6 +98,7 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
     expect(location.pathname).toBe("/verify/github");
     expect(location.searchParams.get("status")).toBe("submitted");
+    expect(location.searchParams.get("subject")).toBe(SUBJECT_DID);
     expect(location.searchParams.get("transaction")).toBe(ISSUANCE.transactionHash);
     expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
     expect(location.searchParams.get("login")).toBe("truthixify");
@@ -105,7 +106,7 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(deps.issueClaim.mock.calls[0][0]).toEqual({ did: SUBJECT_DID });
   });
 
-  test("rejects callback replay before provider access or issuance", async () => {
+  test("rejects a callback without its bound state cookie before provider access", async () => {
     const fetch = providerFetch();
     const deps = dependencies(fetch);
     const started = await start(deps);
@@ -120,6 +121,49 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(location.searchParams.get("code")).toBe("oauth_state_invalid");
     expect(fetch).not.toHaveBeenCalled();
     expect(deps.issueClaim).not.toHaveBeenCalled();
+  });
+
+  test("does not issue twice when the same callback is replayed", async () => {
+    const responses = [
+      Response.json({ access_token: "provider-token-for-tests-only", token_type: "bearer" }),
+      Response.json({
+        login: "truthixify",
+        id: 5_830_913,
+        type: "User",
+        created_at: "2022-04-15T05:20:00Z",
+      }),
+      new Response(null, { status: 204 }),
+      Response.json({ error: "bad_verification_code" }),
+    ];
+    const fetch = mock(async () => {
+      const response = responses.shift();
+      if (!response) throw new Error("Unexpected provider request");
+      return response;
+    });
+    const deps = dependencies(fetch);
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.GITHUB_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+
+    const first = await handleGithubOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+    const replay = await handleGithubOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+
+    expect(new URL(first.headers.get("location") ?? "").searchParams.get("status")).toBe(
+      "submitted",
+    );
+    expect(new URL(replay.headers.get("location") ?? "").searchParams.get("code")).toBe(
+      "provider_unavailable",
+    );
+    expect(deps.issueClaim).toHaveBeenCalledTimes(1);
   });
 
   test("validates state before handling a denied authorization", async () => {
@@ -178,6 +222,11 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(
       githubActionFromUrl(
         new Request("https://dashboard.usevellum.xyz/api/verify/github/start/extra"),
+      ),
+    ).toBeUndefined();
+    expect(
+      githubActionFromUrl(
+        new Request("https://dashboard.usevellum.xyz/api/github?action=start&action=callback"),
       ),
     ).toBeUndefined();
   });

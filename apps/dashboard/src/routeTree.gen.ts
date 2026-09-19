@@ -26,6 +26,7 @@ import { Route as DocsCellModelRouteImport } from './routes/docs/cell-model'
 import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
 import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
 import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
+import { Route as VerifyGithubRouteImport } from './routes/verify/github'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -112,6 +113,11 @@ const DocsResolutionRoute = DocsResolutionRouteImport.update({
   path: '/resolution',
   getParentRoute: () => DocsRoute,
 } as any)
+const VerifyGithubRoute = VerifyGithubRouteImport.update({
+  id: '/verify/github',
+  path: '/verify/github',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/github': typeof VerifyGithubRoute
   '/docs/': typeof DocsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/github': typeof VerifyGithubRoute
   '/docs': typeof DocsIndexRoute
 }
 export interface FileRoutesById {
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/github': typeof VerifyGithubRoute
   '/docs/': typeof DocsIndexRoute
 }
 export interface FileRouteTypes {
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/github'
     | '/docs/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/github'
     | '/docs'
   id:
     | '__root__'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/github'
     | '/docs/'
   fileRoutesById: FileRoutesById
 }
@@ -242,6 +254,7 @@ export interface RootRouteChildren {
   MyRoute: typeof MyRoute
   ResolveRoute: typeof ResolveRoute
   RotateRoute: typeof RotateRoute
+  VerifyGithubRoute: typeof VerifyGithubRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -365,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsResolutionRouteImport
       parentRoute: typeof DocsRoute
     }
+    '/verify/github': {
+      id: '/verify/github'
+      path: '/verify/github'
+      fullPath: '/verify/github'
+      preLoaderRoute: typeof VerifyGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -399,6 +419,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyRoute: MyRoute,
   ResolveRoute: ResolveRoute,
   RotateRoute: RotateRoute,
+  VerifyGithubRoute: VerifyGithubRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

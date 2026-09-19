@@ -33,9 +33,10 @@ state binding, but does not introduce a separate wallet-signature challenge.
 
 GitHub returns to `GET /api/verify/github/callback`. The callback validates the state, clears its
 cookie, exchanges the one-time authorization code, reads the authenticated account with the
-`read:user` scope, and revokes the OAuth credential before invoking claim issuance. A successful callback
-redirects to `/verify/github` with only the public transaction hash, Claim ID, output index, and
-GitHub login. OAuth codes and tokens are never returned to the browser or stored in the claim.
+`read:user` scope, and revokes the OAuth credential before invoking claim issuance. A successful
+callback redirects to `/verify/github` with only the public subject DID, transaction hash, Claim ID,
+output index, and GitHub login. OAuth codes and tokens are never returned to the browser or stored
+in the claim.
 
 The claim uses schema `vellum.social.github.v1` with hash
 `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` and the exact payload:

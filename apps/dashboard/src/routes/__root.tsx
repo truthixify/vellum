@@ -102,6 +102,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/rotate")) return "Identity - Rotate key";
   if (pathname.startsWith("/migrate")) return "Identity - Migrate";
   if (pathname.startsWith("/deactivate")) return "Identity - Deactivate";
+  if (pathname.startsWith("/verify/github")) return "Connect GitHub";
   if (pathname.startsWith("/resolve")) return "Verify";
   if (pathname.startsWith("/issue")) return "Issue a claim";
   if (pathname.startsWith("/activity")) return "Activity";

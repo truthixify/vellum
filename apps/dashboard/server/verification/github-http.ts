@@ -64,7 +64,7 @@ export function githubActionFromUrl(request: Request): GithubAction | undefined 
     segments[2] === "github"
       ? segments[3]
       : segments.length === 2 && segments[0] === "api" && segments[1] === "github"
-        ? url.searchParams.get("action")
+        ? exactlyOneParameter(url, "action")
         : undefined;
   return value === "start" || value === "callback" ? value : undefined;
 }
@@ -236,6 +236,7 @@ async function handleCallback(
     const login = claim.payload.login;
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "submitted",
+      subject: subject.did,
       transaction: issued.body.issuance.transactionHash,
       claim: issued.body.issuance.claimId,
       output: issued.body.issuance.outputIndex,
