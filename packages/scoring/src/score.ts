@@ -126,15 +126,19 @@ function claimKey(claim: Claim): string {
   return referenceKey(claimReference(claim));
 }
 
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function compareClaims(left: Claim, right: Claim): number {
-  return left.claimId.localeCompare(right.claimId) || claimKey(left).localeCompare(claimKey(right));
+  return compareText(left.claimId, right.claimId) || compareText(claimKey(left), claimKey(right));
 }
 
 function compareNewest(left: GithubCandidate, right: GithubCandidate): number {
   if (left.claim.issuedAt !== right.claim.issuedAt) {
     return left.claim.issuedAt > right.claim.issuedAt ? -1 : 1;
   }
-  return left.claim.claimId.localeCompare(right.claim.claimId);
+  return compareText(left.claim.claimId, right.claim.claimId);
 }
 
 function exclusion(
@@ -157,8 +161,8 @@ function compareExclusions(
   right: ReputationExcludedEvidence,
 ): number {
   return (
-    referenceKey(left.claim).localeCompare(referenceKey(right.claim)) ||
-    left.reason.localeCompare(right.reason)
+    compareText(referenceKey(left.claim), referenceKey(right.claim)) ||
+    compareText(left.reason, right.reason)
   );
 }
 
@@ -175,7 +179,7 @@ function canonicalClaims(
 
   const canonical: Claim[] = [];
   for (const matches of grouped.values()) {
-    matches.sort((left, right) => claimKey(left).localeCompare(claimKey(right)));
+    matches.sort((left, right) => compareText(claimKey(left), claimKey(right)));
     const [selected, ...duplicates] = matches;
     canonical.push(selected);
 
@@ -254,23 +258,6 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       );
       continue;
     }
-    if (claim.issuerState.status === "unavailable") {
-      return {
-        status: "unavailable",
-        policyVersion: policy.version,
-        evaluatedAt,
-        error: {
-          code: "issuer-state-unavailable",
-          message: "The trusted issuer state could not be resolved completely.",
-          claim: claimReference(claim),
-        },
-      };
-    }
-    if (claim.issuerState.status !== "active") {
-      const reason = `issuer-${claim.issuerState.status}` as const;
-      excluded.push(exclusion(claim, reason, `The claim issuer is ${claim.issuerState.status}.`));
-      continue;
-    }
     if (claim.issuedAt > BigInt(evaluatedAt)) {
       excluded.push(
         exclusion(claim, "not-yet-active", "The claim was issued after the evaluation time."),
@@ -299,6 +286,23 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
           "The GitHub verification time does not match the claim issuance time.",
         ),
       );
+      continue;
+    }
+    if (claim.issuerState.status === "unavailable") {
+      return {
+        status: "unavailable",
+        policyVersion: policy.version,
+        evaluatedAt,
+        error: {
+          code: "issuer-state-unavailable",
+          message: "The trusted issuer state could not be resolved completely.",
+          claim: claimReference(claim),
+        },
+      };
+    }
+    if (claim.issuerState.status !== "active") {
+      const reason = `issuer-${claim.issuerState.status}` as const;
+      excluded.push(exclusion(claim, reason, `The claim issuer is ${claim.issuerState.status}.`));
       continue;
     }
     candidates.push({ claim, payload });

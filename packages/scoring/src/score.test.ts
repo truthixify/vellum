@@ -254,6 +254,24 @@ describe("vellum.reputation.v1", () => {
     });
   });
 
+  test("rejects ineligible evidence before an irrelevant issuer lookup failure", () => {
+    const unavailable = { status: "unavailable", reason: "indexer timeout" } as const;
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim({ id: 1, expiresAt: EVALUATED_AT, issuerState: unavailable }),
+        githubClaim({ id: 2, payload: { nope: true }, issuerState: unavailable }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 0 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence.map(({ reason }) => reason).sort()).toEqual([
+      "expired",
+      "malformed-payload",
+    ]);
+  });
+
   test("does not let an irrelevant untrusted issuer make the score unavailable", () => {
     const result = scoreReputation({
       claims: readResult([
