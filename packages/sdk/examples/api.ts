@@ -2,6 +2,16 @@ import { ccc } from "@ckb-ccc/core";
 import { ClaimData, ClaimDataV1, parseClaimPayload, readClaims, writeClaim } from "@vellum/sdk";
 import type { Claim, ClaimSchema, ClaimScriptConfigLike, WriteClaimInput } from "@vellum/sdk";
 
+if (
+  typeof ClaimData !== "function" ||
+  typeof ClaimDataV1 !== "function" ||
+  typeof parseClaimPayload !== "function" ||
+  typeof readClaims !== "function" ||
+  typeof writeClaim !== "function"
+) {
+  throw new Error("SDK runtime exports are incomplete");
+}
+
 export const testnetScripts = {
   claimType: {
     codeHash: "0xfb2757e524b3f83161d8b85b8b3e00186e2019ff04f5dfe833c5a72731e13157",

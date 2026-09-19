@@ -34,7 +34,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun run clean && bun build ./src/index.ts --outdir ./dist --entry-naming index.js --target=browser --format=esm --packages=external --sourcemap=external && tsc -p tsconfig.build.json",
+    "build": "bun run clean && tsc -p tsconfig.build.json",
     "clean": "rm -rf ./dist",
     "example": "bun run examples/api.ts",
     "prepack": "bun run build",

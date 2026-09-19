@@ -108,7 +108,7 @@ package pins canonical manifests and validates payloads used by verification ada
 
 ## Run locally
 
-The workspace is pinned to Bun 1.3.9.
+The workspace is pinned to Bun 1.3.14.
 
 ```bash
 bun install
