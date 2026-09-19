@@ -4,8 +4,8 @@ import {
   parseGithubClaimPayload,
 } from "@vellum/schemas";
 
-import type { VerifiedClaim } from "./contracts";
-import { GithubOAuthError, OAuthConfigurationError } from "./errors";
+import type { VerifiedClaim } from "./contracts.js";
+import { GithubOAuthError, OAuthConfigurationError } from "./errors.js";
 
 const GITHUB_API_VERSION = "2026-03-10";
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";

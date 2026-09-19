@@ -1,5 +1,5 @@
-import type { VerificationPlatform, VerificationRequest, VerifiedClaim } from "./contracts";
-import { VerificationServiceError } from "./errors";
+import type { VerificationPlatform, VerificationRequest, VerifiedClaim } from "./contracts.js";
+import { VerificationServiceError } from "./errors.js";
 
 export type PlatformVerifier = (request: VerificationRequest) => Promise<VerifiedClaim>;
 

@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
-import { didVerificationSubjectSchema, type DidVerificationSubject } from "./contracts";
-import { OAuthConfigurationError, GithubOAuthError } from "./errors";
+import { didVerificationSubjectSchema, type DidVerificationSubject } from "./contracts.js";
+import { OAuthConfigurationError, GithubOAuthError } from "./errors.js";
 
 export const GITHUB_OAUTH_STATE_TTL_SECONDS = 5 * 60;
 export const GITHUB_OAUTH_COOKIE_NAME = "vellum_github_oauth";

@@ -6,9 +6,9 @@ import {
   type WriteClaimResult,
 } from "@vellum/sdk";
 
-import deployment from "../../../../deployments/testnet.json";
-import type { ClaimIssuanceResult, VerificationSubject, VerifiedClaim } from "./contracts";
-import { IssuerConfigurationError } from "./errors";
+import deployment from "../../../../deployments/testnet.json" with { type: "json" };
+import type { ClaimIssuanceResult, VerificationSubject, VerifiedClaim } from "./contracts.js";
+import { IssuerConfigurationError } from "./errors.js";
 
 const DEFAULT_CKB_RPC_URL = "https://testnet.ckbapp.dev";
 const PRIVATE_KEY_PATTERN = /^0x[0-9a-fA-F]{64}$/;

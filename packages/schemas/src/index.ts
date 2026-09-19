@@ -1,8 +1,8 @@
-export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash";
+export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash.js";
 export {
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
   githubClaimSchemaManifest,
   parseGithubClaimPayload,
   type GithubClaimPayload,
-} from "./social/github.v1";
+} from "./social/github.v1.js";

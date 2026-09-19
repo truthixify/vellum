@@ -1,4 +1,4 @@
-import type { VerificationErrorCode } from "./contracts";
+import type { VerificationErrorCode } from "./contracts.js";
 
 export class VerificationServiceError extends Error {
   constructor(

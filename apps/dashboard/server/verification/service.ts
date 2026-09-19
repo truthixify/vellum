@@ -10,10 +10,10 @@ import {
   type VerificationRequest,
   type VerificationResponse,
   type VerifiedClaim,
-} from "./contracts";
-import { IssuerConfigurationError, VerificationServiceError } from "./errors";
-import { issueVerifiedClaim } from "./issuer";
-import { platformVerifiers, type PlatformVerifierRegistry } from "./platforms";
+} from "./contracts.js";
+import { IssuerConfigurationError, VerificationServiceError } from "./errors.js";
+import { issueVerifiedClaim } from "./issuer.js";
+import { platformVerifiers, type PlatformVerifierRegistry } from "./platforms.js";
 
 export type ClaimIssuer = (
   subject: VerificationRequest["subject"],

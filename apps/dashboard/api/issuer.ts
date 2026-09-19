@@ -1,4 +1,4 @@
-import { handleIssuerRequest } from "../server/verification/http";
+import { handleIssuerRequest } from "../server/verification/http.js";
 
 export default {
   fetch: handleIssuerRequest,

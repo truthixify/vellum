@@ -2,23 +2,23 @@ import {
   VERIFICATION_API_VERSION,
   githubOAuthStartRequestSchema,
   type VerificationErrorCode,
-} from "./contracts";
-import { GithubOAuthError, OAuthConfigurationError } from "./errors";
+} from "./contracts.js";
+import { GithubOAuthError, OAuthConfigurationError } from "./errors.js";
 import {
   githubAuthorizationUrl,
   githubOAuthConfig,
   verifyGithubAuthorization,
   type GithubFetch,
   type GithubOAuthEnvironment,
-} from "./github";
-import { issueVerifiedClaim } from "./issuer";
-import { jsonResponse, parseJsonBody, RequestBodyError } from "./http";
+} from "./github.js";
+import { issueVerifiedClaim } from "./issuer.js";
+import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
 import {
   clearGithubOAuthCookie,
   consumeGithubOAuthState,
   createGithubOAuthState,
-} from "./oauth-state";
-import { issuePlatformClaim, type ClaimIssuer } from "./service";
+} from "./oauth-state.js";
+import { issuePlatformClaim, type ClaimIssuer } from "./service.js";
 
 type GithubAction = "start" | "callback";
 

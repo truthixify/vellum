@@ -2,13 +2,13 @@ import {
   VERIFICATION_API_VERSION,
   isVerificationPlatform,
   type VerificationErrorCode,
-} from "./contracts";
-import { issuerMetadata } from "./issuer";
+} from "./contracts.js";
+import { issuerMetadata } from "./issuer.js";
 import {
   verifyPlatformProof,
   type VerificationServiceDependencies,
   type VerificationServiceResult,
-} from "./service";
+} from "./service.js";
 
 export const MAX_REQUEST_BYTES = 16_384;
 
