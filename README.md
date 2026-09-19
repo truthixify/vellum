@@ -91,7 +91,7 @@ independently verifiable, and not tied to the application currently displaying i
 ```text
 .
 ├── apps/
-│   ├── dashboard/                  identity dashboard and reputation previews
+│   ├── dashboard/                  identity dashboard, verification API, and reputation previews
 │   └── site/                       public website, docs, and Testnet resolver
 ├── docs/                            protocol and integration documentation
 └── packages/
@@ -140,7 +140,9 @@ should arrive with focused tests for both successful and rejected paths.
 ## Deployment
 
 The public site and dashboard deploy independently to Vercel from `apps/site` and `apps/dashboard`.
-Each app produces `dist` and includes an SPA rewrite for direct visits to client-side routes.
+Each app produces `dist` and includes an SPA rewrite for direct visits to client-side routes. The
+dashboard deployment also serves the stateless verification API described in
+[`docs/verification-service.md`](./docs/verification-service.md).
 
 ### Claim contracts
 
