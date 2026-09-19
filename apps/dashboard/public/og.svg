@@ -1,20 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-  <rect width="1200" height="630" fill="#FBF8EE"/>
-  <rect x="32" y="32" width="1136" height="566" fill="none" stroke="#0E0E0C" stroke-width="3"/>
+  <rect width="1200" height="630" fill="#f4f5ef"/>
+  <rect x="32" y="32" width="1136" height="566" fill="none" stroke="#101814" stroke-width="2"/>
 
-  <text x="72" y="92" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="22" font-weight="500" letter-spacing="3.2" fill="#6F6A5C">VELLUM · DID:CKB DASHBOARD</text>
-
-  <g transform="translate(72, 320)">
-    <text font-family="system-ui, -apple-system, sans-serif" font-size="148" font-weight="500" fill="#0E0E0C" letter-spacing="-3">Vellum.</text>
-    <text y="84" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="500" fill="#0E0E0C">Your identity, on <tspan fill="#1A6E4A">paper</tspan> that lasts.</text>
+  <g transform="translate(72 70)">
+    <rect width="28" height="28" fill="#147a49"/>
+    <text x="14" y="20" text-anchor="middle" font-family="ui-monospace, monospace" font-size="14" font-weight="700" fill="#ffffff">V</text>
+    <text x="42" y="21" font-family="ui-monospace, monospace" font-size="18" font-weight="600" fill="#101814">VELLUM / DASHBOARD</text>
   </g>
 
-  <g transform="translate(880, 180)" stroke="#0E0E0C" stroke-width="4" fill="none" stroke-linecap="square">
-    <rect width="220" height="244"/>
-    <path d="M0 44h220 M40 88h140 M40 132h140 M40 176h100 M40 220h60"/>
+  <text x="72" y="214" font-family="system-ui, sans-serif" font-size="66" font-weight="600" fill="#101814">Identity, evidence,</text>
+  <text x="72" y="286" font-family="system-ui, sans-serif" font-size="66" font-weight="600" fill="#101814">and reputation on CKB.</text>
+  <text x="72" y="346" font-family="system-ui, sans-serif" font-size="25" fill="#526058">Resolve a did:ckb identity. Verify its claims. Inspect every point.</text>
+
+  <g transform="translate(72 410)">
+    <rect width="1056" height="108" fill="#ffffff" stroke="#cbd1ca"/>
+    <text x="24" y="31" font-family="ui-monospace, monospace" font-size="12" fill="#526058">REPUTATION POLICY</text>
+    <text x="24" y="67" font-family="ui-monospace, monospace" font-size="24" font-weight="600" fill="#101814">vellum.reputation.v1</text>
+    <line x1="390" y1="0" x2="390" y2="108" stroke="#cbd1ca"/>
+    <text x="418" y="31" font-family="ui-monospace, monospace" font-size="12" fill="#526058">SCORE RANGE</text>
+    <text x="418" y="70" font-family="ui-monospace, monospace" font-size="32" font-weight="600" fill="#101814">0 TO 1000</text>
+    <line x1="650" y1="0" x2="650" y2="108" stroke="#cbd1ca"/>
+    <text x="678" y="31" font-family="ui-monospace, monospace" font-size="12" fill="#526058">EVIDENCE</text>
+    <text x="678" y="67" font-family="system-ui, sans-serif" font-size="20" font-weight="600" fill="#101814">Accepted and excluded</text>
+    <rect x="936" y="28" width="92" height="34" fill="#147a49"/>
+    <text x="982" y="50" text-anchor="middle" font-family="ui-monospace, monospace" font-size="11" font-weight="600" fill="#ffffff">TESTNET LIVE</text>
   </g>
 
-  <text x="72" y="558" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" font-weight="500" letter-spacing="2.4" fill="#6F6A5C">REGISTRY · OPEN FOR ENROLMENT · MIT</text>
-  <text x="1128" y="558" font-family="ui-monospace, 'JetBrains Mono', monospace" font-size="18" font-weight="500" letter-spacing="2.4" fill="#6F6A5C" text-anchor="end">PAGE 01 / 01</text>
+  <text x="72" y="560" font-family="ui-monospace, monospace" font-size="14" fill="#526058">DASHBOARD.USEVELLUM.XYZ</text>
+  <text x="1128" y="560" text-anchor="end" font-family="ui-monospace, monospace" font-size="14" fill="#147a49">PUBLIC · VERSIONED · REVIEWABLE</text>
 </svg>

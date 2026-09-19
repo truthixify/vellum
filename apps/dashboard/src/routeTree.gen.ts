@@ -19,6 +19,7 @@ import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as IssueRouteImport } from './routes/issue'
 import { Route as MigrateRouteImport } from './routes/migrate'
 import { Route as MyRouteImport } from './routes/my'
+import { Route as ReputationRouteImport } from './routes/reputation'
 import { Route as ResolveRouteImport } from './routes/resolve'
 import { Route as RotateRouteImport } from './routes/rotate'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
@@ -79,6 +80,11 @@ const MyRoute = MyRouteImport.update({
   path: '/my',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReputationRoute = ReputationRouteImport.update({
+  id: '/reputation',
+  path: '/reputation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResolveRoute = ResolveRouteImport.update({
   id: '/resolve',
   path: '/resolve',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
+  '/reputation': typeof ReputationRoute
   '/resolve': typeof ResolveRoute
   '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
+  '/reputation': typeof ReputationRoute
   '/resolve': typeof ResolveRoute
   '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/issue': typeof IssueRoute
   '/migrate': typeof MigrateRoute
   '/my': typeof MyRoute
+  '/reputation': typeof ReputationRoute
   '/resolve': typeof ResolveRoute
   '/rotate': typeof RotateRoute
   '/docs/cell-model': typeof DocsCellModelRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/issue'
     | '/migrate'
     | '/my'
+    | '/reputation'
     | '/resolve'
     | '/rotate'
     | '/docs/cell-model'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/issue'
     | '/migrate'
     | '/my'
+    | '/reputation'
     | '/resolve'
     | '/rotate'
     | '/docs/cell-model'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '/issue'
     | '/migrate'
     | '/my'
+    | '/reputation'
     | '/resolve'
     | '/rotate'
     | '/docs/cell-model'
@@ -264,6 +276,7 @@ export interface RootRouteChildren {
   IssueRoute: typeof IssueRoute
   MigrateRoute: typeof MigrateRoute
   MyRoute: typeof MyRoute
+  ReputationRoute: typeof ReputationRoute
   ResolveRoute: typeof ResolveRoute
   RotateRoute: typeof RotateRoute
   VerifyGithubRoute: typeof VerifyGithubRoute
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/my'
       fullPath: '/my'
       preLoaderRoute: typeof MyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reputation': {
+      id: '/reputation'
+      path: '/reputation'
+      fullPath: '/reputation'
+      preLoaderRoute: typeof ReputationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resolve': {
@@ -437,6 +457,7 @@ const rootRouteChildren: RootRouteChildren = {
   IssueRoute: IssueRoute,
   MigrateRoute: MigrateRoute,
   MyRoute: MyRoute,
+  ReputationRoute: ReputationRoute,
   ResolveRoute: ResolveRoute,
   RotateRoute: RotateRoute,
   VerifyGithubRoute: VerifyGithubRoute,

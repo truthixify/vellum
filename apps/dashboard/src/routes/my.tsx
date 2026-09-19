@@ -1,14 +1,12 @@
-import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
+import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 
 import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
 
 import {
   getDidHistory,
-  listDidsByLock,
   PROFILE_SERVICE_KEY,
   type DidRecord,
   type HistoryEntry,
@@ -16,6 +14,7 @@ import {
 import { Avatar } from "@/components/vellum/Avatar";
 import { useCopy } from "@/hooks/use-copy";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useActiveIdentity } from "@/lib/active-identity-context";
 
 export const Route = createFileRoute("/my")({
   component: MyDid,
@@ -23,44 +22,12 @@ export const Route = createFileRoute("/my")({
 
 function MyDid() {
   useDocumentTitle("My DID");
-  const signer = useSigner();
-  const { client, open } = useCcc();
-  const [lock, setLock] = useState<ccc.Script | null>(null);
-  const [selectedDid, setSelectedDid] = useState<string | null>(null);
+  const { open } = useCcc();
+  const { records, activeIdentity, setActiveDid, network, isConnected, isLoading, error, refetch } =
+    useActiveIdentity();
+  const networkLabel = network.toUpperCase();
 
-  useEffect(() => {
-    let cancelled = false;
-    async function loadLock() {
-      if (!signer) {
-        setLock(null);
-        return;
-      }
-      try {
-        const addressObj = await signer.getRecommendedAddressObj();
-        if (!cancelled) setLock(addressObj.script);
-      } catch (err) {
-        console.error("Failed to load lock script", err);
-        if (!cancelled) setLock(null);
-      }
-    }
-    loadLock();
-    return () => {
-      cancelled = true;
-    };
-  }, [signer]);
-
-  const networkLabel = client instanceof ccc.ClientPublicMainnet ? "MAINNET" : "TESTNET";
-
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["my-dids", lock?.codeHash, lock?.hashType, lock?.args, networkLabel],
-    queryFn: async () => {
-      if (!lock) return [] as DidRecord[];
-      return listDidsByLock(client, lock);
-    },
-    enabled: !!lock,
-  });
-
-  if (!signer) {
+  if (!isConnected) {
     return (
       <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-32 text-center">
         <div className="mono-caps text-muted-foreground mb-3">REGISTRY · MY DOCUMENT</div>
@@ -78,7 +45,7 @@ function MyDid() {
     );
   }
 
-  if (isLoading || !lock) {
+  if (isLoading) {
     return (
       <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-24">
         <div className="mono-caps text-muted-foreground">INDEXING CELLS, RESOLVING DIDS…</div>
@@ -102,8 +69,6 @@ function MyDid() {
     );
   }
 
-  const records = data ?? [];
-
   if (records.length === 0) {
     return (
       <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-32 text-center">
@@ -120,7 +85,7 @@ function MyDid() {
     );
   }
 
-  const active = records.find((r) => r.did === selectedDid) ?? records[0];
+  const active = activeIdentity ?? records[0];
 
   return (
     <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-12">
@@ -134,7 +99,7 @@ function MyDid() {
           {records.map((r) => (
             <button
               key={r.did}
-              onClick={() => setSelectedDid(r.did)}
+              onClick={() => setActiveDid(r.did)}
               className={`mono-caps px-3 py-2 border ${
                 active.did === r.did
                   ? "border-verdant bg-verdant text-paper"

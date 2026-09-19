@@ -4,6 +4,7 @@ import {
   Activity,
   BadgeCheck,
   BookOpen,
+  ChartNoAxesColumnIncreasing,
   ExternalLink,
   Landmark,
   LayoutGrid,
@@ -29,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { WalletButton } from "@/components/vellum/WalletButton";
+import { ReputationChip } from "@/components/reputation/ReputationChip";
+import { ActiveIdentityProvider } from "@/lib/active-identity";
 
 const SITE_ORIGIN =
   import.meta.env.VITE_SITE_URL ??
@@ -42,7 +45,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 type NavItem = {
   label: string;
-  to: "/" | "/my" | "/verify" | "/resolve" | "/issue" | "/activity" | "/governance" | "/docs";
+  to:
+    | "/"
+    | "/my"
+    | "/verify"
+    | "/reputation"
+    | "/resolve"
+    | "/issue"
+    | "/activity"
+    | "/governance"
+    | "/docs";
   icon: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
 };
 
@@ -50,6 +62,7 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "Overview", to: "/", icon: LayoutGrid },
   { label: "Identity", to: "/my", icon: Shield },
   { label: "Verify", to: "/verify", icon: BadgeCheck },
+  { label: "Reputation", to: "/reputation", icon: ChartNoAxesColumnIncreasing },
   { label: "Resolve", to: "/resolve", icon: Search },
   { label: "Issue", to: "/issue", icon: Plus },
   { label: "Activity", to: "/activity", icon: Activity },
@@ -60,12 +73,13 @@ const MOBILE_NAV: NavItem[] = [
   { label: "Overview", to: "/", icon: LayoutGrid },
   { label: "Identity", to: "/my", icon: Shield },
   { label: "Verify", to: "/verify", icon: BadgeCheck },
-  { label: "Activity", to: "/activity", icon: Activity },
+  { label: "Score", to: "/reputation", icon: ChartNoAxesColumnIncreasing },
 ];
 
 const MOBILE_MORE_NAV: NavItem[] = [
   { label: "Resolve a DID", to: "/resolve", icon: Search },
   { label: "Issue a claim", to: "/issue", icon: Plus },
+  { label: "Activity", to: "/activity", icon: Activity },
   { label: "Governance", to: "/governance", icon: Landmark },
   { label: "Documentation", to: "/docs", icon: BookOpen },
 ];
@@ -137,6 +151,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/deactivate")) return "Identity - Deactivate";
   if (pathname.startsWith("/verify/github")) return "GitHub verification";
   if (pathname.startsWith("/verify")) return "Verification";
+  if (pathname.startsWith("/reputation")) return "Reputation";
   if (pathname.startsWith("/resolve")) return "Resolve";
   if (pathname.startsWith("/issue")) return "Issue a claim";
   if (pathname.startsWith("/activity")) return "Activity";
@@ -151,14 +166,9 @@ function ContextBar() {
     <header className="dashboard-context-bar">
       <div className="dashboard-context-bar__title">
         <strong>{pageTitle(pathname)}</strong>
-        {pathname === "/" && (
-          <>
-            <span className="dashboard-updated">Data last updated 18 minutes ago</span>
-            <span className="v-preview-badge dashboard-preview-badge">&lt;&gt; Preview data</span>
-          </>
-        )}
       </div>
       <div className="dashboard-context-bar__actions">
+        <ReputationChip />
         <WalletButton />
         <ThemeButton />
       </div>
@@ -218,16 +228,18 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="dashboard-layout">
-        <DashboardSidebar />
-        <div className="dashboard-workspace">
-          <ContextBar />
-          <main className="dashboard-main">
-            <Outlet />
-          </main>
+      <ActiveIdentityProvider>
+        <div className="dashboard-layout">
+          <DashboardSidebar />
+          <div className="dashboard-workspace">
+            <ContextBar />
+            <main className="dashboard-main">
+              <Outlet />
+            </main>
+          </div>
+          <MobileNavigation />
         </div>
-        <MobileNavigation />
-      </div>
+      </ActiveIdentityProvider>
     </QueryClientProvider>
   );
 }
