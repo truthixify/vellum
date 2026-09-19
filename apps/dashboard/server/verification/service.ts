@@ -10,10 +10,10 @@ import {
   type VerificationRequest,
   type VerificationResponse,
   type VerifiedClaim,
-} from "./contracts";
-import { IssuerConfigurationError, VerificationServiceError } from "./errors";
-import { issueVerifiedClaim } from "./issuer";
-import { platformVerifiers, type PlatformVerifierRegistry } from "./platforms";
+} from "./contracts.js";
+import { IssuerConfigurationError, VerificationServiceError } from "./errors.js";
+import { issueVerifiedClaim } from "./issuer.js";
+import { platformVerifiers, type PlatformVerifierRegistry } from "./platforms.js";
 
 export type ClaimIssuer = (
   subject: VerificationRequest["subject"],
@@ -62,6 +62,51 @@ function validateVerifiedClaim(platform: VerificationPlatform, value: unknown): 
   return claim.data;
 }
 
+export async function issuePlatformClaim(
+  platform: VerificationPlatform,
+  subject: VerificationRequest["subject"],
+  claimValue: unknown,
+  issueClaim: ClaimIssuer = defaultDependencies.issueClaim,
+): Promise<VerificationServiceResult> {
+  let claim: VerifiedClaim;
+  try {
+    claim = validateVerifiedClaim(platform, claimValue);
+  } catch (error) {
+    if (error instanceof VerificationServiceError) {
+      return errorResult(error.status, error.code, error.message);
+    }
+    return errorResult(
+      422,
+      "verification_failed",
+      "The platform verifier returned an invalid claim.",
+    );
+  }
+
+  try {
+    const issuance = claimIssuanceResultSchema.parse(await issueClaim(subject, claim));
+    return {
+      status: 201,
+      body: {
+        ok: true,
+        version: VERIFICATION_API_VERSION,
+        platform,
+        subject,
+        claim,
+        issuance,
+      },
+    };
+  } catch (error) {
+    if (error instanceof IssuerConfigurationError) {
+      return errorResult(
+        503,
+        "issuer_unavailable",
+        "The claim issuer is not available. Try again later.",
+      );
+    }
+    return errorResult(502, "issuance_failed", "The claim could not be issued. Try again later.");
+  }
+}
+
 export async function verifyPlatformProof(
   routePlatform: string,
   input: unknown,
@@ -97,29 +142,5 @@ export async function verifyPlatformProof(
     );
   }
 
-  try {
-    const issuance = claimIssuanceResultSchema.parse(
-      await dependencies.issueClaim(request.data.subject, verified),
-    );
-    return {
-      status: 201,
-      body: {
-        ok: true,
-        version: VERIFICATION_API_VERSION,
-        platform: routePlatform,
-        subject: request.data.subject,
-        claim: verified,
-        issuance,
-      },
-    };
-  } catch (error) {
-    if (error instanceof IssuerConfigurationError) {
-      return errorResult(
-        503,
-        "issuer_unavailable",
-        "The claim issuer is not available. Try again later.",
-      );
-    }
-    return errorResult(502, "issuance_failed", "The claim could not be issued. Try again later.");
-  }
+  return issuePlatformClaim(routePlatform, request.data.subject, verified, dependencies.issueClaim);
 }

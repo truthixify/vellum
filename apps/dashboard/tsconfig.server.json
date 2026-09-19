@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": false,
+    "types": ["node", "bun-types"]
+  },
+  "include": ["api/**/*.ts", "server/**/*.ts"],
+  "exclude": ["**/*.test.ts"]
+}

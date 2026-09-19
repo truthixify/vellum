@@ -5,8 +5,9 @@ Claim Cell transactions. Platform adapters verify the external proof and return 
 payload. The service then uses `@vellum/sdk` to build the Claim Cell transaction, signs it with the
 current issuer DID controller, and submits it to CKB Testnet. There is no detached claim signature.
 
-The initial service exposes the common contract and dispatch boundary. GitHub, Discord, Telegram,
-and Bluesky return a typed `501` response until their verification adapters are implemented.
+GitHub uses an OAuth-specific route because an authorization code must never pass through the
+generic proof endpoint. Discord, Telegram, and Bluesky still return a typed `501` response until
+their verification adapters are implemented.
 
 ## Endpoints
 
@@ -14,12 +15,50 @@ and Bluesky return a typed `501` response until their verification adapters are 
 deployment, payer, and submission mode. Consumers can resolve the DID on CKB Testnet and compare its
 live controller lock with this metadata.
 
-`POST /api/verify/:platform` accepts at most 16 KiB of `application/json`:
+`POST /api/verify/github/start` accepts a selected `did:ckb` subject:
 
 ```json
 {
   "version": "1",
-  "platform": "github",
+  "subject": {
+    "did": "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp"
+  }
+}
+```
+
+The response contains a GitHub authorization URL. It also sets an `HttpOnly`, `SameSite=Lax`
+cookie that binds the subject to a random state value for five minutes. The dashboard only offers
+Testnet identities indexed under the connected wallet. The API validates the selected DID and the
+state binding, and uses S256 PKCE for the authorization-code exchange. It does not introduce a
+separate wallet-signature challenge.
+
+GitHub returns to `GET /api/verify/github/callback`. The callback validates the state, clears its
+cookie, exchanges the one-time authorization code, and reads the authenticated account without
+requesting an OAuth scope. A token carrying any non-empty scope is rejected. The callback revokes
+the OAuth credential before invoking claim issuance. A successful callback redirects to
+`/verify/github` with only the public subject DID, transaction hash, Claim ID, output index, and
+GitHub login. OAuth codes and tokens are never returned to the browser or stored in the claim.
+
+The claim uses schema `vellum.social.github.v1` with hash
+`0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` and the exact payload:
+
+```json
+{
+  "user_id": 5830913,
+  "login": "example",
+  "profile_url": "https://github.com/example",
+  "account_created_at": 1650000000,
+  "verified_at": 1800000000
+}
+```
+
+`POST /api/verify/:platform` is the common boundary for non-OAuth adapters and accepts at most 16
+KiB of `application/json`:
+
+```json
+{
+  "version": "1",
+  "platform": "discord",
   "subject": {
     "did": "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp"
   },
@@ -29,36 +68,8 @@ live controller lock with this metadata.
 
 `subject` may instead contain a complete CKB `lock` object with `codeHash`, `hashType`, and `args`.
 The path and body platform must match. Unknown fields, malformed CKB values, non-JSON proof values,
-and invalid timestamps are rejected before verification or issuance.
-
-A successful platform adapter returns a schema identity, canonical JSON payload, and explicit
-issuance time. The service response binds that typed claim to the subject and includes the submitted
-transaction hash, Claim ID, and output index:
-
-```json
-{
-  "ok": true,
-  "version": "1",
-  "platform": "github",
-  "subject": { "did": "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp" },
-  "claim": {
-    "schema": {
-      "id": "vellum.social.github.v1",
-      "hash": "0x0000000000000000000000000000000000000000000000000000000000000000"
-    },
-    "payload": { "login": "example" },
-    "issuedAt": 1700000000
-  },
-  "issuance": {
-    "status": "submitted",
-    "network": "ckb_testnet",
-    "payer": "issuer",
-    "transactionHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "claimId": "0x0000000000000000000000000000000000000000000000000000000000000000",
-    "outputIndex": 0
-  }
-}
-```
+and invalid timestamps are rejected before verification or issuance. Direct GitHub requests are
+rejected and must use the OAuth start route.
 
 Errors always use the same envelope:
 
@@ -67,11 +78,14 @@ Errors always use the same envelope:
   "ok": false,
   "version": "1",
   "error": {
-    "code": "not_implemented",
-    "message": "github verification is not available yet."
+    "code": "oauth_configuration_error",
+    "message": "GitHub verification is not configured. Try again later."
   }
 }
 ```
+
+Callback failures redirect to `/verify/github?status=error&code=...`. Rate-limit responses also
+include a public `retryAt` Unix timestamp so the dashboard can show when another attempt is useful.
 
 ## Configuration
 
@@ -80,6 +94,11 @@ The Vercel dashboard project needs these environment variables:
 - `VELLUM_ISSUER_PRIVATE_KEY`: the current issuer controller credential. It must be stored as an
   encrypted server-side variable and must never use a `VITE_` prefix.
 - `CKB_RPC_URL`: optional CKB Testnet RPC endpoint. It defaults to `https://testnet.ckbapp.dev`.
+- `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`: credentials for a dedicated GitHub OAuth app.
+- `GITHUB_OAUTH_CALLBACK_URL`: the exact callback URL ending in
+  `/api/verify/github/callback`. HTTPS is required outside loopback development.
+- `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
+  the short-lived OAuth state cookie and derive its PKCE verifier.
 
 The repository's `.env.example` intentionally leaves the credential blank. Local credentials belong
 in an ignored `.env.local` file. The service refuses issuance when the credential is absent,
@@ -88,8 +107,8 @@ malformed, or does not derive the controller public key, address, lock, and lock
 credential errors.
 
 The issuer pays Claim Cell capacity and transaction fees, and the service submits the transaction.
-Platform adapters must complete proof verification before calling the issuer. Tests replace the
-issuer adapter and never broadcast transactions.
+Platform adapters must complete proof verification and credential cleanup before calling the
+issuer. Tests replace the issuer adapter and never broadcast transactions.
 
 ## Controller rotation
 

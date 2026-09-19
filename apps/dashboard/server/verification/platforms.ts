@@ -1,5 +1,5 @@
-import type { VerificationPlatform, VerificationRequest, VerifiedClaim } from "./contracts";
-import { VerificationServiceError } from "./errors";
+import type { VerificationPlatform, VerificationRequest, VerifiedClaim } from "./contracts.js";
+import { VerificationServiceError } from "./errors.js";
 
 export type PlatformVerifier = (request: VerificationRequest) => Promise<VerifiedClaim>;
 
@@ -16,7 +16,13 @@ function unavailable(platform: VerificationPlatform): PlatformVerifier {
 }
 
 export const platformVerifiers: PlatformVerifierRegistry = {
-  github: unavailable("github"),
+  github: async () => {
+    throw new VerificationServiceError(
+      "invalid_request",
+      400,
+      "Start GitHub verification through the OAuth endpoint.",
+    );
+  },
   discord: unavailable("discord"),
   telegram: unavailable("telegram"),
   bluesky: unavailable("bluesky"),

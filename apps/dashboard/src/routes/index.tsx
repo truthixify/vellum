@@ -132,7 +132,7 @@ function Overview() {
           <dl className="coverage-table">
             <div>
               <dt>Verified account links</dt>
-              <dd className="positive">2</dd>
+              <dd className="positive">1</dd>
             </div>
             <div>
               <dt>Self-declared links</dt>
@@ -298,30 +298,45 @@ function ClaimsTable({ verifiedOnly, reverse }: { verifiedOnly: boolean; reverse
 
 function AccountsTable() {
   const rows = [
-    ["GitHub \u00b7 @rmaddox", "Signed gist proof", "Verified"],
-    ["ckb1qzda\u20264mns9f0", "Signature control proof", "Controller"],
-    ["CKBoost \u00b7 rae.boost", "Profile link only", "Self-declared"],
-  ];
+    {
+      name: "GitHub",
+      method: "OAuth account claim",
+      state: "Available",
+      action: "View status",
+      to: "/verify/github",
+      added: "Check live claim",
+    },
+    {
+      name: "ckb1qzda\u20264mns9f0",
+      method: "Signature control proof",
+      state: "Controller",
+      action: "Inspect",
+      to: "/resolve",
+      added: "Added 2026-02-11",
+    },
+    {
+      name: "CKBoost \u00b7 rae.boost",
+      method: "Profile link only",
+      state: "Self-declared",
+      action: "Verify",
+      to: "/my",
+      added: "Added 2026-02-11",
+    },
+  ] as const;
   return (
     <div className="dashboard-data-table dashboard-data-table--accounts">
-      {rows.map(([name, method, state]) => (
-        <div className="dashboard-data-table__row" key={name}>
+      {rows.map((row) => (
+        <div className="dashboard-data-table__row" key={row.name}>
           <span>
-            <strong>{name}</strong>
-            <small>{method}</small>
+            <strong>{row.name}</strong>
+            <small>{row.method}</small>
           </span>
-          <span className="muted">Added 2026-02-11</span>
-          <StatusMark
-            tone={state === "Verified" ? "positive" : "neutral"}
-            icon={state === "Verified"}
-          >
-            {state}
+          <span className="muted">{row.added}</span>
+          <StatusMark tone={row.state === "Available" ? "info" : "neutral"} icon={false}>
+            {row.state}
           </StatusMark>
-          <Link
-            className="v-button v-button--quiet"
-            to={state === "Self-declared" ? "/my" : "/resolve"}
-          >
-            {state === "Self-declared" ? "Verify" : "Inspect"}
+          <Link className="v-button v-button--quiet" to={row.to}>
+            {row.action}
           </Link>
         </div>
       ))}

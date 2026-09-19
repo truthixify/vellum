@@ -99,7 +99,7 @@ describe("verification service", () => {
     expect(verifier).not.toHaveBeenCalled();
   });
 
-  test("returns a stable placeholder without invoking issuance", async () => {
+  test("requires GitHub verification to use the OAuth endpoint", async () => {
     const issuer = mock(async () => issuance);
     const result = await verifyPlatformProof("github", request, {
       verifiers: platformVerifiers,
@@ -107,13 +107,13 @@ describe("verification service", () => {
     });
 
     expect(result).toEqual({
-      status: 501,
+      status: 400,
       body: {
         ok: false,
         version: "1",
         error: {
-          code: "not_implemented",
-          message: "github verification is not available yet.",
+          code: "invalid_request",
+          message: "Start GitHub verification through the OAuth endpoint.",
         },
       },
     });

@@ -2,17 +2,17 @@ import {
   VERIFICATION_API_VERSION,
   isVerificationPlatform,
   type VerificationErrorCode,
-} from "./contracts";
-import { issuerMetadata } from "./issuer";
+} from "./contracts.js";
+import { issuerMetadata } from "./issuer.js";
 import {
   verifyPlatformProof,
   type VerificationServiceDependencies,
   type VerificationServiceResult,
-} from "./service";
+} from "./service.js";
 
-const MAX_REQUEST_BYTES = 16_384;
+export const MAX_REQUEST_BYTES = 16_384;
 
-class RequestBodyError extends Error {
+export class RequestBodyError extends Error {
   constructor(
     readonly status: number,
     message: string,
@@ -21,7 +21,7 @@ class RequestBodyError extends Error {
   }
 }
 
-function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
+export function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Response {
   return Response.json(body, {
     status,
     headers: {
@@ -77,7 +77,7 @@ async function readBody(request: Request): Promise<string> {
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-async function parseJsonBody(request: Request): Promise<unknown> {
+export async function parseJsonBody(request: Request): Promise<unknown> {
   const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
   if (contentType !== "application/json") {
     throw new RequestBodyError(415, "The request must use application/json.");

@@ -54,7 +54,7 @@ const jsonObjectSchema = z.custom<JsonObject>(isJsonObject, {
   message: "Expected a JSON object",
 });
 
-const didCkbSchema = z.string().superRefine((value, context) => {
+export const didCkbSchema = z.string().superRefine((value, context) => {
   try {
     const args = didToArgs(value);
     if (!value.startsWith("did:ckb:") || ccc.bytesFrom(args).length !== 20) {
@@ -77,6 +77,15 @@ export const verificationSubjectSchema = z.union([
   z.object({ did: didCkbSchema }).strict(),
   z.object({ lock: ckbScriptSchema }).strict(),
 ]);
+
+export const didVerificationSubjectSchema = z.object({ did: didCkbSchema }).strict();
+
+export const githubOAuthStartRequestSchema = z
+  .object({
+    version: z.literal(VERIFICATION_API_VERSION),
+    subject: didVerificationSubjectSchema,
+  })
+  .strict();
 
 export const verificationRequestSchema = z
   .object({
@@ -129,6 +138,8 @@ export const claimIssuanceResultSchema = z
 
 export type CkbScript = z.infer<typeof ckbScriptSchema>;
 export type VerificationSubject = z.infer<typeof verificationSubjectSchema>;
+export type DidVerificationSubject = z.infer<typeof didVerificationSubjectSchema>;
+export type GithubOAuthStartRequest = z.infer<typeof githubOAuthStartRequestSchema>;
 export type VerificationRequest = z.infer<typeof verificationRequestSchema>;
 export type VerifiedClaim = z.infer<typeof verifiedClaimSchema>;
 
@@ -148,6 +159,12 @@ export type VerificationErrorCode =
   | "method_not_allowed"
   | "unsupported_platform"
   | "not_implemented"
+  | "oauth_configuration_error"
+  | "oauth_denied"
+  | "oauth_state_invalid"
+  | "provider_rate_limited"
+  | "provider_unavailable"
+  | "credential_revocation_failed"
   | "verification_failed"
   | "issuer_unavailable"
   | "issuance_failed";

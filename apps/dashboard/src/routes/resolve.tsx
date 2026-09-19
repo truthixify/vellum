@@ -56,8 +56,8 @@ function ResolvePage() {
 
   return (
     <div className="dashboard-verify-page">
-      <h1>Verify an identity</h1>
-      <p>Read any Vellum record and inspect its DID document before relying on the identity.</p>
+      <h1>Resolve an identity</h1>
+      <p>Look up any did:ckb identifier and inspect its current document on CKB Testnet.</p>
 
       <form onSubmit={handleResolve} className="dashboard-verify-form">
         <label htmlFor="dashboard-did-input">Identifier</label>
