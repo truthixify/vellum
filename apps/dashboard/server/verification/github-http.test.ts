@@ -24,7 +24,11 @@ const ISSUANCE: ClaimIssuanceResult = {
 
 function providerFetch() {
   const responses = [
-    Response.json({ access_token: "provider-token-for-tests-only", token_type: "bearer" }),
+    Response.json({
+      access_token: "provider-token-for-tests-only",
+      scope: "",
+      token_type: "bearer",
+    }),
     Response.json({
       login: "truthixify",
       id: 5_830_913,
@@ -73,8 +77,10 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("set-cookie")).toContain("Max-Age=300");
-    expect(authorization.searchParams.get("scope")).toBe("read:user");
+    expect(authorization.searchParams.has("scope")).toBe(false);
     expect(authorization.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(authorization.searchParams.get("code_challenge")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(authorization.searchParams.get("code_challenge_method")).toBe("S256");
   });
 
   test("completes OAuth, revokes credentials, and redirects with public issuance references", async () => {
@@ -125,7 +131,11 @@ describe("GitHub OAuth HTTP boundary", () => {
 
   test("does not issue twice when the same callback is replayed", async () => {
     const responses = [
-      Response.json({ access_token: "provider-token-for-tests-only", token_type: "bearer" }),
+      Response.json({
+        access_token: "provider-token-for-tests-only",
+        scope: "",
+        token_type: "bearer",
+      }),
       Response.json({
         login: "truthixify",
         id: 5_830_913,

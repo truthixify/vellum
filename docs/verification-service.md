@@ -29,14 +29,15 @@ live controller lock with this metadata.
 The response contains a GitHub authorization URL. It also sets an `HttpOnly`, `SameSite=Lax`
 cookie that binds the subject to a random state value for five minutes. The dashboard only offers
 Testnet identities indexed under the connected wallet. The API validates the selected DID and the
-state binding, but does not introduce a separate wallet-signature challenge.
+state binding, and uses S256 PKCE for the authorization-code exchange. It does not introduce a
+separate wallet-signature challenge.
 
 GitHub returns to `GET /api/verify/github/callback`. The callback validates the state, clears its
-cookie, exchanges the one-time authorization code, reads the authenticated account with the
-`read:user` scope, and revokes the OAuth credential before invoking claim issuance. A successful
-callback redirects to `/verify/github` with only the public subject DID, transaction hash, Claim ID,
-output index, and GitHub login. OAuth codes and tokens are never returned to the browser or stored
-in the claim.
+cookie, exchanges the one-time authorization code, and reads the authenticated account without
+requesting an OAuth scope. A token carrying any non-empty scope is rejected. The callback revokes
+the OAuth credential before invoking claim issuance. A successful callback redirects to
+`/verify/github` with only the public subject DID, transaction hash, Claim ID, output index, and
+GitHub login. OAuth codes and tokens are never returned to the browser or stored in the claim.
 
 The claim uses schema `vellum.social.github.v1` with hash
 `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` and the exact payload:
@@ -97,7 +98,7 @@ The Vercel dashboard project needs these environment variables:
 - `GITHUB_OAUTH_CALLBACK_URL`: the exact callback URL ending in
   `/api/verify/github/callback`. HTTPS is required outside loopback development.
 - `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
-  the short-lived OAuth state cookie.
+  the short-lived OAuth state cookie and derive its PKCE verifier.
 
 The repository's `.env.example` intentionally leaves the credential blank. Local credentials belong
 in an ignored `.env.local` file. The service refuses issuance when the credential is absent,

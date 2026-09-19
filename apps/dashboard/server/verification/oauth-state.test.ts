@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 
 import { GithubOAuthError, OAuthConfigurationError } from "./errors";
 import {
@@ -26,9 +27,17 @@ describe("GitHub OAuth state", () => {
     expect(created.cookie).toContain("HttpOnly");
     expect(created.cookie).toContain("SameSite=Lax");
     expect(created.cookie).toContain("Secure");
-    expect(
-      consumeGithubOAuthState(requestCookie(created.cookie), created.state, SECRET, NOW + 1),
-    ).toEqual(SUBJECT);
+    const consumed = consumeGithubOAuthState(
+      requestCookie(created.cookie),
+      created.state,
+      SECRET,
+      NOW + 1,
+    );
+    expect(consumed.subject).toEqual(SUBJECT);
+    expect(consumed.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(created.codeChallenge).toBe(
+      createHash("sha256").update(consumed.codeVerifier, "ascii").digest("base64url"),
+    );
   });
 
   test("rejects missing, duplicated, tampered, mismatched, and expired state", () => {

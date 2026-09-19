@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { didVerificationSubjectSchema, type DidVerificationSubject } from "./contracts";
 import { OAuthConfigurationError, GithubOAuthError } from "./errors";
@@ -13,9 +13,15 @@ type OAuthStatePayload = {
 };
 
 export type CreatedOAuthState = {
+  codeChallenge: string;
   cookie: string;
   expiresAt: number;
   state: string;
+};
+
+export type ConsumedOAuthState = {
+  codeVerifier: string;
+  subject: DidVerificationSubject;
 };
 
 function stateSecret(value: string | undefined): string {
@@ -27,6 +33,14 @@ function stateSecret(value: string | undefined): string {
 
 function signature(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+function codeVerifier(nonce: string, secret: string): string {
+  return createHmac("sha256", secret).update(`github-pkce:${nonce}`).digest("base64url");
+}
+
+function codeChallenge(verifier: string): string {
+  return createHash("sha256").update(verifier, "ascii").digest("base64url");
 }
 
 function cookieAttributes(maxAge: number, secure: boolean): string {
@@ -91,8 +105,10 @@ export function createGithubOAuthState(
   const payload: OAuthStatePayload = { issuedAt: now, nonce, subject: parsedSubject };
   const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   const value = `${encodedPayload}.${signature(encodedPayload, secret)}`;
+  const verifier = codeVerifier(nonce, secret);
 
   return {
+    codeChallenge: codeChallenge(verifier),
     state: nonce,
     expiresAt: now + GITHUB_OAUTH_STATE_TTL_SECONDS,
     cookie: `${GITHUB_OAUTH_COOKIE_NAME}=${value}; ${cookieAttributes(
@@ -107,7 +123,7 @@ export function consumeGithubOAuthState(
   queryState: string,
   secretValue: string | undefined,
   now: number,
-): DidVerificationSubject {
+): ConsumedOAuthState {
   const secret = stateSecret(secretValue);
   const value = cookieValue(cookieHeader);
   const parts = value?.split(".");
@@ -172,7 +188,10 @@ export function consumeGithubOAuthState(
     );
   }
 
-  return subject.data;
+  return {
+    codeVerifier: codeVerifier(candidate.nonce, secret),
+    subject: subject.data,
+  };
 }
 
 export function clearGithubOAuthCookie(secure: boolean): string {

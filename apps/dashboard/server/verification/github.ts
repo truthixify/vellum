@@ -43,6 +43,7 @@ const defaultDependencies: GithubVerifierDependencies = {
 type GithubCredentials = {
   accessToken: string;
   hasRefreshToken: boolean;
+  hasUnexpectedScopes: boolean;
   valid: boolean;
 };
 
@@ -109,12 +110,17 @@ export function githubOAuthConfig(
   return { callbackUrl, clientId, clientSecret, stateSecret };
 }
 
-export function githubAuthorizationUrl(config: GithubOAuthConfig, state: string): string {
+export function githubAuthorizationUrl(
+  config: GithubOAuthConfig,
+  state: string,
+  codeChallenge: string,
+): string {
   const url = new URL(GITHUB_AUTHORIZE_URL);
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.callbackUrl.toString());
-  url.searchParams.set("scope", "read:user");
   url.searchParams.set("state", state);
+  url.searchParams.set("code_challenge", codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
   return url.toString();
 }
 
@@ -186,6 +192,7 @@ async function jsonBody(response: Response): Promise<Record<string, unknown>> {
 
 async function exchangeGithubCode(
   code: string,
+  codeVerifier: string,
   config: GithubOAuthConfig,
   dependencies: GithubVerifierDependencies,
 ): Promise<GithubCredentials> {
@@ -193,6 +200,7 @@ async function exchangeGithubCode(
     client_id: config.clientId,
     client_secret: config.clientSecret,
     code,
+    code_verifier: codeVerifier,
     redirect_uri: config.callbackUrl.toString(),
   });
   const response = await providerFetch(dependencies.fetch, GITHUB_ACCESS_TOKEN_URL, {
@@ -219,11 +227,14 @@ async function exchangeGithubCode(
     );
   }
 
+  const hasUnexpectedScopes = value.scope !== "";
   return {
     accessToken: value.access_token,
     hasRefreshToken: typeof value.refresh_token === "string" && value.refresh_token.length > 0,
+    hasUnexpectedScopes,
     valid:
       typeof value.error !== "string" &&
+      !hasUnexpectedScopes &&
       typeof value.token_type === "string" &&
       value.token_type.toLowerCase() === "bearer",
   };
@@ -308,6 +319,7 @@ async function revokeGithubCredentials(
 
 export async function verifyGithubAuthorization(
   code: string,
+  codeVerifier: string,
   config: GithubOAuthConfig,
   dependencies: GithubVerifierDependencies = defaultDependencies,
 ): Promise<VerifiedClaim> {
@@ -317,9 +329,16 @@ export async function verifyGithubAuthorization(
   let verifiedAt: number;
 
   try {
-    const credentials = await exchangeGithubCode(code, config, dependencies);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(codeVerifier)) {
+      throw new GithubOAuthError(
+        "oauth_state_invalid",
+        400,
+        "The GitHub verification session is invalid.",
+      );
+    }
+    const credentials = await exchangeGithubCode(code, codeVerifier, config, dependencies);
     accessToken = credentials.accessToken;
-    revokeGrant = credentials.hasRefreshToken;
+    revokeGrant = credentials.hasRefreshToken || credentials.hasUnexpectedScopes;
     if (!credentials.valid) {
       throw new GithubOAuthError(
         "provider_unavailable",

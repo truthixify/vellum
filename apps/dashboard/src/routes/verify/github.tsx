@@ -539,7 +539,7 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
       <dl>
         <div>
           <dt>GitHub access</dt>
-          <dd>read:user</dd>
+          <dd>Public profile only</dd>
         </div>
         <div>
           <dt>Claim fields</dt>

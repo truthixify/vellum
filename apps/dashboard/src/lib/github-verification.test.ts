@@ -12,6 +12,7 @@ const DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 const TX_HASH = `0x${"11".repeat(32)}` as `0x${string}`;
 const CLAIM_ID = `0x${"22".repeat(32)}` as `0x${string}`;
 const STATE = "A".repeat(43);
+const CODE_CHALLENGE = "C".repeat(43);
 const NOW = 1_800_000_000;
 
 describe("GitHub verification client contract", () => {
@@ -58,7 +59,7 @@ describe("GitHub verification client contract", () => {
         ok: true,
         version: "1",
         platform: "github",
-        authorizationUrl: `https://github.com/login/oauth/authorize?scope=read%3Auser&state=${STATE}`,
+        authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
         expiresAt: NOW + 300,
       }),
     );
@@ -77,7 +78,7 @@ describe("GitHub verification client contract", () => {
         ok: true,
         version: "1",
         platform: "github",
-        authorizationUrl: `https://example.com/login/oauth/authorize?scope=read%3Auser&state=${STATE}`,
+        authorizationUrl: `https://example.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
         expiresAt: NOW + 300,
       }),
     );
@@ -90,7 +91,7 @@ describe("GitHub verification client contract", () => {
         ok: true,
         version: "1",
         platform: "github",
-        authorizationUrl: `https://github.com/login/oauth/authorize?scope=read%3Auser&state=${STATE}&state=${STATE}`,
+        authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
         expiresAt: NOW + 300,
       }),
     );

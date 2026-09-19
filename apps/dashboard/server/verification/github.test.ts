@@ -11,6 +11,8 @@ import {
 
 const NOW = 1_800_000_000;
 const ACCESS_TOKEN = "provider-token-for-tests-only";
+const CODE_VERIFIER = "V".repeat(43);
+const CODE_CHALLENGE = "C".repeat(43);
 const ENVIRONMENT = {
   GITHUB_CLIENT_ID: "client-id-for-tests",
   GITHUB_CLIENT_SECRET: "client-secret-for-tests-only",
@@ -27,7 +29,7 @@ function sequence(...responses: Response[]) {
 }
 
 function tokenResponse(extra: Record<string, unknown> = {}): Response {
-  return Response.json({ access_token: ACCESS_TOKEN, token_type: "bearer", ...extra });
+  return Response.json({ access_token: ACCESS_TOKEN, scope: "", token_type: "bearer", ...extra });
 }
 
 function userResponse(overrides: Record<string, unknown> = {}): Response {
@@ -41,12 +43,14 @@ function userResponse(overrides: Record<string, unknown> = {}): Response {
 }
 
 describe("GitHub OAuth verifier", () => {
-  test("validates configuration and requests only read:user", () => {
+  test("validates configuration and requests no profile scopes", () => {
     const config = githubOAuthConfig(ENVIRONMENT);
-    const url = new URL(githubAuthorizationUrl(config, "state-value"));
+    const url = new URL(githubAuthorizationUrl(config, "state-value", CODE_CHALLENGE));
 
     expect(url.origin + url.pathname).toBe("https://github.com/login/oauth/authorize");
-    expect(url.searchParams.get("scope")).toBe("read:user");
+    expect(url.searchParams.has("scope")).toBe(false);
+    expect(url.searchParams.get("code_challenge")).toBe(CODE_CHALLENGE);
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
     expect(url.searchParams.get("redirect_uri")).toBe(ENVIRONMENT.GITHUB_OAUTH_CALLBACK_URL);
     expect(() => githubOAuthConfig({ ...ENVIRONMENT, GITHUB_CLIENT_SECRET: "short" })).toThrow(
       OAuthConfigurationError,
@@ -61,10 +65,15 @@ describe("GitHub OAuth verifier", () => {
 
   test("fetches the authenticated account, revokes the token, and returns the canonical claim", async () => {
     const fetch = sequence(tokenResponse(), userResponse(), new Response(null, { status: 204 }));
-    const claim = await verifyGithubAuthorization("one-time-code", githubOAuthConfig(ENVIRONMENT), {
-      fetch,
-      now: () => NOW,
-    });
+    const claim = await verifyGithubAuthorization(
+      "one-time-code",
+      CODE_VERIFIER,
+      githubOAuthConfig(ENVIRONMENT),
+      {
+        fetch,
+        now: () => NOW,
+      },
+    );
 
     expect(claim).toEqual({
       schema: {
@@ -84,6 +93,7 @@ describe("GitHub OAuth verifier", () => {
 
     const calls = fetch.mock.calls;
     expect(String(calls[0][0])).toBe("https://github.com/login/oauth/access_token");
+    expect(String(calls[0][1]?.body)).toContain(`code_verifier=${CODE_VERIFIER}`);
     expect(String(calls[1][0])).toBe("https://api.github.com/user");
     expect(String(calls[2][0])).toContain("/applications/client-id-for-tests/token");
     expect((calls[1][1]?.headers as Record<string, string>).authorization).toBe(
@@ -104,10 +114,15 @@ describe("GitHub OAuth verifier", () => {
     );
 
     try {
-      await verifyGithubAuthorization("one-time-code", githubOAuthConfig(ENVIRONMENT), {
-        fetch,
-        now: () => NOW,
-      });
+      await verifyGithubAuthorization(
+        "one-time-code",
+        CODE_VERIFIER,
+        githubOAuthConfig(ENVIRONMENT),
+        {
+          fetch,
+          now: () => NOW,
+        },
+      );
       throw new Error("Expected verification to fail");
     } catch (error) {
       expect(error).toBeInstanceOf(GithubOAuthError);
@@ -122,7 +137,7 @@ describe("GitHub OAuth verifier", () => {
     const fetch = sequence(tokenResponse(), userResponse(), new Response(null, { status: 500 }));
 
     await expect(
-      verifyGithubAuthorization("one-time-code", githubOAuthConfig(ENVIRONMENT), {
+      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
         fetch,
         now: () => NOW,
       }),
@@ -136,7 +151,7 @@ describe("GitHub OAuth verifier", () => {
     );
 
     await expect(
-      verifyGithubAuthorization("one-time-code", githubOAuthConfig(ENVIRONMENT), {
+      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
         fetch,
         now: () => NOW,
       }),
@@ -152,11 +167,32 @@ describe("GitHub OAuth verifier", () => {
       new Response(null, { status: 204 }),
     );
 
-    await verifyGithubAuthorization("one-time-code", githubOAuthConfig(ENVIRONMENT), {
-      fetch,
-      now: () => NOW,
-    });
+    await verifyGithubAuthorization(
+      "one-time-code",
+      CODE_VERIFIER,
+      githubOAuthConfig(ENVIRONMENT),
+      {
+        fetch,
+        now: () => NOW,
+      },
+    );
 
     expect(String(fetch.mock.calls[2][0])).toContain("/grant");
+  });
+
+  test("rejects and revokes a token with broader scopes", async () => {
+    const fetch = sequence(
+      tokenResponse({ scope: "read:user" }),
+      new Response(null, { status: 204 }),
+    );
+
+    await expect(
+      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
+        fetch,
+        now: () => NOW,
+      }),
+    ).rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(String(fetch.mock.calls[1][0])).toContain("/applications/client-id-for-tests/grant");
   });
 });

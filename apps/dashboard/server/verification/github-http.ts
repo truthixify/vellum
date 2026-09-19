@@ -151,7 +151,7 @@ async function handleStart(
       ok: true,
       version: VERIFICATION_API_VERSION,
       platform: "github",
-      authorizationUrl: githubAuthorizationUrl(config, state.state),
+      authorizationUrl: githubAuthorizationUrl(config, state.state, state.codeChallenge),
       expiresAt: state.expiresAt,
     },
     200,
@@ -194,7 +194,7 @@ async function handleCallback(
         "The GitHub verification session is invalid.",
       );
     }
-    const subject = consumeGithubOAuthState(
+    const oauthState = consumeGithubOAuthState(
       request.headers.get("cookie"),
       queryState,
       config.stateSecret,
@@ -221,11 +221,16 @@ async function handleCallback(
       );
     }
 
-    const claim = await verifyGithubAuthorization(code, config, {
+    const claim = await verifyGithubAuthorization(code, oauthState.codeVerifier, config, {
       fetch: dependencies.fetch,
       now: dependencies.now,
     });
-    const issued = await issuePlatformClaim("github", subject, claim, dependencies.issueClaim);
+    const issued = await issuePlatformClaim(
+      "github",
+      oauthState.subject,
+      claim,
+      dependencies.issueClaim,
+    );
     if (!issued.body.ok) {
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
@@ -236,7 +241,7 @@ async function handleCallback(
     const login = claim.payload.login;
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "submitted",
-      subject: subject.did,
+      subject: oauthState.subject.did,
       transaction: issued.body.issuance.transactionHash,
       claim: issued.body.issuance.claimId,
       output: issued.body.issuance.outputIndex,

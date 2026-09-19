@@ -178,14 +178,19 @@ function parseAuthorizationResponse(value: unknown, now: number): string {
   }
   const states = url.searchParams.getAll("state");
   const scopes = url.searchParams.getAll("scope");
+  const codeChallenges = url.searchParams.getAll("code_challenge");
+  const codeChallengeMethods = url.searchParams.getAll("code_challenge_method");
   if (
     `${url.origin}${url.pathname}` !== GITHUB_AUTHORIZE_URL ||
     url.username ||
     url.password ||
     states.length !== 1 ||
     !/^[A-Za-z0-9_-]{43}$/.test(states[0]) ||
-    scopes.length !== 1 ||
-    scopes[0] !== "read:user"
+    scopes.length !== 0 ||
+    codeChallenges.length !== 1 ||
+    !/^[A-Za-z0-9_-]{43}$/.test(codeChallenges[0]) ||
+    codeChallengeMethods.length !== 1 ||
+    codeChallengeMethods[0] !== "S256"
   ) {
     throw new GithubVerificationRequestError("verification_failed");
   }
