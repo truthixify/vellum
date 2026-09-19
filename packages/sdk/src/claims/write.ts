@@ -1,7 +1,7 @@
 import { ccc } from "@ckb-ccc/core";
 import { didToArgs } from "@ckb-ccc/did-ckb";
 
-import { ClaimData, decodeClaimDataRaw } from "./codec";
+import { ClaimData, decodeClaimDataRaw } from "./codec.js";
 import type {
   ClaimIssuerSource,
   ClaimScriptConfigLike,
@@ -9,7 +9,7 @@ import type {
   WriteClaimInput,
   WriteClaimProps,
   WriteClaimResult,
-} from "./types";
+} from "./types.js";
 
 const CLAIM_TYPE_ARGS_LENGTH = 65;
 const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
@@ -793,6 +793,12 @@ async function assertIdentityState(
   return { issuer: selectedIssuer, controllerInputIndex };
 }
 
+/**
+ * Builds and balances an unsigned Claim Cell transaction.
+ *
+ * The caller remains responsible for inspecting, signing, and broadcasting the returned
+ * transaction.
+ */
 export async function writeClaim<TPayload = unknown>(
   props: WriteClaimProps<TPayload>,
 ): Promise<WriteClaimResult> {

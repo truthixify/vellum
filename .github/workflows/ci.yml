@@ -64,6 +64,9 @@ jobs:
       - name: Build
         run: bun run build
 
+      - name: Verify SDK package
+        run: bun run --cwd packages/sdk verify:package
+
   rust-contracts:
     name: Claim Cell contracts
     runs-on: ubuntu-latest

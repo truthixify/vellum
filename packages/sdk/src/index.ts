@@ -1,6 +1,6 @@
-export { ClaimData, ClaimDataV1 } from "./claims/codec";
-export { parseClaimPayload, readClaims } from "./claims/read";
-export { writeClaim } from "./claims/write";
+export { ClaimData, ClaimDataV1 } from "./claims/codec.js";
+export { parseClaimPayload, readClaims } from "./claims/read.js";
+export { writeClaim } from "./claims/write.js";
 export type {
   Claim,
   ClaimDataLike,
@@ -19,4 +19,4 @@ export type {
   WriteClaimInput,
   WriteClaimProps,
   WriteClaimResult,
-} from "./claims/types";
+} from "./claims/types.js";

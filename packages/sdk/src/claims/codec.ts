@@ -1,7 +1,7 @@
 import { ccc } from "@ckb-ccc/core";
 import { decode as decodeDagCbor, encode as encodeDagCbor } from "@ipld/dag-cbor";
 
-import type { ClaimDataLike, ClaimDataV1Like } from "./types";
+import type { ClaimDataLike, ClaimDataV1Like } from "./types.js";
 
 const Byte20 = ccc.Codec.from<ccc.HexLike, ccc.Hex>({
   byteLength: 20,
@@ -37,6 +37,7 @@ const ClaimDataV1Codec = ClaimDataV1RawCodec.map<ClaimDataV1Like, ClaimDataV1Lik
   }),
 });
 
+/** Molecule-backed entity for V1 Claim Cell data with a canonical DAG-CBOR payload. */
 @ccc.codec(ClaimDataV1Codec)
 export class ClaimDataV1 extends ccc.Entity.Base<ClaimDataV1Like, ClaimDataV1>() {
   constructor(
@@ -80,6 +81,7 @@ export type ClaimDataV1RawLike = {
   payload: ccc.HexLike;
 };
 
+/** Versioned Molecule entity for Claim Cell data. */
 @ccc.codec(ClaimDataCodec)
 export class ClaimData extends ccc.Entity.BaseUnion<
   typeof ClaimDataCodec,

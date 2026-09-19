@@ -46,24 +46,25 @@ without requiring those products to share one backend.
 
 ## What exists today
 
-| Part                | Status                          | What that means                                                                                                 |
-| ------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                          |
-| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                       |
-| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable. |
-| Reputation protocol | In implementation               | Claim Type and DID Lock are deployed on Testnet; SDK, schemas, scoring, and product integration remain.         |
-| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                 |
+| Part                | Status                          | What that means                                                                                                        |
+| ------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `did:ckb` identity  | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                                 |
+| Vellum website      | Live                            | The public site explains the project and includes a Testnet DID resolver.                                              |
+| Vellum dashboard    | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable.        |
+| Reputation protocol | In implementation               | Claim contracts are live on Testnet and the core SDK is implemented; schemas, scoring, and product integration remain. |
+| Reputation products | Design preview                  | The preview screens show the intended experience but are not connected to live reputation data.                        |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
-the identity operations used by Vellum. The Vellum SDK will build on those identity primitives so
-other CKB applications can read and write claims without depending on the Vellum interface.
+the identity operations used by Vellum. The Vellum SDK builds on those primitives with Claim Cell
+codecs, live reads, and unsigned transaction construction that other CKB applications can use
+without depending on the Vellum interface.
 
 ## What comes next
 
 The public roadmap moves from the primitive to real use:
 
-1. Add claim APIs to the shared SDK, publish the schemas, and build the first verifiable social
-   signals and scoring method on the deployed Testnet contracts.
+1. Publish the schemas and build the first verifiable social signals and scoring method on the
+   deployed Testnet contracts and Claim SDK.
 2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
    participation signal.
 3. Show how other projects can use the record through claim issuance tools and a small governance
@@ -198,6 +199,10 @@ Repository issues are grouped into GitHub milestones and tracked on the public
 [Vellum Reputation Extension project](https://github.com/users/truthixify/projects/2). Each issue is
 developed on a focused branch and delivered through one pull request. The milestones and Project
 board show the larger delivery picture.
+
+## License
+
+Vellum is available under the [MIT License](./LICENSE).
 
 ## References
 
