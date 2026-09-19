@@ -96,7 +96,7 @@ independently verifiable, and not tied to the application currently displaying i
 ├── docs/                            protocol and integration documentation
 └── packages/
     ├── claim-cell-script/          Rust Claim Type, DID Lock, and local VM tests
-    ├── schemas/                    placeholder for canonical claim schemas
+    ├── schemas/                    canonical claim manifests, hashes, and payload parsers
     ├── sdk/                        typed Claim Cell codecs and APIs
     └── ui/                         shared design tokens and React components
 ```
@@ -104,7 +104,7 @@ independently verifiable, and not tied to the application currently displaying i
 Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard uses TanStack
 Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
 The claim scripts are tested locally with `ckb-testtool` and deployed on CKB Testnet. The schema
-package is still a placeholder for the canonical manifests and reader-facing registry.
+package pins canonical manifests and validates payloads used by verification adapters and readers.
 
 ## Run locally
 
