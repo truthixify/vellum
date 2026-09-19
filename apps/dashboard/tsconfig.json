@@ -1,5 +1,12 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "server/**/*.ts",
+    "api/**/*.ts",
+    "vite.config.ts",
+    "eslint.config.js"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -9,6 +16,7 @@
 
     /* Bundler mode */
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
