@@ -4,6 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { StatusMark } from "@vellum/ui";
 import {
   AlertCircle,
+  ArrowLeft,
   Check,
   Clock3,
   ExternalLink,
@@ -55,10 +56,13 @@ function GithubVerificationPage() {
 
   return (
     <div className="github-verification-page">
+      <Link className="github-verification-back" to="/verify">
+        <ArrowLeft size={14} aria-hidden="true" /> Verification
+      </Link>
       <header className="github-verification-header">
         <div>
           <span className="github-verification-kicker">
-            <Github size={15} aria-hidden="true" /> Account verification
+            <Github size={15} aria-hidden="true" /> GitHub verification
           </span>
           <h1>Connect GitHub</h1>
           <p>Attach a verified GitHub account to a did:ckb identity you control.</p>
@@ -504,9 +508,9 @@ function ResultStatus({
       <span className="pulse-dot" aria-hidden="true" />
       <div>
         <StatusMark tone="info" icon={false}>
-          Transaction pending
+          Transaction submitted
         </StatusMark>
-        <p>Waiting for the issuer-submitted transaction to commit on CKB Testnet.</p>
+        <p>Vellum submitted the claim. Waiting for the transaction to commit on CKB Testnet.</p>
       </div>
     </div>
   );
@@ -546,12 +550,16 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
           <dd>User ID, login, profile URL, account age, verification time</dd>
         </div>
         <div>
-          <dt>Authorization</dt>
+          <dt>Claim issuer</dt>
           <dd>Vellum issuer DID</dd>
         </div>
         <div>
-          <dt>Capacity and fee</dt>
-          <dd>Paid by issuer</dd>
+          <dt>Submission</dt>
+          <dd>Automatic after verification</dd>
+        </div>
+        <div>
+          <dt>Network cost</dt>
+          <dd>Paid by Vellum</dd>
         </div>
         <div>
           <dt>OAuth credential</dt>
