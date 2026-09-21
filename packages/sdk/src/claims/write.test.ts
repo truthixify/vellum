@@ -714,7 +714,7 @@ describe("writeClaim funding and composition", () => {
     const { client } = fakeClient({ cells: [identity, funding], liveCells: [identity] });
     const signer = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
 
-    const result = await writeClaims({
+    const result = await writeClaims<unknown>({
       issuerSigner: signer,
       scripts: SCRIPTS,
       inputs: [
