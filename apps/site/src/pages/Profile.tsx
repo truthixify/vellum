@@ -12,7 +12,7 @@ export function Profile() {
           <a href="/resolve">Profiles</a>
           <span>/</span>
           <span className="mono">{DID}</span>
-          <PreviewBadge label="Deterministic example" />
+          <PreviewBadge label="Current policy example" />
         </div>
         <div className="profile-identity">
           <AvatarMark size="large">RM</AvatarMark>
@@ -21,7 +21,7 @@ export function Profile() {
             <div>
               <span className="mono">{DID}</span>
               <StatusMark tone="positive">Active identity</StatusMark>
-              <span>Example resolved 4 minutes ago</span>
+              <span>Illustrative Testnet identity</span>
             </div>
           </div>
           <div className="profile-identity__actions">
@@ -56,15 +56,15 @@ export function Profile() {
       <section className="profile-summary site-content">
         <div className="profile-score">
           <div className="section-heading-row">
-            <h2>Reputation index</h2>
-            <PreviewBadge />
+            <h2>Reputation score</h2>
+            <StatusMark tone="positive">Policy v1</StatusMark>
           </div>
           <div className="score-number">
-            <span>68</span>
-            <small>/ 100</small>
+            <span>200</span>
+            <small>/ 1000</small>
           </div>
-          <SignalRail value={68} max={100} height={10} label="Example index 68 of 100" />
-          <p>Proposed method v0.4.1 - 6 example claims from 3 issuers</p>
+          <SignalRail value={200} max={1000} height={10} label="Example score 200 of 1000" />
+          <p>vellum.reputation.v1 - 1 accepted GitHub claim</p>
           <a className="v-button v-button--secondary" href="/transparency">
             <Info size={14} />
             How this is calculated
@@ -73,10 +73,11 @@ export function Profile() {
         <div className="profile-categories">
           <h2>Categories</h2>
           {[
-            ["Contribution", "28", "40"],
-            ["Credentials", "22", "30"],
-            ["Account coverage", "12", "20"],
-            ["Longevity", "6", "10"],
+            ["Technical", "0", "300"],
+            ["Contribution", "0", "300"],
+            ["Community", "0", "200"],
+            ["Tenure", "100", "100"],
+            ["Recency", "100", "100"],
           ].map(([label, value, max]) => (
             <div className="category-row" key={label}>
               <span>
@@ -98,9 +99,9 @@ export function Profile() {
         <div className="profile-ledger__heading">
           <div>
             <h2>Evidence ledger</h2>
-            <p>Every example record keeps its source and issuer boundary visible.</p>
+            <p>Every accepted or excluded record keeps its source and issuer boundary visible.</p>
           </div>
-          <PreviewBadge label="Preview records" />
+          <PreviewBadge label="Policy example" />
         </div>
         <div className="claims-table">
           <div className="claims-table__head">
@@ -111,18 +112,11 @@ export function Profile() {
           </div>
           {[
             [
-              "Protocol contribution - 14 merged pull requests",
-              "CKBoost - listed",
-              "2026-06-02",
+              "GitHub account - @rmaddox",
+              "Vellum Testnet issuer",
+              "Example checkpoint",
               "Verified",
             ],
-            [
-              "Nervos Academy course completion",
-              "Nervos Academy - listed",
-              "2026-07-19",
-              "Verified",
-            ],
-            ["Peer review attestation", "0x3d1b... - unknown", "2026-08-21", "Neutral"],
           ].map(([claim, issuer, date, state]) => (
             <div className="claims-table__row" key={claim}>
               <strong>{claim}</strong>
@@ -141,22 +135,21 @@ export function Profile() {
       <section className="profile-record-band">
         <div className="site-content profile-record-grid">
           <div>
-            <h2>Eligible uses</h2>
+            <h2>Policy output</h2>
             <dl className="plain-rows">
               <div>
-                <dt>Grants council v3</dt>
+                <dt>Accepted evidence</dt>
                 <dd className="positive">
-                  <Check size={12} />
-                  Eligible
+                  <Check size={12} />1 GitHub claim
                 </dd>
               </div>
               <div>
-                <dt>CKBoost contributor tier</dt>
-                <dd>Reads this profile</dd>
+                <dt>Excluded evidence</dt>
+                <dd>0 claims</dd>
               </div>
               <div>
-                <dt>Community moderation policy</dt>
-                <dd className="warning">Needs 2 registry issuers</dd>
+                <dt>Scored categories</dt>
+                <dd>Tenure and recency</dd>
               </div>
             </dl>
           </div>
@@ -164,10 +157,10 @@ export function Profile() {
             <h2>Raw example record</h2>
             <div className="raw-record">
               <div>
-                <span className="mono">did-document.json</span>
+                <span className="mono">reputation.json</span>
                 <ExternalLink size={13} />
               </div>
-              <pre>{`{\n  "id": "${DID}",\n  "network": "ckb-testnet",\n  "claims": 6,\n  "reputation": { "preview": true, "index": 68 }\n}`}</pre>
+              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v1",\n  "overall": { "score": 200, "maximum": 1000 }\n}`}</pre>
             </div>
             <p>This record is a design fixture, not a chain response.</p>
           </div>

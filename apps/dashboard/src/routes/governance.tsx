@@ -39,27 +39,29 @@ function GovernancePage() {
       <div className="governance-layout">
         <section>
           <h2>Policy</h2>
-          <span className="mono governance-id">policy:grants-council/v3 - method v0.4.1</span>
+          <span className="mono governance-id">
+            policy:example-community/v1 - reads vellum.reputation.v1
+          </span>
           <dl className="governance-rules">
             <div>
-              <dt>Minimum index</dt>
-              <dd className="mono">40</dd>
+              <dt>Minimum score</dt>
+              <dd className="mono">150 of 1000</dd>
             </div>
             <div>
               <dt>Required categories</dt>
-              <dd className="mono">contribution</dd>
+              <dd className="mono">tenure, recency</dd>
             </div>
             <div>
               <dt>Accepted issuer states</dt>
-              <dd className="mono">listed</dd>
+              <dd className="mono">trusted GitHub issuer</dd>
             </div>
             <div>
               <dt>Maximum data age</dt>
-              <dd className="mono">24 hours</dd>
+              <dd className="mono">evaluated on request</dd>
             </div>
             <div>
               <dt>Evaluated</dt>
-              <dd className="mono">2026-09-07 09:41 UTC</dd>
+              <dd className="mono">example only</dd>
             </div>
           </dl>
           <label className="governance-input">
@@ -96,7 +98,7 @@ function GovernanceResult({
           Unable to evaluate
         </strong>
         <p>
-          Reputation has not been calculated for this identity, so the minimum-index rule cannot be
+          Reputation could not be calculated for this identity, so the minimum-score rule cannot be
           applied. The identity itself can still resolve normally.
         </p>
         <Link className="v-button v-button--secondary" to="/resolve">
@@ -109,9 +111,9 @@ function GovernanceResult({
       <div className="governance-result">
         <div className="notice-line">
           <Clock3 size={14} />
-          <span>Data stale. The example calculation is 31 hours old and the policy allows 24.</span>
+          <span>The example consumer has not refreshed its source evidence.</span>
         </div>
-        <StatusMark icon={false}>Eligible - as of 2026-09-06 02:12 UTC</StatusMark>
+        <StatusMark icon={false}>Previous result withheld until refresh</StatusMark>
         <button className="v-button v-button--secondary" onClick={onRecalculate}>
           Recalculate
         </button>
@@ -120,15 +122,15 @@ function GovernanceResult({
   const eligible = result === "eligible";
   const rows = eligible
     ? [
-        ["Index 68 >= 40", "Pass"],
-        ["Contribution claims present", "Pass - 2"],
-        ["At least one listed issuer", "Pass - CKBoost"],
-        ["Data age 18 minutes <= 24 hours", "Pass"],
+        ["Score 200 >= 150", "Pass"],
+        ["Tenure and recency contribute", "Pass - 100 each"],
+        ["Trusted GitHub issuer", "Pass"],
+        ["Evidence evaluated on request", "Pass"],
       ]
     : [
-        ["Index 31 >= 40", "Fail"],
-        ["Contribution claims present", "Pass - 1"],
-        ["At least one listed issuer", "Fail - issuer not in registry"],
+        ["Score 100 >= 150", "Fail"],
+        ["Tenure contributes", "Pass - 100"],
+        ["Recency contributes", "Fail - 0"],
       ];
   return (
     <div className="governance-result">

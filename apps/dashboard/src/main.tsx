@@ -8,6 +8,7 @@ import { CccProvider } from "./lib/ccc-provider";
 import { routeTree } from "./routeTree.gen";
 import "@vellum/ui/styles.css";
 import "./styles.css";
+import "./reputation.css";
 
 const queryClient = new QueryClient();
 

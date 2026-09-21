@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
+import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
   confirmGithubClaim,
   readGithubAccountClaims,
@@ -174,6 +175,7 @@ function ConnectionPanel({
 }) {
   const signer = useSigner();
   const { open } = useCcc();
+  const { activeDid, setActiveDid } = useActiveIdentity();
   const [lock, setLock] = useState<ccc.Script | null>(null);
   const [lockError, setLockError] = useState(false);
   const [selectedDid, setSelectedDid] = useState("");
@@ -217,9 +219,13 @@ function ConnectionPanel({
       return;
     }
     if (!records.some((record) => record.did === selectedDid)) {
-      setSelectedDid(records[0].did);
+      setSelectedDid(
+        activeDid && records.some((record) => record.did === activeDid)
+          ? activeDid
+          : records[0].did,
+      );
     }
-  }, [identities.data, selectedDid]);
+  }, [activeDid, identities.data, selectedDid]);
 
   const issuer = useQuery({
     queryKey: ["verification-issuer"],
@@ -340,6 +346,7 @@ function ConnectionPanel({
                 onChange={(event) => {
                   onExistingClaimsChange(0);
                   setSelectedDid(event.target.value);
+                  setActiveDid(event.target.value);
                   if (issuer.isError) void issuer.refetch();
                 }}
               >

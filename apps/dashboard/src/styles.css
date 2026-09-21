@@ -774,29 +774,33 @@
   color: var(--info);
 }
 
-.reputation-categories {
+.reputation-panel .reputation-categories {
   margin-top: 24px;
   border-top: 1px solid var(--line);
 }
 
-.reputation-categories > div {
-  padding: 12px 0;
+.reputation-panel .reputation-categories > div {
+  padding: 12px 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.reputation-categories > div > span:first-child {
+.reputation-panel .reputation-categories > div:last-child {
+  border-bottom: 0;
+}
+
+.reputation-panel .reputation-categories > div > span:first-child {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   font-size: 13px;
 }
 
-.reputation-categories > div > .v-signal-rail {
+.reputation-panel .reputation-categories > div > .v-signal-rail {
   margin-top: 6px;
 }
 
-.reputation-categories strong,
-.reputation-categories b {
+.reputation-panel .reputation-categories strong,
+.reputation-panel .reputation-categories b {
   font-weight: 500;
 }
 

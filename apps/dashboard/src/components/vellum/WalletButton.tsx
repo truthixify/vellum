@@ -1,10 +1,10 @@
-import { ccc, useCcc } from "@ckb-ccc/connector-react";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, WalletCards } from "lucide-react";
+import { useCcc } from "@ckb-ccc/connector-react";
+import { Check, ChevronDown, WalletCards } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useCopy } from "@/hooks/use-copy";
+import { useActiveIdentity } from "@/lib/active-identity-context";
+import type { DidRecord } from "@/lib/did-ckb";
 import { Avatar } from "./Avatar";
 
 function truncate(value: string, head = 6, tail = 6): string {
@@ -23,9 +23,8 @@ function initials(record: DidRecord | undefined, fallback: string): string {
 }
 
 export function WalletButton() {
-  const { open, disconnect, signerInfo, wallet, client } = useCcc();
-  const [address, setAddress] = useState<string | null>(null);
-  const [lock, setLock] = useState<ccc.Script | null>(null);
+  const { open, disconnect, signerInfo, wallet } = useCcc();
+  const { address, activeIdentity, records, setActiveDid, network } = useActiveIdentity();
   const [menuOpen, setMenuOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { copied, copy } = useCopy();
@@ -50,54 +49,19 @@ export function WalletButton() {
     };
   }, [menuOpen]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (!signerInfo) {
-        setAddress(null);
-        setLock(null);
-        return;
-      }
-      try {
-        const addrObj = await signerInfo.signer.getRecommendedAddressObj();
-        if (cancelled) return;
-        setAddress(addrObj.toString());
-        setLock(addrObj.script);
-      } catch (err) {
-        console.error("Failed to load wallet address", err);
-        if (!cancelled) {
-          setAddress(null);
-          setLock(null);
-        }
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [signerInfo]);
-
-  const network = client instanceof ccc.ClientPublicMainnet ? "mainnet" : "testnet";
-
-  // Shares the cache with /my; same query key so navigating between pages
-  // doesn't refetch when the wallet hasn't changed.
-  const { data: dids } = useQuery({
-    queryKey: ["my-dids", lock?.codeHash, lock?.hashType, lock?.args, network],
-    queryFn: async () => {
-      if (!lock) return [] as DidRecord[];
-      return listDidsByLock(client, lock);
-    },
-    enabled: !!lock,
-  });
-
-  const primaryDid = dids && dids.length > 0 ? dids[0] : undefined;
+  const primaryDid = activeIdentity;
   const displayName = primaryDid?.profile.displayName;
   const avatarUrl = primaryDid?.profile.avatar;
   const fallbackInitials = initials(primaryDid, address ?? "??");
 
   if (!signerInfo) {
     return (
-      <button onClick={() => open()} className="dashboard-wallet dashboard-wallet--connect">
+      <button
+        onClick={() => open()}
+        className="dashboard-wallet dashboard-wallet--connect"
+        aria-label="Connect wallet"
+        title="Connect wallet"
+      >
         <WalletCards size={14} strokeWidth={1.8} aria-hidden="true" />
         <span>Connect wallet</span>
       </button>
@@ -133,6 +97,27 @@ export function WalletButton() {
                 </div>
                 <div className="dashboard-wallet-menu__did">{truncate(primaryDid.did, 14, 8)}</div>
               </div>
+            </div>
+          ) : null}
+          {records.length > 1 ? (
+            <div className="dashboard-wallet-menu__identities" role="group" aria-label="Active DID">
+              <span className="dashboard-wallet-menu__eyebrow">Active identity</span>
+              {records.map((record) => (
+                <button
+                  key={record.did}
+                  type="button"
+                  className="dashboard-wallet-menu__did-option"
+                  onClick={() => {
+                    setActiveDid(record.did);
+                    setMenuOpen(false);
+                  }}
+                >
+                  <span>{record.profile.displayName ?? truncate(record.did, 12, 6)}</span>
+                  {record.did === primaryDid?.did ? (
+                    <Check size={13} strokeWidth={2} aria-label="Selected" />
+                  ) : null}
+                </button>
+              ))}
             </div>
           ) : null}
           <div className="dashboard-wallet-menu__fact">
