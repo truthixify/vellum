@@ -1,15 +1,19 @@
 import { describe, expect, mock, test } from "bun:test";
 
 import type { ClaimIssuanceResult } from "./contracts";
+import { VerificationCoordinationError, VerificationServiceError } from "./errors";
 import {
   discordActionFromUrl,
   handleDiscordOAuthRequest,
   type DiscordClaimIssuer,
 } from "./discord-http";
 import type { DiscordOAuthEnvironment } from "./discord";
+import { MemoryVerificationCoordinator } from "./coordination";
+import type { VerificationFailureLogger } from "./logging";
 
 const SUBJECT_DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 const NOW = 1_800_000_000;
+const CONTROLLER_LOCK_HASH = `0x${"44".repeat(32)}` as const;
 const USER_ID = "80351110224678912";
 const GUILD_ID = "111111111111111111";
 const ROLE_ID = "222222222222222222";
@@ -46,6 +50,14 @@ const ISSUANCE: ClaimIssuanceResult[] = [
     outputIndex: 2,
   },
 ];
+const SUBJECT_PROOF = {
+  challenge: "signed-challenge",
+  signature: {
+    signature: "signed-message",
+    identity: `0x${"33".repeat(33)}`,
+    signType: "CkbSecp256k1" as const,
+  },
+};
 
 function providerFetch() {
   const responses = [
@@ -68,6 +80,7 @@ function providerFetch() {
 }
 
 function dependencies(fetch = providerFetch()) {
+  const coordinator = new MemoryVerificationCoordinator();
   return {
     environment: ENVIRONMENT,
     fetch,
@@ -77,6 +90,15 @@ function dependencies(fetch = providerFetch()) {
         _claims: Parameters<DiscordClaimIssuer>[1],
       ) => ISSUANCE,
     ),
+    createCoordinator: () => coordinator,
+    assertSubjectController: mock(async () => undefined),
+    createSubjectChallenge: mock(async () => ({
+      challenge: SUBJECT_PROOF.challenge,
+      expiresAt: NOW + 300,
+      message: "Vellum account verification",
+    })),
+    verifySubjectProof: mock(async () => CONTROLLER_LOCK_HASH),
+    logFailure: mock((_failure: Parameters<VerificationFailureLogger>[0]) => undefined),
     nonceBytes: () => Uint8Array.from({ length: 32 }, (_, index) => index),
     now: () => NOW,
   };
@@ -87,7 +109,11 @@ async function start(deps = dependencies()) {
     new Request("https://dashboard.usevellum.xyz/api/verify/discord/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ version: "1", subject: { did: SUBJECT_DID } }),
+      body: JSON.stringify({
+        version: "1",
+        subject: { did: SUBJECT_DID },
+        proof: SUBJECT_PROOF,
+      }),
     }),
     deps,
   );
@@ -96,6 +122,25 @@ async function start(deps = dependencies()) {
 }
 
 describe("Discord OAuth HTTP boundary", () => {
+  test("returns a wallet challenge before OAuth starts", async () => {
+    const deps = dependencies();
+    const response = await handleDiscordOAuthRequest(
+      new Request("https://dashboard.usevellum.xyz/api/verify/discord/challenge", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ version: "1", subject: { did: SUBJECT_DID } }),
+      }),
+      deps,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      challenge: SUBJECT_PROOF.challenge,
+      platform: "discord",
+    });
+    expect(deps.createSubjectChallenge).toHaveBeenCalledTimes(1);
+  });
+
   test("starts a short-lived, cookie-bound authorization request", async () => {
     const { response, body } = await start();
     const authorization = new URL(body.authorizationUrl);
@@ -107,6 +152,36 @@ describe("Discord OAuth HTTP boundary", () => {
     expect(authorization.searchParams.get("scope")).toBe("guilds.members.read identify");
     expect(authorization.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(authorization.searchParams.has("code_challenge")).toBe(false);
+  });
+
+  test("requires a valid wallet proof before creating OAuth state", async () => {
+    const deps = dependencies();
+    deps.verifySubjectProof = mock(async () => {
+      throw new VerificationServiceError(
+        "subject_control_invalid",
+        400,
+        "The wallet does not control the selected identity.",
+      );
+    });
+
+    const response = await handleDiscordOAuthRequest(
+      new Request("https://dashboard.usevellum.xyz/api/verify/discord/start", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          version: "1",
+          subject: { did: SUBJECT_DID },
+          proof: SUBJECT_PROOF,
+        }),
+      }),
+      deps,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "subject_control_invalid" },
+    });
+    expect(deps.verifySubjectProof).toHaveBeenCalledTimes(1);
   });
 
   test("issues separate identity and community outputs in one transaction", async () => {
@@ -137,6 +212,11 @@ describe("Discord OAuth HTTP boundary", () => {
     expect(deps.issueClaims).toHaveBeenCalledTimes(1);
     expect(deps.issueClaims.mock.calls[0][0]).toEqual({ did: SUBJECT_DID });
     expect(deps.issueClaims.mock.calls[0][1]).toHaveLength(2);
+    expect(deps.assertSubjectController).toHaveBeenCalledWith(
+      { did: SUBJECT_DID },
+      CONTROLLER_LOCK_HASH,
+      ENVIRONMENT,
+    );
   });
 
   test("validates state before provider access", async () => {
@@ -152,6 +232,34 @@ describe("Discord OAuth HTTP boundary", () => {
     const location = new URL(response.headers.get("location") ?? "");
 
     expect(location.searchParams.get("code")).toBe("oauth_state_invalid");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(deps.issueClaims).not.toHaveBeenCalled();
+  });
+
+  test("rejects a controller rotation before provider access", async () => {
+    const fetch = providerFetch();
+    const deps = dependencies(fetch);
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.DISCORD_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+    deps.assertSubjectController = mock(async () => {
+      throw new VerificationServiceError(
+        "subject_control_invalid",
+        400,
+        "The identity controller changed.",
+      );
+    });
+
+    const response = await handleDiscordOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.searchParams.get("code")).toBe("subject_control_invalid");
     expect(fetch).not.toHaveBeenCalled();
     expect(deps.issueClaims).not.toHaveBeenCalled();
   });
@@ -174,6 +282,34 @@ describe("Discord OAuth HTTP boundary", () => {
     expect(new URL(response.headers.get("location") ?? "").searchParams.get("code")).toBe(
       "issuance_failed",
     );
+    expect(deps.logFailure).toHaveBeenCalledTimes(1);
+    expect(deps.logFailure.mock.calls[0][0]).toMatchObject({
+      platform: "discord",
+      stage: "issuance",
+    });
+  });
+
+  test("fails closed when durable issuance coordination is unavailable", async () => {
+    const deps = dependencies();
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.DISCORD_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+    deps.createCoordinator = () => {
+      throw new VerificationCoordinationError("Verification coordination is unavailable.");
+    };
+
+    const response = await handleDiscordOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.searchParams.get("code")).toBe("issuer_unavailable");
+    expect(deps.issueClaims).not.toHaveBeenCalled();
+    expect(deps.logFailure).toHaveBeenCalledTimes(1);
   });
 
   test("returns deterministic method, input, configuration, and route errors", async () => {
@@ -199,7 +335,11 @@ describe("Discord OAuth HTTP boundary", () => {
       new Request("https://dashboard.usevellum.xyz/api/verify/discord/start", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ version: "1", subject: { did: SUBJECT_DID } }),
+        body: JSON.stringify({
+          version: "1",
+          subject: { did: SUBJECT_DID },
+          proof: SUBJECT_PROOF,
+        }),
       }),
       { ...deps, environment: {} },
     );

@@ -250,7 +250,8 @@ function ConnectionPanel({
     setStartError(undefined);
     setStarting(true);
     try {
-      const authorizationUrl = await requestGithubAuthorization(selectedDid);
+      if (!signer) throw new GithubVerificationRequestError("subject_control_invalid");
+      const authorizationUrl = await requestGithubAuthorization(selectedDid, signer);
       window.location.assign(authorizationUrl);
     } catch (error) {
       setStartError(

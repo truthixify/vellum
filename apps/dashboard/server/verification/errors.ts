@@ -5,6 +5,7 @@ export class VerificationServiceError extends Error {
     readonly code: VerificationErrorCode,
     readonly status: number,
     message: string,
+    readonly retryAt?: number,
   ) {
     super(message);
     this.name = "VerificationServiceError";
@@ -25,6 +26,13 @@ export class OAuthConfigurationError extends Error {
   }
 }
 
+export class VerificationCoordinationError extends VerificationServiceError {
+  constructor(message: string) {
+    super("issuer_unavailable", 503, message);
+    this.name = "VerificationCoordinationError";
+  }
+}
+
 export class GithubOAuthError extends VerificationServiceError {
   constructor(
     code: Extract<
@@ -37,9 +45,9 @@ export class GithubOAuthError extends VerificationServiceError {
     >,
     status: number,
     message: string,
-    readonly retryAt?: number,
+    retryAt?: number,
   ) {
-    super(code, status, message);
+    super(code, status, message, retryAt);
     this.name = "GithubOAuthError";
   }
 }
@@ -56,9 +64,9 @@ export class DiscordOAuthError extends VerificationServiceError {
     >,
     status: number,
     message: string,
-    readonly retryAt?: number,
+    retryAt?: number,
   ) {
-    super(code, status, message);
+    super(code, status, message, retryAt);
     this.name = "DiscordOAuthError";
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { ccc } from "@ckb-ccc/core";
 
 import {
   DiscordVerificationRequestError,
@@ -13,6 +14,12 @@ const CLAIM_ID = `0x${"22".repeat(32)}` as `0x${string}`;
 const COMMUNITY_CLAIM_ID = `0x${"33".repeat(32)}` as `0x${string}`;
 const STATE = "A".repeat(43);
 const NOW = 1_800_000_000;
+const SIGNATURE = new ccc.Signature(
+  "signed-message",
+  `0x${"33".repeat(33)}`,
+  ccc.SignerSignType.CkbSecp256k1,
+);
+const SIGNER = { signMessage: mock(async () => SIGNATURE) };
 
 describe("Discord verification client contract", () => {
   test("accepts a complete public callback and binds community references to the count", () => {
@@ -78,36 +85,61 @@ describe("Discord verification client contract", () => {
     );
     authorizationUrl.searchParams.set("scope", "guilds.members.read identify");
     authorizationUrl.searchParams.set("state", STATE);
-    const fetch = mock(async (_input: string | URL | Request, _init?: RequestInit) =>
-      Response.json({
-        ok: true,
-        version: "1",
-        platform: "discord",
-        authorizationUrl: authorizationUrl.toString(),
-        expiresAt: NOW + 300,
-      }),
+    const fetch = mock(async (input: string | URL | Request, _init?: RequestInit) =>
+      Response.json(
+        String(input).endsWith("/challenge")
+          ? {
+              ok: true,
+              version: "1",
+              platform: "discord",
+              challenge: "signed-challenge",
+              message: "Vellum account verification",
+              expiresAt: NOW + 300,
+            }
+          : {
+              ok: true,
+              version: "1",
+              platform: "discord",
+              authorizationUrl: authorizationUrl.toString(),
+              expiresAt: NOW + 300,
+            },
+      ),
     );
 
-    await expect(requestDiscordAuthorization(DID, fetch, () => NOW)).resolves.toContain(
+    await expect(requestDiscordAuthorization(DID, SIGNER, fetch, () => NOW)).resolves.toContain(
       "https://discord.com/oauth2/authorize",
     );
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toEqual({
       version: "1",
       subject: { did: DID },
+      proof: { challenge: "signed-challenge", signature: SIGNATURE },
     });
 
     authorizationUrl.hostname = "example.com";
+    let redirectCall = 0;
     const redirectingFetch = mock(async (_input: string | URL | Request, _init?: RequestInit) =>
-      Response.json({
-        ok: true,
-        version: "1",
-        platform: "discord",
-        authorizationUrl: authorizationUrl.toString(),
-        expiresAt: NOW + 300,
-      }),
+      Response.json(
+        redirectCall++ === 0
+          ? {
+              ok: true,
+              version: "1",
+              platform: "discord",
+              challenge: "signed-challenge",
+              message: "Vellum account verification",
+              expiresAt: NOW + 300,
+            }
+          : {
+              ok: true,
+              version: "1",
+              platform: "discord",
+              authorizationUrl: authorizationUrl.toString(),
+              expiresAt: NOW + 300,
+            },
+      ),
     );
     await expect(
-      requestDiscordAuthorization(DID, redirectingFetch, () => NOW),
+      requestDiscordAuthorization(DID, SIGNER, redirectingFetch, () => NOW),
     ).rejects.toBeInstanceOf(DiscordVerificationRequestError);
   });
 });

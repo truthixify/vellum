@@ -13,6 +13,8 @@ export const GITHUB_VERIFICATION_ERROR_CODES = [
   "oauth_configuration_error",
   "oauth_denied",
   "oauth_state_invalid",
+  "subject_control_invalid",
+  "verification_rate_limited",
   "provider_rate_limited",
   "provider_unavailable",
   "credential_revocation_failed",
@@ -114,6 +116,8 @@ const ERROR_MESSAGES: Record<GithubVerificationErrorCode, string> = {
   oauth_configuration_error: "GitHub verification is temporarily unavailable.",
   oauth_denied: "GitHub access was not approved. No claim was issued.",
   oauth_state_invalid: "This verification session expired or has already been used.",
+  subject_control_invalid: "The connected wallet does not control this identity.",
+  verification_rate_limited: "This account or identity was verified recently.",
   provider_rate_limited: "GitHub is rate limiting verification requests.",
   provider_unavailable: "GitHub could not complete verification. Try again shortly.",
   credential_revocation_failed:
@@ -192,12 +196,71 @@ function errorCodeFromResponse(value: unknown): GithubVerificationErrorCode | un
   return code && isErrorCode(code) ? code : undefined;
 }
 
+function parseChallengeResponse(
+  value: unknown,
+  now: number,
+): {
+  challenge: string;
+  message: string;
+} {
+  const body = record(value);
+  const challenge = body && scalar(body.challenge);
+  const message = body && scalar(body.message);
+  const expiresAt = body && positiveInteger(body.expiresAt);
+  if (
+    !body ||
+    body.ok !== true ||
+    body.version !== "1" ||
+    body.platform !== "github" ||
+    !challenge ||
+    challenge.length > 4_096 ||
+    !message ||
+    message.length > 4_096 ||
+    !expiresAt ||
+    expiresAt <= now
+  ) {
+    throw new GithubVerificationRequestError("verification_failed");
+  }
+  return { challenge, message };
+}
+
 export async function requestGithubAuthorization(
   did: string,
+  signer: Pick<ccc.Signer, "signMessage">,
   fetchImplementation: FetchImplementation = globalThis.fetch,
   now: () => number = () => Math.floor(Date.now() / 1_000),
 ): Promise<string> {
   if (!isDidCkb(did)) throw new GithubVerificationRequestError("invalid_request");
+
+  let challengeResponse: Response;
+  try {
+    challengeResponse = await fetchImplementation("/api/verify/github/challenge", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ version: "1", subject: { did } }),
+    });
+  } catch {
+    throw new GithubVerificationRequestError("provider_unavailable");
+  }
+
+  let challengeBody: unknown;
+  try {
+    challengeBody = await challengeResponse.json();
+  } catch {
+    throw new GithubVerificationRequestError("verification_failed");
+  }
+  if (!challengeResponse.ok) {
+    throw new GithubVerificationRequestError(errorCodeFromResponse(challengeBody));
+  }
+  const challenge = parseChallengeResponse(challengeBody, now());
+
+  let signature: ccc.Signature;
+  try {
+    signature = await signer.signMessage(challenge.message);
+  } catch {
+    throw new GithubVerificationRequestError("subject_control_invalid");
+  }
 
   let response: Response;
   try {
@@ -205,7 +268,11 @@ export async function requestGithubAuthorization(
       method: "POST",
       credentials: "same-origin",
       headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ version: "1", subject: { did } }),
+      body: JSON.stringify({
+        version: "1",
+        subject: { did },
+        proof: { challenge: challenge.challenge, signature },
+      }),
     });
   } catch {
     throw new GithubVerificationRequestError("provider_unavailable");

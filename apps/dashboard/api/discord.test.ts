@@ -9,6 +9,8 @@ const ENVIRONMENT = {
   DISCORD_TRUSTED_COMMUNITIES: JSON.stringify([
     { guildId: "111111111111111111", name: "Nervos Community", roles: [] },
   ]),
+  UPSTASH_REDIS_REST_TOKEN: "redis-token-for-tests",
+  UPSTASH_REDIS_REST_URL: "https://redis.example.test",
   VELLUM_OAUTH_STATE_SECRET: "oauth-state-secret-with-at-least-32-bytes",
 } as const;
 
@@ -22,19 +24,19 @@ test("Discord API entry ignores the Vercel runtime context", async () => {
     const request = new Request("https://dashboard.usevellum.xyz/api/verify/discord/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        version: "1",
-        subject: { did: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no" },
-      }),
+      body: JSON.stringify({ version: "1", subject: { did: "not-a-did" } }),
     });
     const response = await Reflect.apply(discordHandler.fetch, discordHandler, [
       request,
       { waitUntil: () => undefined },
     ]);
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toContain("vellum_discord_oauth=");
-    expect(await response.json()).toMatchObject({ ok: true, platform: "discord", version: "1" });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: { code: "invalid_request" },
+      ok: false,
+      version: "1",
+    });
   } finally {
     for (const [name, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[name];

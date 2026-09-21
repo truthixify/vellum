@@ -1,9 +1,17 @@
 import {
   VERIFICATION_API_VERSION,
+  claimIssuanceResultSchema,
+  oauthChallengeRequestSchema,
   githubOAuthStartRequestSchema,
   type VerificationErrorCode,
 } from "./contracts.js";
-import { GithubOAuthError, OAuthConfigurationError } from "./errors.js";
+import {
+  GithubOAuthError,
+  IssuerConfigurationError,
+  OAuthConfigurationError,
+  VerificationCoordinationError,
+  VerificationServiceError,
+} from "./errors.js";
 import {
   githubAuthorizationUrl,
   githubOAuthConfig,
@@ -12,20 +20,33 @@ import {
   type GithubOAuthEnvironment,
 } from "./github.js";
 import { issueVerifiedClaim } from "./issuer.js";
+import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
 import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
+import { coordinateIssuance } from "./issuance-control.js";
+import { logVerificationFailure, type VerificationFailureLogger } from "./logging.js";
 import {
   clearGithubOAuthCookie,
   consumeGithubOAuthState,
   createGithubOAuthState,
 } from "./oauth-state.js";
-import { issuePlatformClaim, type ClaimIssuer } from "./service.js";
+import type { ClaimIssuer } from "./service.js";
+import {
+  assertSubjectController,
+  createSubjectChallenge,
+  verifySubjectProof,
+} from "./subject-proof.js";
 
-type GithubAction = "start" | "callback";
+type GithubAction = "challenge" | "start" | "callback";
 
 export type GithubOAuthHttpDependencies = {
   environment: GithubOAuthEnvironment;
   fetch: GithubFetch;
   issueClaim: ClaimIssuer;
+  createCoordinator: (environment: GithubOAuthEnvironment) => VerificationCoordinator;
+  assertSubjectController: typeof assertSubjectController;
+  createSubjectChallenge: typeof createSubjectChallenge;
+  verifySubjectProof: typeof verifySubjectProof;
+  logFailure: VerificationFailureLogger;
   nonceBytes?: () => Uint8Array;
   now: () => number;
 };
@@ -34,6 +55,11 @@ const defaultDependencies: GithubOAuthHttpDependencies = {
   environment: process.env,
   fetch: globalThis.fetch,
   issueClaim: issueVerifiedClaim,
+  createCoordinator: createVerificationCoordinator,
+  assertSubjectController,
+  createSubjectChallenge,
+  verifySubjectProof,
+  logFailure: logVerificationFailure,
   now: () => Math.floor(Date.now() / 1_000),
 };
 
@@ -66,7 +92,7 @@ export function githubActionFromUrl(request: Request): GithubAction | undefined 
       : segments.length === 2 && segments[0] === "api" && segments[1] === "github"
         ? exactlyOneParameter(url, "action")
         : undefined;
-  return value === "start" || value === "callback" ? value : undefined;
+  return value === "challenge" || value === "start" || value === "callback" ? value : undefined;
 }
 
 function exactlyOneParameter(url: URL, name: string): string | undefined {
@@ -139,27 +165,139 @@ async function handleStart(
   }
 
   const now = dependencies.now();
-  const state = createGithubOAuthState(
-    parsed.data.subject,
-    config.stateSecret,
-    now,
-    config.callbackUrl.protocol === "https:",
-    dependencies.nonceBytes,
-  );
-  return jsonResponse(
-    {
+  try {
+    const coordinator = dependencies.createCoordinator(dependencies.environment);
+    const controllerLockHash = await dependencies.verifySubjectProof(
+      "github",
+      parsed.data.subject,
+      parsed.data.proof,
+      config.stateSecret,
+      now,
+      coordinator,
+      dependencies.environment,
+    );
+    const state = createGithubOAuthState(
+      parsed.data.subject,
+      controllerLockHash,
+      config.stateSecret,
+      now,
+      config.callbackUrl.protocol === "https:",
+      dependencies.nonceBytes,
+    );
+    return jsonResponse(
+      {
+        ok: true,
+        version: VERIFICATION_API_VERSION,
+        platform: "github",
+        authorizationUrl: githubAuthorizationUrl(config, state.state, state.codeChallenge),
+        expiresAt: state.expiresAt,
+      },
+      200,
+      {
+        "referrer-policy": "no-referrer",
+        "set-cookie": state.cookie,
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof OAuthConfigurationError ||
+      error instanceof VerificationCoordinationError
+    ) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "GitHub verification is temporarily unavailable.",
+      );
+    }
+    if (error instanceof VerificationServiceError) {
+      return errorResponse(error.status, error.code, error.message);
+    }
+    dependencies.logFailure({
+      error,
+      platform: "github",
+      requestId: crypto.randomUUID(),
+      stage: "start",
+    });
+    return errorResponse(
+      400,
+      "subject_control_invalid",
+      "The wallet could not be verified for this identity.",
+    );
+  }
+}
+
+async function handleChallenge(
+  request: Request,
+  dependencies: GithubOAuthHttpDependencies,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return errorResponse(405, "method_not_allowed", "Use POST to request a wallet challenge.", {
+      allow: "POST",
+    });
+  }
+
+  let config;
+  try {
+    config = githubOAuthConfig(dependencies.environment);
+    dependencies.createCoordinator(dependencies.environment);
+  } catch (error) {
+    if (error instanceof OAuthConfigurationError) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "GitHub verification is not configured. Try again later.",
+      );
+    }
+    throw error;
+  }
+
+  let body: unknown;
+  try {
+    body = await parseJsonBody(request);
+  } catch (error) {
+    return errorResponse(
+      error instanceof RequestBodyError ? error.status : 400,
+      "invalid_request",
+      error instanceof RequestBodyError
+        ? error.message
+        : "The request body must contain valid JSON.",
+    );
+  }
+  const parsed = oauthChallengeRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return errorResponse(
+      400,
+      "invalid_request",
+      "Choose a valid did:ckb identity before connecting GitHub.",
+    );
+  }
+
+  try {
+    const challenge = await dependencies.createSubjectChallenge(
+      "github",
+      parsed.data.subject,
+      config.stateSecret,
+      dependencies.now(),
+      dependencies.environment,
+    );
+    return jsonResponse({
       ok: true,
       version: VERIFICATION_API_VERSION,
       platform: "github",
-      authorizationUrl: githubAuthorizationUrl(config, state.state, state.codeChallenge),
-      expiresAt: state.expiresAt,
-    },
-    200,
-    {
-      "referrer-policy": "no-referrer",
-      "set-cookie": state.cookie,
-    },
-  );
+      ...challenge,
+    });
+  } catch (error) {
+    if (error instanceof VerificationServiceError) {
+      return errorResponse(error.status, error.code, error.message);
+    }
+    dependencies.logFailure({
+      error,
+      platform: "github",
+      requestId: crypto.randomUUID(),
+      stage: "challenge",
+    });
+    return errorResponse(503, "issuer_unavailable", "The selected identity could not be resolved.");
+  }
 }
 
 async function handleCallback(
@@ -184,6 +322,7 @@ async function handleCallback(
   }
 
   const secure = config.callbackUrl.protocol === "https:";
+  const requestId = crypto.randomUUID();
   try {
     const url = new URL(request.url);
     const queryState = exactlyOneParameter(url, "state");
@@ -221,20 +360,54 @@ async function handleCallback(
       );
     }
 
+    await dependencies.assertSubjectController(
+      oauthState.subject,
+      oauthState.controllerLockHash,
+      dependencies.environment,
+    );
+
     const claim = await verifyGithubAuthorization(code, oauthState.codeVerifier, config, {
       fetch: dependencies.fetch,
       now: dependencies.now,
     });
-    const issued = await issuePlatformClaim(
-      "github",
-      oauthState.subject,
-      claim,
-      dependencies.issueClaim,
-    );
-    if (!issued.body.ok) {
+    const accountId = claim.payload.user_id;
+    if (typeof accountId !== "number" || !Number.isSafeInteger(accountId)) {
+      throw new GithubOAuthError(
+        "provider_unavailable",
+        502,
+        "GitHub returned incomplete account data.",
+      );
+    }
+    let issued;
+    try {
+      const coordinator = dependencies.createCoordinator(dependencies.environment);
+      issued = await coordinateIssuance({
+        accountId: String(accountId),
+        coordinator,
+        issue: async () =>
+          claimIssuanceResultSchema.parse(await dependencies.issueClaim(oauthState.subject, claim)),
+        now: dependencies.now(),
+        platform: "github",
+        subjectDid: oauthState.subject.did,
+      });
+    } catch (error) {
+      dependencies.logFailure({ error, platform: "github", requestId, stage: "issuance" });
+      if (error instanceof VerificationServiceError) {
+        return callbackRedirect(request, config.callbackUrl, secure, {
+          status: "error",
+          code: error.code,
+          retryAt: error.retryAt,
+        });
+      }
+      if (error instanceof IssuerConfigurationError) {
+        return callbackRedirect(request, config.callbackUrl, secure, {
+          status: "error",
+          code: "issuer_unavailable",
+        });
+      }
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
-        code: issued.body.error.code,
+        code: "issuance_failed",
       });
     }
 
@@ -242,9 +415,9 @@ async function handleCallback(
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "submitted",
       subject: oauthState.subject.did,
-      transaction: issued.body.issuance.transactionHash,
-      claim: issued.body.issuance.claimId,
-      output: issued.body.issuance.outputIndex,
+      transaction: issued.transactionHash,
+      claim: issued.claimId,
+      output: issued.outputIndex,
       login: typeof login === "string" ? login : undefined,
     });
   } catch (error) {
@@ -255,6 +428,15 @@ async function handleCallback(
         retryAt: error.retryAt,
       });
     }
+    if (error instanceof VerificationServiceError) {
+      dependencies.logFailure({ error, platform: "github", requestId, stage: "callback" });
+      return callbackRedirect(request, config.callbackUrl, secure, {
+        status: "error",
+        code: error.code,
+        retryAt: error.retryAt,
+      });
+    }
+    dependencies.logFailure({ error, platform: "github", requestId, stage: "callback" });
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "error",
       code: "verification_failed",
@@ -267,6 +449,7 @@ export async function handleGithubOAuthRequest(
   dependencies: GithubOAuthHttpDependencies = defaultDependencies,
 ): Promise<Response> {
   const action = githubActionFromUrl(request);
+  if (action === "challenge") return handleChallenge(request, dependencies);
   if (action === "start") return handleStart(request, dependencies);
   if (action === "callback") return handleCallback(request, dependencies);
   return errorResponse(404, "invalid_request", "The GitHub verification endpoint was not found.");

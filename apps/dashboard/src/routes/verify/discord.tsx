@@ -259,7 +259,8 @@ function ConnectionPanel({
     setStartError(undefined);
     setStarting(true);
     try {
-      const authorizationUrl = await requestDiscordAuthorization(selectedDid);
+      if (!signer) throw new DiscordVerificationRequestError("subject_control_invalid");
+      const authorizationUrl = await requestDiscordAuthorization(selectedDid, signer);
       window.location.assign(authorizationUrl);
     } catch (error) {
       setStartError(

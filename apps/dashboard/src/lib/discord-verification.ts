@@ -11,6 +11,8 @@ export const DISCORD_VERIFICATION_ERROR_CODES = [
   "oauth_configuration_error",
   "oauth_denied",
   "oauth_state_invalid",
+  "subject_control_invalid",
+  "verification_rate_limited",
   "provider_rate_limited",
   "provider_unavailable",
   "credential_revocation_failed",
@@ -142,6 +144,8 @@ const ERROR_MESSAGES: Record<DiscordVerificationErrorCode, string> = {
   oauth_configuration_error: "Discord verification is temporarily unavailable.",
   oauth_denied: "Discord access was not approved. No claim was issued.",
   oauth_state_invalid: "This verification session expired or has already been used.",
+  subject_control_invalid: "The connected wallet does not control this identity.",
+  verification_rate_limited: "This account or identity was verified recently.",
   provider_rate_limited: "Discord is rate limiting verification requests.",
   provider_unavailable: "Discord could not complete verification. Try again shortly.",
   credential_revocation_failed:
@@ -219,12 +223,71 @@ function errorCodeFromResponse(value: unknown): DiscordVerificationErrorCode | u
   return code && isErrorCode(code) ? code : undefined;
 }
 
+function parseChallengeResponse(
+  value: unknown,
+  now: number,
+): {
+  challenge: string;
+  message: string;
+} {
+  const body = record(value);
+  const challenge = body && scalar(body.challenge);
+  const message = body && scalar(body.message);
+  const expiresAt = body && nonnegativeInteger(body.expiresAt);
+  if (
+    !body ||
+    body.ok !== true ||
+    body.version !== "1" ||
+    body.platform !== "discord" ||
+    !challenge ||
+    challenge.length > 4_096 ||
+    !message ||
+    message.length > 4_096 ||
+    !expiresAt ||
+    expiresAt <= now
+  ) {
+    throw new DiscordVerificationRequestError("verification_failed");
+  }
+  return { challenge, message };
+}
+
 export async function requestDiscordAuthorization(
   did: string,
+  signer: Pick<ccc.Signer, "signMessage">,
   fetchImplementation: FetchImplementation = globalThis.fetch,
   now: () => number = () => Math.floor(Date.now() / 1_000),
 ): Promise<string> {
   if (!isDidCkb(did)) throw new DiscordVerificationRequestError("invalid_request");
+
+  let challengeResponse: Response;
+  try {
+    challengeResponse = await fetchImplementation("/api/verify/discord/challenge", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ version: "1", subject: { did } }),
+    });
+  } catch {
+    throw new DiscordVerificationRequestError("provider_unavailable");
+  }
+
+  let challengeBody: unknown;
+  try {
+    challengeBody = await challengeResponse.json();
+  } catch {
+    throw new DiscordVerificationRequestError("verification_failed");
+  }
+  if (!challengeResponse.ok) {
+    throw new DiscordVerificationRequestError(errorCodeFromResponse(challengeBody));
+  }
+  const challenge = parseChallengeResponse(challengeBody, now());
+
+  let signature: ccc.Signature;
+  try {
+    signature = await signer.signMessage(challenge.message);
+  } catch {
+    throw new DiscordVerificationRequestError("subject_control_invalid");
+  }
 
   let response: Response;
   try {
@@ -232,7 +295,11 @@ export async function requestDiscordAuthorization(
       method: "POST",
       credentials: "same-origin",
       headers: { accept: "application/json", "content-type": "application/json" },
-      body: JSON.stringify({ version: "1", subject: { did } }),
+      body: JSON.stringify({
+        version: "1",
+        subject: { did },
+        proof: { challenge: challenge.challenge, signature },
+      }),
     });
   } catch {
     throw new DiscordVerificationRequestError("provider_unavailable");

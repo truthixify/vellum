@@ -1,9 +1,11 @@
 # Verification service
 
-The dashboard deployment includes a stateless API that turns platform verification results into
-Claim Cell transactions. Platform adapters verify the external proof and return a schema-bound JSON
-payload. The service then uses `@vellum/sdk` to build the Claim Cell transaction, signs it with the
-current issuer DID controller, and submits it to CKB Testnet. There is no detached claim signature.
+The dashboard deployment includes an API that turns platform verification results into Claim Cell
+transactions. Platform adapters verify the external proof and return a schema-bound JSON payload.
+The service then uses `@vellum/sdk` to build the Claim Cell transaction, signs it with the current
+issuer DID controller, and submits it to CKB Testnet. Redis-backed coordination prevents challenge
+replay, repeated subsidized issuance, and concurrent use of the issuer's funding Cell. There is no
+detached claim signature.
 
 GitHub and Discord use OAuth-specific routes because authorization codes must never pass through
 the generic proof endpoint. Telegram and Bluesky still return a typed `501` response until their
@@ -15,7 +17,7 @@ verification adapters are implemented.
 deployment, payer, and submission mode. Consumers can resolve the DID on CKB Testnet and compare its
 live controller lock with this metadata.
 
-`POST /api/verify/github/start` accepts a selected `did:ckb` subject:
+`POST /api/verify/github/challenge` accepts a selected `did:ckb` subject:
 
 ```json
 {
@@ -26,11 +28,17 @@ live controller lock with this metadata.
 }
 ```
 
-The response contains a GitHub authorization URL. It also sets an `HttpOnly`, `SameSite=Lax`
-cookie that binds the subject to a random state value for five minutes. The dashboard only offers
-Testnet identities indexed under the connected wallet. The API validates the selected DID and the
-state binding, and uses S256 PKCE for the authorization-code exchange. It does not introduce a
-separate wallet-signature challenge.
+The response contains a five-minute, domain-separated message and signed challenge. The dashboard
+asks the connected wallet to sign that exact message, then sends the challenge and CCC signature to
+`POST /api/verify/github/start`. The server verifies the signature, resolves the selected DID again,
+and requires the signer-derived CKB lock to equal its live controller lock. A challenge can be used
+only once.
+
+A successful start response contains a GitHub authorization URL and sets an `HttpOnly`,
+`SameSite=Lax` cookie that binds the subject to a random state value for five minutes. The API uses
+S256 PKCE for the authorization-code exchange. Before exchanging the returned code, the callback
+resolves the DID once more and requires its controller lock to match the hash bound into the signed
+OAuth state.
 
 GitHub returns to `GET /api/verify/github/callback`. The callback validates the state, clears its
 cookie, exchanges the one-time authorization code, and reads the authenticated account without
@@ -52,8 +60,8 @@ The claim uses schema `vellum.social.github.v1` with hash
 }
 ```
 
-`POST /api/verify/discord/start` accepts the same subject envelope and returns a Discord
-authorization URL. The request uses only `identify` and `guilds.members.read`. Discord returns to
+Discord uses the same `challenge` and signed `start` sequence under `/api/verify/discord`. The OAuth
+request uses only `identify` and `guilds.members.read`. Discord returns to
 `GET /api/verify/discord/callback`, where the service validates the state, exchanges the code, reads
 the stable account identity, and checks membership only in explicitly configured CKB Discord
 servers. The credential is revoked before claim issuance.
@@ -122,16 +130,19 @@ The Vercel dashboard project needs these environment variables:
   verifier stays unavailable when this allowlist is missing or empty so configuration mistakes do
   not appear as an absence of community history.
 - `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
-  short-lived OAuth state cookies and derive GitHub's PKCE verifier.
+  short-lived wallet challenges and OAuth state cookies, and to derive GitHub's PKCE verifier.
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: server-side credentials from an Upstash
+  Redis integration. They are required in deployed environments for challenge replay protection,
+  weekly account and DID cooldowns, and the issuer transaction lease.
 
 For example:
 
 ```json
 [
   {
-    "guildId": "1048098513321902120",
-    "name": "Nervos Nation",
-    "roles": [{ "roleId": "1048098513321902121", "name": "Builder" }]
+    "guildId": "657799690070523914",
+    "name": "Nervos Network",
+    "roles": []
   }
 ]
 ```
@@ -147,7 +158,8 @@ credential errors.
 
 The issuer pays Claim Cell capacity and transaction fees, and the service submits the transaction.
 Platform adapters must complete proof verification and credential cleanup before calling the
-issuer. Tests replace the issuer adapter and never broadcast transactions.
+issuer. One provider account and one subject DID can each receive at most one subsidized claim set
+per provider every seven days. Tests replace the issuer adapter and never broadcast transactions.
 
 ## Controller rotation
 

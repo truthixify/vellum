@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { ccc } from "@ckb-ccc/core";
 
 import {
   GithubVerificationRequestError,
@@ -14,6 +15,12 @@ const CLAIM_ID = `0x${"22".repeat(32)}` as `0x${string}`;
 const STATE = "A".repeat(43);
 const CODE_CHALLENGE = "C".repeat(43);
 const NOW = 1_800_000_000;
+const SIGNATURE = new ccc.Signature(
+  "signed-message",
+  `0x${"33".repeat(33)}`,
+  ccc.SignerSignType.CkbSecp256k1,
+);
+const SIGNER = { signMessage: mock(async () => SIGNATURE) };
 
 describe("GitHub verification client contract", () => {
   test("accepts a complete public callback result and rejects untrusted values", () => {
@@ -54,50 +61,86 @@ describe("GitHub verification client contract", () => {
   });
 
   test("starts OAuth with the exact subject and accepts only GitHub authorization URLs", async () => {
-    const fetch = mock(async (_input: string | URL | Request, _init?: RequestInit) =>
-      Response.json({
-        ok: true,
-        version: "1",
-        platform: "github",
-        authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
-        expiresAt: NOW + 300,
-      }),
+    const fetch = mock(async (input: string | URL | Request, _init?: RequestInit) =>
+      Response.json(
+        String(input).endsWith("/challenge")
+          ? {
+              ok: true,
+              version: "1",
+              platform: "github",
+              challenge: "signed-challenge",
+              message: "Vellum account verification",
+              expiresAt: NOW + 300,
+            }
+          : {
+              ok: true,
+              version: "1",
+              platform: "github",
+              authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
+              expiresAt: NOW + 300,
+            },
+      ),
     );
 
-    await expect(requestGithubAuthorization(DID, fetch, () => NOW)).resolves.toContain(
+    await expect(requestGithubAuthorization(DID, SIGNER, fetch, () => NOW)).resolves.toContain(
       "https://github.com/login/oauth/authorize",
     );
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String(fetch.mock.calls[0][1]?.body))).toEqual({
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toEqual({
       version: "1",
       subject: { did: DID },
+      proof: { challenge: "signed-challenge", signature: SIGNATURE },
     });
 
+    let redirectCall = 0;
     const redirectingFetch = mock(async () =>
-      Response.json({
-        ok: true,
-        version: "1",
-        platform: "github",
-        authorizationUrl: `https://example.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
-        expiresAt: NOW + 300,
-      }),
+      Response.json(
+        redirectCall++ === 0
+          ? {
+              ok: true,
+              version: "1",
+              platform: "github",
+              challenge: "signed-challenge",
+              message: "Vellum account verification",
+              expiresAt: NOW + 300,
+            }
+          : {
+              ok: true,
+              version: "1",
+              platform: "github",
+              authorizationUrl: `https://example.com/login/oauth/authorize?state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
+              expiresAt: NOW + 300,
+            },
+      ),
     );
     await expect(
-      requestGithubAuthorization(DID, redirectingFetch, () => NOW),
+      requestGithubAuthorization(DID, SIGNER, redirectingFetch, () => NOW),
     ).rejects.toBeInstanceOf(GithubVerificationRequestError);
 
+    let ambiguousCall = 0;
     const ambiguousFetch = mock(async () =>
-      Response.json({
-        ok: true,
-        version: "1",
-        platform: "github",
-        authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
-        expiresAt: NOW + 300,
-      }),
+      Response.json(
+        ambiguousCall++ === 0
+          ? {
+              ok: true,
+              version: "1",
+              platform: "github",
+              challenge: "signed-challenge",
+              message: "Vellum account verification",
+              expiresAt: NOW + 300,
+            }
+          : {
+              ok: true,
+              version: "1",
+              platform: "github",
+              authorizationUrl: `https://github.com/login/oauth/authorize?state=${STATE}&state=${STATE}&code_challenge=${CODE_CHALLENGE}&code_challenge_method=S256`,
+              expiresAt: NOW + 300,
+            },
+      ),
     );
-    await expect(requestGithubAuthorization(DID, ambiguousFetch, () => NOW)).rejects.toBeInstanceOf(
-      GithubVerificationRequestError,
-    );
+    await expect(
+      requestGithubAuthorization(DID, SIGNER, ambiguousFetch, () => NOW),
+    ).rejects.toBeInstanceOf(GithubVerificationRequestError);
   });
 
   test("validates public issuer role metadata", async () => {

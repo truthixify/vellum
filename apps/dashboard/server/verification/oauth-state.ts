@@ -11,6 +11,7 @@ export const DISCORD_OAUTH_COOKIE_NAME = "vellum_discord_oauth";
 type OAuthProvider = "github" | "discord";
 
 type OAuthStatePayload = {
+  controllerLockHash: string;
   issuedAt: number;
   nonce: string;
   provider: OAuthProvider;
@@ -26,11 +27,12 @@ export type CreatedOAuthState = {
 
 export type ConsumedOAuthState = {
   codeVerifier: string;
+  controllerLockHash: string;
   subject: DidVerificationSubject;
 };
 
 export type CreatedDiscordOAuthState = Omit<CreatedOAuthState, "codeChallenge">;
-export type ConsumedDiscordOAuthState = Pick<ConsumedOAuthState, "subject">;
+export type ConsumedDiscordOAuthState = Pick<ConsumedOAuthState, "controllerLockHash" | "subject">;
 
 const PROVIDER_CONFIG = {
   github: {
@@ -118,6 +120,7 @@ function decodeBase64Url(provider: OAuthProvider, value: string): Buffer {
 function createProviderOAuthState(
   provider: OAuthProvider,
   subject: DidVerificationSubject,
+  controllerLockHash: string,
   secretValue: string | undefined,
   now: number,
   secure: boolean,
@@ -128,12 +131,21 @@ function createProviderOAuthState(
   if (!Number.isSafeInteger(now) || now <= 0) {
     throw new TypeError("OAuth state time must be a positive Unix timestamp");
   }
+  if (!/^0x[0-9a-f]{64}$/.test(controllerLockHash)) {
+    throw new TypeError("OAuth state controller lock hash must be 32 bytes");
+  }
 
   const nonce = Buffer.from(nonceBytes()).toString("base64url");
   if (!/^[A-Za-z0-9_-]{43}$/.test(nonce)) {
     throw new TypeError("OAuth state nonce must contain 32 random bytes");
   }
-  const payload: OAuthStatePayload = { issuedAt: now, nonce, provider, subject: parsedSubject };
+  const payload: OAuthStatePayload = {
+    controllerLockHash,
+    issuedAt: now,
+    nonce,
+    provider,
+    subject: parsedSubject,
+  };
   const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   const value = `${encodedPayload}.${signature(encodedPayload, secret)}`;
   const config = PROVIDER_CONFIG[provider];
@@ -148,12 +160,21 @@ function createProviderOAuthState(
 
 export function createGithubOAuthState(
   subject: DidVerificationSubject,
+  controllerLockHash: string,
   secretValue: string | undefined,
   now: number,
   secure: boolean,
   nonceBytes: () => Uint8Array = () => randomBytes(32),
 ): CreatedOAuthState {
-  const created = createProviderOAuthState("github", subject, secretValue, now, secure, nonceBytes);
+  const created = createProviderOAuthState(
+    "github",
+    subject,
+    controllerLockHash,
+    secretValue,
+    now,
+    secure,
+    nonceBytes,
+  );
   const verifier = codeVerifier(created.nonce, created.secret);
 
   return {
@@ -166,6 +187,7 @@ export function createGithubOAuthState(
 
 export function createDiscordOAuthState(
   subject: DidVerificationSubject,
+  controllerLockHash: string,
   secretValue: string | undefined,
   now: number,
   secure: boolean,
@@ -174,6 +196,7 @@ export function createDiscordOAuthState(
   const created = createProviderOAuthState(
     "discord",
     subject,
+    controllerLockHash,
     secretValue,
     now,
     secure,
@@ -192,7 +215,12 @@ function consumeProviderOAuthState(
   queryState: string,
   secretValue: string | undefined,
   now: number,
-): { nonce: string; secret: string; subject: DidVerificationSubject } {
+): {
+  controllerLockHash: string;
+  nonce: string;
+  secret: string;
+  subject: DidVerificationSubject;
+} {
   const secret = stateSecret(secretValue);
   const value = cookieValue(provider, cookieHeader);
   const parts = value?.split(".");
@@ -232,6 +260,8 @@ function consumeProviderOAuthState(
   if (
     candidate.provider !== provider ||
     !subject.success ||
+    typeof candidate.controllerLockHash !== "string" ||
+    !/^0x[0-9a-f]{64}$/.test(candidate.controllerLockHash) ||
     typeof candidate.nonce !== "string" ||
     !/^[A-Za-z0-9_-]{43}$/.test(candidate.nonce) ||
     candidate.nonce !== queryState ||
@@ -244,7 +274,12 @@ function consumeProviderOAuthState(
     throw providerError(provider, `The ${displayName} verification session is invalid or expired.`);
   }
 
-  return { nonce: candidate.nonce, secret, subject: subject.data };
+  return {
+    controllerLockHash: candidate.controllerLockHash,
+    nonce: candidate.nonce,
+    secret,
+    subject: subject.data,
+  };
 }
 
 export function consumeGithubOAuthState(
@@ -257,6 +292,7 @@ export function consumeGithubOAuthState(
 
   return {
     codeVerifier: codeVerifier(consumed.nonce, consumed.secret),
+    controllerLockHash: consumed.controllerLockHash,
     subject: consumed.subject,
   };
 }
@@ -268,7 +304,7 @@ export function consumeDiscordOAuthState(
   now: number,
 ): ConsumedDiscordOAuthState {
   const consumed = consumeProviderOAuthState("discord", cookieHeader, queryState, secretValue, now);
-  return { subject: consumed.subject };
+  return { controllerLockHash: consumed.controllerLockHash, subject: consumed.subject };
 }
 
 export function clearGithubOAuthCookie(secure: boolean): string {

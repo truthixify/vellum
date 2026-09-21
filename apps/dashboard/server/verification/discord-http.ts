@@ -8,6 +8,7 @@ import {
 import {
   VERIFICATION_API_VERSION,
   claimIssuanceResultSchema,
+  oauthChallengeRequestSchema,
   oauthStartRequestSchema,
   verifiedClaimSchema,
   type ClaimIssuanceResult,
@@ -22,16 +23,30 @@ import {
   type DiscordFetch,
   type DiscordOAuthEnvironment,
 } from "./discord.js";
-import { DiscordOAuthError, IssuerConfigurationError, OAuthConfigurationError } from "./errors.js";
+import {
+  DiscordOAuthError,
+  IssuerConfigurationError,
+  OAuthConfigurationError,
+  VerificationCoordinationError,
+  VerificationServiceError,
+} from "./errors.js";
+import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
 import { issueVerifiedClaims } from "./issuer.js";
 import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
+import { coordinateIssuance } from "./issuance-control.js";
+import { logVerificationFailure, type VerificationFailureLogger } from "./logging.js";
 import {
   clearDiscordOAuthCookie,
   consumeDiscordOAuthState,
   createDiscordOAuthState,
 } from "./oauth-state.js";
+import {
+  assertSubjectController,
+  createSubjectChallenge,
+  verifySubjectProof,
+} from "./subject-proof.js";
 
-type DiscordAction = "start" | "callback";
+type DiscordAction = "challenge" | "start" | "callback";
 
 export type DiscordClaimIssuer = (
   subject: VerificationSubject,
@@ -42,6 +57,11 @@ export type DiscordOAuthHttpDependencies = {
   environment: DiscordOAuthEnvironment;
   fetch: DiscordFetch;
   issueClaims: DiscordClaimIssuer;
+  createCoordinator: (environment: DiscordOAuthEnvironment) => VerificationCoordinator;
+  assertSubjectController: typeof assertSubjectController;
+  createSubjectChallenge: typeof createSubjectChallenge;
+  verifySubjectProof: typeof verifySubjectProof;
+  logFailure: VerificationFailureLogger;
   nonceBytes?: () => Uint8Array;
   now: () => number;
 };
@@ -50,6 +70,11 @@ const defaultDependencies: DiscordOAuthHttpDependencies = {
   environment: process.env,
   fetch: globalThis.fetch,
   issueClaims: (subject, claims) => issueVerifiedClaims(subject, claims),
+  createCoordinator: createVerificationCoordinator,
+  assertSubjectController,
+  createSubjectChallenge,
+  verifySubjectProof,
+  logFailure: logVerificationFailure,
   now: () => Math.floor(Date.now() / 1_000),
 };
 
@@ -87,7 +112,7 @@ export function discordActionFromUrl(request: Request): DiscordAction | undefine
       : segments.length === 2 && segments[0] === "api" && segments[1] === "discord"
         ? exactlyOneParameter(url, "action")
         : undefined;
-  return value === "start" || value === "callback" ? value : undefined;
+  return value === "challenge" || value === "start" || value === "callback" ? value : undefined;
 }
 
 function callbackRedirect(
@@ -155,27 +180,139 @@ async function handleStart(
   }
 
   const now = dependencies.now();
-  const state = createDiscordOAuthState(
-    parsed.data.subject,
-    config.stateSecret,
-    now,
-    config.callbackUrl.protocol === "https:",
-    dependencies.nonceBytes,
-  );
-  return jsonResponse(
-    {
+  try {
+    const coordinator = dependencies.createCoordinator(dependencies.environment);
+    const controllerLockHash = await dependencies.verifySubjectProof(
+      "discord",
+      parsed.data.subject,
+      parsed.data.proof,
+      config.stateSecret,
+      now,
+      coordinator,
+      dependencies.environment,
+    );
+    const state = createDiscordOAuthState(
+      parsed.data.subject,
+      controllerLockHash,
+      config.stateSecret,
+      now,
+      config.callbackUrl.protocol === "https:",
+      dependencies.nonceBytes,
+    );
+    return jsonResponse(
+      {
+        ok: true,
+        version: VERIFICATION_API_VERSION,
+        platform: "discord",
+        authorizationUrl: discordAuthorizationUrl(config, state.state),
+        expiresAt: state.expiresAt,
+      },
+      200,
+      {
+        "referrer-policy": "no-referrer",
+        "set-cookie": state.cookie,
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof OAuthConfigurationError ||
+      error instanceof VerificationCoordinationError
+    ) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "Discord verification is temporarily unavailable.",
+      );
+    }
+    if (error instanceof VerificationServiceError) {
+      return errorResponse(error.status, error.code, error.message);
+    }
+    dependencies.logFailure({
+      error,
+      platform: "discord",
+      requestId: crypto.randomUUID(),
+      stage: "start",
+    });
+    return errorResponse(
+      400,
+      "subject_control_invalid",
+      "The wallet could not be verified for this identity.",
+    );
+  }
+}
+
+async function handleChallenge(
+  request: Request,
+  dependencies: DiscordOAuthHttpDependencies,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return errorResponse(405, "method_not_allowed", "Use POST to request a wallet challenge.", {
+      allow: "POST",
+    });
+  }
+
+  let config;
+  try {
+    config = discordOAuthConfig(dependencies.environment);
+    dependencies.createCoordinator(dependencies.environment);
+  } catch (error) {
+    if (error instanceof OAuthConfigurationError) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "Discord verification is not configured. Try again later.",
+      );
+    }
+    throw error;
+  }
+
+  let body: unknown;
+  try {
+    body = await parseJsonBody(request);
+  } catch (error) {
+    return errorResponse(
+      error instanceof RequestBodyError ? error.status : 400,
+      "invalid_request",
+      error instanceof RequestBodyError
+        ? error.message
+        : "The request body must contain valid JSON.",
+    );
+  }
+  const parsed = oauthChallengeRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return errorResponse(
+      400,
+      "invalid_request",
+      "Choose a valid did:ckb identity before connecting Discord.",
+    );
+  }
+
+  try {
+    const challenge = await dependencies.createSubjectChallenge(
+      "discord",
+      parsed.data.subject,
+      config.stateSecret,
+      dependencies.now(),
+      dependencies.environment,
+    );
+    return jsonResponse({
       ok: true,
       version: VERIFICATION_API_VERSION,
       platform: "discord",
-      authorizationUrl: discordAuthorizationUrl(config, state.state),
-      expiresAt: state.expiresAt,
-    },
-    200,
-    {
-      "referrer-policy": "no-referrer",
-      "set-cookie": state.cookie,
-    },
-  );
+      ...challenge,
+    });
+  } catch (error) {
+    if (error instanceof VerificationServiceError) {
+      return errorResponse(error.status, error.code, error.message);
+    }
+    dependencies.logFailure({
+      error,
+      platform: "discord",
+      requestId: crypto.randomUUID(),
+      stage: "challenge",
+    });
+    return errorResponse(503, "issuer_unavailable", "The selected identity could not be resolved.");
+  }
 }
 
 function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClaim[] {
@@ -235,6 +372,7 @@ async function handleCallback(
   }
 
   const secure = config.callbackUrl.protocol === "https:";
+  const requestId = crypto.randomUUID();
   try {
     const url = new URL(request.url);
     const queryState = exactlyOneParameter(url, "state");
@@ -272,6 +410,12 @@ async function handleCallback(
       );
     }
 
+    await dependencies.assertSubjectController(
+      oauthState.subject,
+      oauthState.controllerLockHash,
+      dependencies.environment,
+    );
+
     const verified = await verifyDiscordAuthorization(code, config, {
       fetch: dependencies.fetch,
       now: dependencies.now,
@@ -280,9 +424,18 @@ async function handleCallback(
 
     let issuance: ClaimIssuanceResult[];
     try {
-      issuance = (await dependencies.issueClaims(oauthState.subject, claims)).map((result) =>
-        claimIssuanceResultSchema.parse(result),
-      );
+      const coordinator = dependencies.createCoordinator(dependencies.environment);
+      issuance = await coordinateIssuance({
+        accountId: verified.account.id,
+        coordinator,
+        issue: async () =>
+          (await dependencies.issueClaims(oauthState.subject, claims)).map((result) =>
+            claimIssuanceResultSchema.parse(result),
+          ),
+        now: dependencies.now(),
+        platform: "discord",
+        subjectDid: oauthState.subject.did,
+      });
       if (
         issuance.length !== claims.length ||
         issuance.some((result) => result.transactionHash !== issuance[0].transactionHash) ||
@@ -292,6 +445,14 @@ async function handleCallback(
         throw new Error("Discord claim issuance returned inconsistent results");
       }
     } catch (error) {
+      dependencies.logFailure({ error, platform: "discord", requestId, stage: "issuance" });
+      if (error instanceof VerificationServiceError) {
+        return callbackRedirect(request, config.callbackUrl, secure, {
+          status: "error",
+          code: error.code,
+          retryAt: error.retryAt,
+        });
+      }
       if (error instanceof IssuerConfigurationError) {
         return callbackRedirect(request, config.callbackUrl, secure, {
           status: "error",
@@ -325,6 +486,15 @@ async function handleCallback(
         retryAt: error.retryAt,
       });
     }
+    if (error instanceof VerificationServiceError) {
+      dependencies.logFailure({ error, platform: "discord", requestId, stage: "callback" });
+      return callbackRedirect(request, config.callbackUrl, secure, {
+        status: "error",
+        code: error.code,
+        retryAt: error.retryAt,
+      });
+    }
+    dependencies.logFailure({ error, platform: "discord", requestId, stage: "callback" });
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "error",
       code: "verification_failed",
@@ -337,6 +507,7 @@ export async function handleDiscordOAuthRequest(
   dependencies: DiscordOAuthHttpDependencies = defaultDependencies,
 ): Promise<Response> {
   const action = discordActionFromUrl(request);
+  if (action === "challenge") return handleChallenge(request, dependencies);
   if (action === "start") return handleStart(request, dependencies);
   if (action === "callback") return handleCallback(request, dependencies);
   return errorResponse(404, "invalid_request", "The Discord verification endpoint was not found.");
