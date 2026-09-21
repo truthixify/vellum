@@ -1,13 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { GITHUB_CLAIM_SCHEMA_HASH } from "@vellum/schemas";
+import {
+  DISCORD_CLAIM_SCHEMA_HASH,
+  DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
+  GITHUB_CLAIM_SCHEMA_HASH,
+} from "@vellum/schemas";
 import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V1 } from "./policy";
+import { VELLUM_REPUTATION_POLICY_V2 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V1.github.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V2.github.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -23,6 +27,18 @@ type ClaimOptions = {
   verifiedAt?: number;
   payload?: unknown;
   duplicateTransactions?: readonly number[];
+};
+
+type DiscordClaimOptions = Omit<ClaimOptions, "userId" | "login"> & {
+  userId?: string;
+  username?: string;
+};
+
+type DiscordCommunityClaimOptions = Omit<DiscordClaimOptions, "accountCreatedAt"> & {
+  guildId?: string;
+  communityName?: string;
+  joinedAt?: number;
+  recognizedRoles?: { role_id: string; role_name: string }[];
 };
 
 function hash(byte: number): `0x${string}` {
@@ -66,6 +82,83 @@ function githubClaim(options: ClaimOptions = {}): Claim {
   } as unknown as Claim;
 }
 
+function discordSnowflake(timestamp: number, increment = 0n): string {
+  return (((BigInt(timestamp) * 1_000n - 1_420_070_400_000n) << 22n) + increment).toString();
+}
+
+function discordClaim(options: DiscordClaimOptions = {}): Claim {
+  const id = options.id ?? 30;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - 10 * DAY;
+  const accountCreatedAt = options.accountCreatedAt ?? EVALUATED_AT - 1_460 * DAY;
+  const userId = options.userId ?? discordSnowflake(accountCreatedAt, BigInt(id));
+  const username = options.username ?? `builder${id}`;
+  const payload = options.payload ?? {
+    user_id: userId,
+    username,
+    profile_url: `https://discord.com/users/${userId}`,
+    account_created_at: accountCreatedAt,
+    verified_at: options.verifiedAt ?? issuedAt,
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? DISCORD_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: options.expiresAt === undefined ? undefined : BigInt(options.expiresAt),
+    payload,
+    cell: cell(options.transaction ?? id),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) => cell(transaction)),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
+function discordCommunityClaim(options: DiscordCommunityClaimOptions = {}): Claim {
+  const id = options.id ?? 40;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - 10 * DAY;
+  const userId = options.userId ?? discordSnowflake(EVALUATED_AT - 1_460 * DAY, 30n);
+  const payload = options.payload ?? {
+    user_id: userId,
+    verified_at: options.verifiedAt ?? issuedAt,
+    memberships: [
+      {
+        guild_id: options.guildId ?? "1048098513321902120",
+        community_name: options.communityName ?? "Nervos Nation",
+        joined_at: options.joinedAt ?? EVALUATED_AT - 730 * DAY,
+        recognized_roles: options.recognizedRoles ?? [
+          { role_id: "1048098513321902121", role_name: "Builder" },
+        ],
+      },
+    ],
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: BigInt(options.expiresAt ?? issuedAt + 30 * DAY),
+    payload,
+    cell: cell(options.transaction ?? id, 1n),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) =>
+      cell(transaction, 1n),
+    ),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
 function readResult(claims: Claim[], invalid: ReadClaimsResult["invalid"] = []): ReadClaimsResult {
   return { claims, invalid };
 }
@@ -78,7 +171,7 @@ function categoryScore(
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v1", () => {
+describe("vellum.reputation.v2", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -87,7 +180,7 @@ describe("vellum.reputation.v1", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v1",
+      policyVersion: "vellum.reputation.v2",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -106,8 +199,8 @@ describe("vellum.reputation.v1", () => {
       schemaId: "vellum.social.github.v1",
       account: { platform: "github", id: 1, handle: "builder-1" },
       contributions: [
-        { category: "tenure", points: 100, ruleId: "github-account-tenure.v1" },
-        { category: "recency", points: 100, ruleId: "github-verification-recency.v1" },
+        { category: "tenure", points: 100, ruleId: "github-account-tenure.v2" },
+        { category: "recency", points: 100, ruleId: "github-verification-recency.v2" },
       ],
     });
   });
@@ -160,6 +253,171 @@ describe("vellum.reputation.v1", () => {
       });
       expect(categoryScore(result, "recency")).toBe(expected);
     }
+  });
+
+  test("scores Discord identity and trusted CKB community history", () => {
+    const accountCreatedAt = EVALUATED_AT - 1_460 * DAY;
+    const userId = discordSnowflake(accountCreatedAt, 30n);
+    const identity = discordClaim({ userId, accountCreatedAt });
+    const community = discordCommunityClaim({
+      userId,
+      joinedAt: EVALUATED_AT - 730 * DAY,
+    });
+    const result = scoreReputation({
+      claims: readResult([community, identity]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v2",
+      overall: { score: 360, maximum: 1_000 },
+      categories: [
+        { id: "technical", score: 0, maximum: 300 },
+        { id: "contribution", score: 0, maximum: 300 },
+        { id: "community", score: 160, maximum: 200 },
+        { id: "tenure", score: 100, maximum: 100 },
+        { id: "recency", score: 100, maximum: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence[1]).toMatchObject({
+      schemaId: "vellum.community.discord.v1",
+      account: { platform: "discord", id: userId },
+      community: {
+        memberships: [
+          {
+            community_name: "Nervos Nation",
+            recognized_roles: [{ role_name: "Builder" }],
+          },
+        ],
+      },
+      supportingClaims: [{ claimId: identity.claimId }],
+      contributions: [
+        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v2" },
+      ],
+    });
+  });
+
+  test("uses the best identity evidence without stacking category points", () => {
+    const discordCreatedAt = EVALUATED_AT - 730 * DAY;
+    const discordUserId = discordSnowflake(discordCreatedAt, 31n);
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim({
+          accountCreatedAt: EVALUATED_AT - 1_460 * DAY,
+          issuedAt: EVALUATED_AT - 40 * DAY,
+        }),
+        discordClaim({
+          userId: discordUserId,
+          accountCreatedAt: discordCreatedAt,
+          issuedAt: EVALUATED_AT - DAY,
+        }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      overall: { score: 200 },
+      categories: [
+        { id: "technical", score: 0 },
+        { id: "contribution", score: 0 },
+        { id: "community", score: 0 },
+        { id: "tenure", score: 100 },
+        { id: "recency", score: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v2" },
+      { category: "recency", points: 100, ruleId: "discord-verification-recency.v2" },
+    ]);
+  });
+
+  test("applies exact Discord community age boundaries", () => {
+    const accountCreatedAt = EVALUATED_AT - 1_460 * DAY;
+    const userId = discordSnowflake(accountCreatedAt, 32n);
+    const cases = [
+      [0, 0],
+      [30 * DAY - 1, 0],
+      [30 * DAY, 40],
+      [180 * DAY, 80],
+      [365 * DAY, 120],
+      [730 * DAY, 160],
+      [1_460 * DAY, 200],
+    ] as const;
+
+    for (const [age, expected] of cases) {
+      const result = scoreReputation({
+        claims: readResult([
+          discordClaim({ userId, accountCreatedAt }),
+          discordCommunityClaim({ userId, joinedAt: EVALUATED_AT - age }),
+        ]),
+        evaluatedAt: EVALUATED_AT,
+      });
+      if (result.status !== "available") throw new Error("Expected an available score");
+      expect(result.categories.find((entry) => entry.id === "community")?.score).toBe(expected);
+    }
+  });
+
+  test("requires matching current Discord identity and a thirty-day community lifetime", () => {
+    const accountCreatedAt = EVALUATED_AT - 365 * DAY;
+    const userId = discordSnowflake(accountCreatedAt, 33n);
+    const otherUserId = discordSnowflake(accountCreatedAt, 34n);
+    const issuedAt = EVALUATED_AT - DAY;
+    const result = scoreReputation({
+      claims: readResult([
+        discordCommunityClaim({ id: 41, userId, issuedAt }),
+        discordClaim({ id: 31, userId: otherUserId, accountCreatedAt }),
+        discordCommunityClaim({
+          id: 42,
+          userId: otherUserId,
+          issuedAt: issuedAt - 1,
+          expiresAt: issuedAt - 1 + 29 * DAY,
+        }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 160 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence.map((item) => item.reason).sort()).toEqual([
+      "additional-account",
+      "malformed-payload",
+    ]);
+  });
+
+  test("does not score Discord community evidence without an identity claim", () => {
+    const result = scoreReputation({
+      claims: readResult([discordCommunityClaim()]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 0 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toEqual([]);
+    expect(result.excludedEvidence).toContainEqual(
+      expect.objectContaining({ reason: "identity-missing" }),
+    );
+  });
+
+  test("treats Discord community evidence as inactive at its expiry boundary", () => {
+    const issuedAt = EVALUATED_AT - 30 * DAY;
+    const accountCreatedAt = EVALUATED_AT - 365 * DAY;
+    const userId = discordSnowflake(accountCreatedAt, 35n);
+    const result = scoreReputation({
+      claims: readResult([
+        discordClaim({ userId, accountCreatedAt }),
+        discordCommunityClaim({ userId, issuedAt }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 160 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence).toContainEqual(expect.objectContaining({ reason: "expired" }));
   });
 
   test("is independent of claim order and prevents duplicate or account stacking", () => {
@@ -248,7 +506,7 @@ describe("vellum.reputation.v1", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v1",
+      policyVersion: "vellum.reputation.v2",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -290,9 +548,10 @@ describe("vellum.reputation.v1", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V1.github.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.discord.communityBands)).toBe(true);
   });
 });

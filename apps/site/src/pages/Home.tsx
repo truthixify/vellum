@@ -30,6 +30,14 @@ const RECORDS: RecordNode[] = [
     time: "2026-02-11 16:40 UTC",
   },
   {
+    key: "discord",
+    id: "discord.com/users/80351110224678912",
+    title: "Discord community membership",
+    source: "OAuth-backed Claim Cells",
+    issuer: "Vellum verifier",
+    time: "2026-02-11 16:42 UTC",
+  },
+  {
     key: "address",
     id: "ckb1qzda\u20264mns9f0",
     title: "Linked address",
@@ -144,6 +152,14 @@ function RegistryScene() {
                 <small className="positive">Verified &middot; issuer-backed claim</small>
               </NodeButton>
               <NodeButton
+                record={byKey("discord")}
+                selected={selected.key === "discord"}
+                onSelect={setSelected}
+              >
+                <strong>Discord &middot; @rmaddox</strong>
+                <small className="positive">Verified &middot; CKB community member</small>
+              </NodeButton>
+              <NodeButton
                 record={byKey("address")}
                 selected={selected.key === "address"}
                 onSelect={setSelected}
@@ -231,7 +247,10 @@ function RegistryLegend() {
     <section className="site-content registry-legend">
       {[
         ["did:ckb:0x8f2a\u2026c41d", "One resolvable identifier, owned by a person"],
-        ["Three linked services", "GitHub, CKB address, CKBoost \u2014 each with its own method"],
+        [
+          "Four linked services",
+          "GitHub, Discord, CKB address, CKBoost \u2014 each with its own method",
+        ],
         ["Independently sourced claims", "Issuer, schema, and timestamp visible on every record"],
         [
           "One transparent eligibility result",
@@ -289,12 +308,26 @@ function ClaimsLedger() {
     <div className="ledger">
       <div className="ledger__bar">
         <strong>Attached evidence</strong>
-        <span>1 accepted claim</span>
+        <span>3 accepted Claim Cells</span>
       </div>
       {[
         [
           "GitHub account",
           "vellum.social.github.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
+        [
+          "Discord account",
+          "vellum.social.discord.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
+        [
+          "Nervos Nation membership",
+          "vellum.community.discord.v1",
           "Vellum Testnet issuer",
           "Example checkpoint",
           "Verified",
@@ -325,7 +358,7 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">Vellum reputation v1 \u2014 evaluation</div>
+        <div className="policy-card__bar">Vellum reputation v2 - evaluation</div>
         <div className="policy-card__result">
           <StatusMark tone="positive">Available</StatusMark>
           <span>Deterministic Testnet result</span>
@@ -333,11 +366,15 @@ function PolicyExamples() {
         <dl>
           <div>
             <dt>Aggregate score</dt>
-            <dd>200 of 1000</dd>
+            <dd>360 of 1000</dd>
           </div>
           <div>
-            <dt>GitHub tenure</dt>
+            <dt>Identity tenure</dt>
             <dd>100 of 100</dd>
+          </div>
+          <div>
+            <dt>CKB community history</dt>
+            <dd>160 of 200</dd>
           </div>
           <div>
             <dt>Verification recency</dt>
@@ -357,10 +394,14 @@ function PolicyExamples() {
             <small className="mono">did:ckb:0x8f2a\u2026c41d</small>
           </span>
           <strong className="embed-score">
-            200<small>/1000</small>
+            360<small>/1000</small>
           </strong>
         </div>
         <div className="embed-rails">
+          <span>
+            Community <b className="mono">160/200</b>
+          </span>
+          <SignalRail value={160} max={200} label="Community 160 of 200" />
           <span>
             Tenure <b className="mono">100/100</b>
           </span>
@@ -369,7 +410,7 @@ function PolicyExamples() {
             Recency <b className="mono">100/100</b>
           </span>
           <SignalRail value={100} max={100} label="Recency 100 of 100" />
-          <small>1 accepted claim {"\u00b7"} evaluated on request</small>
+          <small>3 accepted Claim Cells {"\u00b7"} evaluated on request</small>
         </div>
       </div>
     </div>
@@ -471,11 +512,11 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0\u20131000 {"\u00b7"} vellum.reputation.v1</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v2</strong>
             </div>
             <div>
-              <small>Scored in v1</small>
-              <strong>Tenure and recency; other categories remain at zero</strong>
+              <small>Scored in v2</small>
+              <strong>Community history, identity tenure, and verification recency</strong>
             </div>
             <div>
               <small>Issuer visibility</small>

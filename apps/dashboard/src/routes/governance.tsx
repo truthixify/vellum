@@ -40,7 +40,7 @@ function GovernancePage() {
         <section>
           <h2>Policy</h2>
           <span className="mono governance-id">
-            policy:example-community/v1 - reads vellum.reputation.v1
+            policy:example-community/v1 - reads vellum.reputation.v2
           </span>
           <dl className="governance-rules">
             <div>
@@ -53,7 +53,7 @@ function GovernancePage() {
             </div>
             <div>
               <dt>Accepted issuer states</dt>
-              <dd className="mono">trusted GitHub issuer</dd>
+              <dd className="mono">trusted evidence issuer</dd>
             </div>
             <div>
               <dt>Maximum data age</dt>

@@ -1,4 +1,5 @@
 import { useCcc } from "@ckb-ccc/connector-react";
+import { DISCORD_CLAIM_SCHEMA_ID, DISCORD_COMMUNITY_CLAIM_SCHEMA_ID } from "@vellum/schemas";
 import { ArrowUpRight, BadgeCheck, Copy, RefreshCw } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
@@ -309,6 +310,10 @@ function EvidenceCoverage({
 }) {
   const available = result?.status === "available" ? result : undefined;
   const github = available?.evidence.find((item) => item.account.platform === "github");
+  const discord = available?.evidence.find((item) => item.schemaId === DISCORD_CLAIM_SCHEMA_ID);
+  const discordCommunity = available?.evidence.find(
+    (item) => item.schemaId === DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  );
   const scoredCategories =
     available?.categories.filter((category) => category.score > 0).length ?? 0;
   const checking = loading && !mainnet;
@@ -361,6 +366,37 @@ function EvidenceCoverage({
         </span>
         <Link className="v-button v-button--quiet" to="/verify/github">
           <BadgeCheck size={13} aria-hidden="true" /> {github ? "View" : "Verify"}
+        </Link>
+      </div>
+      <div className="coverage-action">
+        <span>
+          <strong>
+            {checking
+              ? "Checking Discord evidence"
+              : discord
+                ? `Discord · @${discord.account.handle}`
+                : unavailable
+                  ? "Discord evidence unavailable"
+                  : "Discord is not verified"}
+          </strong>
+          <small>
+            {checking
+              ? "Reading account and community claims"
+              : discordCommunity && "community" in discordCommunity
+                ? `${discordCommunity.community.memberships.length} recognized CKB ${
+                    discordCommunity.community.memberships.length === 1
+                      ? "community"
+                      : "communities"
+                  }`
+                : discord
+                  ? "Account verified; no recognized CKB community claim"
+                  : unavailable
+                    ? "No conclusion was drawn from unavailable evidence"
+                    : "Add account and recognized CKB community evidence"}
+          </small>
+        </span>
+        <Link className="v-button v-button--quiet" to="/verify/discord">
+          <BadgeCheck size={13} aria-hidden="true" /> {discord ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">
@@ -419,8 +455,17 @@ function EvidenceLedger({ result }: { result: ReputationResponse | undefined }) 
               key={`${evidence.claim.transactionHash}:${evidence.claim.outputIndex}`}
             >
               <span>
-                <strong>GitHub · @{evidence.account.handle}</strong>
-                <small>{evidence.schemaId}</small>
+                <strong>
+                  {evidence.account.platform === "github" ? "GitHub" : "Discord"} · @
+                  {evidence.account.handle}
+                </strong>
+                <small>
+                  {"community" in evidence
+                    ? evidence.community.memberships
+                        .map((membership) => membership.community_name)
+                        .join(", ")
+                    : evidence.schemaId}
+                </small>
               </span>
               <span className="mono" title={evidence.issuerDid}>
                 {shorten(evidence.issuerDid, 12, 6)}

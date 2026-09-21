@@ -22,10 +22,11 @@ export function Transparency() {
               <span>Change</span>
             </div>
             <div>
-              <span className="mono">vellum.reputation.v1</span>
+              <span className="mono">vellum.reputation.v2</span>
               <span>Live on Testnet</span>
               <span>
-                Scores active GitHub account claims by account tenure and verification recency.
+                Scores verified account age, verification recency, and recognized CKB Discord
+                community membership age.
               </span>
             </div>
           </div>
@@ -52,7 +53,7 @@ export function Transparency() {
           <div>
             <small>Score range</small>
             <strong>0 to 1000</strong>
-            <span>Five fixed categories with published maxima; v1 currently scores two.</span>
+            <span>Five fixed categories with published maxima; v2 currently scores three.</span>
           </div>
           <div>
             <small>Failure behavior</small>
@@ -69,7 +70,10 @@ export function Transparency() {
             <h2>Known limitations</h2>
             <ul>
               <li>The current policy and service operate on CKB Testnet.</li>
-              <li>Version 1 recognizes the published GitHub schema and trusted issuer.</li>
+              <li>
+                Version 2 recognizes published GitHub identity, Discord identity, and Discord CKB
+                community schemas from the trusted issuer.
+              </li>
               <li>A score does not prove uniqueness, humanity, honesty, or intent.</li>
               <li>Applications decide whether and how a Vellum score affects access.</li>
             </ul>

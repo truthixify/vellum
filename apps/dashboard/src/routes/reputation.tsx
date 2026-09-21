@@ -198,7 +198,7 @@ function UnavailableReputation({
 }
 
 function ReputationReport({ result }: { result: AvailableReputation }) {
-  const githubEvidence = result.evidence.find((evidence) => evidence.account.platform === "github");
+  const hasAcceptedEvidence = result.evidence.length > 0;
 
   return (
     <div className="reputation-report">
@@ -257,9 +257,14 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
           <div className="reputation-evidence-empty">
             <h3>No qualifying claims</h3>
             <p>This identity has no active claims recognized by the current policy.</p>
-            <Link to="/verify/github" className="v-button v-button--secondary">
-              <BadgeCheck size={14} aria-hidden="true" /> Verify GitHub
-            </Link>
+            <div className="reputation-evidence-empty__actions">
+              <Link to="/verify/github" className="v-button v-button--secondary">
+                <BadgeCheck size={14} aria-hidden="true" /> Verify GitHub
+              </Link>
+              <Link to="/verify/discord" className="v-button v-button--secondary">
+                <BadgeCheck size={14} aria-hidden="true" /> Verify Discord
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="reputation-evidence-list">
@@ -285,11 +290,28 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
                   <span>
                     Contributions{" "}
                     <strong>
-                      {evidence.contributions
-                        .map((item) => `${item.category} +${item.points}`)
-                        .join(", ")}
+                      {evidence.contributions.length > 0
+                        ? evidence.contributions
+                            .map((item) => `${item.category} +${item.points}`)
+                            .join(", ")
+                        : "No direct points"}
                     </strong>
                   </span>
+                  {"community" in evidence
+                    ? evidence.community.memberships.map((membership) => (
+                        <span className="reputation-evidence__community" key={membership.guild_id}>
+                          <strong>{membership.community_name}</strong>
+                          <small>Joined {formatDate(membership.joined_at)} UTC</small>
+                          <small>
+                            {membership.recognized_roles.length > 0
+                              ? `Roles: ${membership.recognized_roles
+                                  .map((role) => role.role_name)
+                                  .join(", ")}`
+                              : "No recognized roles"}
+                          </small>
+                        </span>
+                      ))
+                    : null}
                 </div>
                 <details>
                   <summary>On-chain reference</summary>
@@ -341,7 +363,7 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
           This score is a policy output, not a universal judgment. Re-evaluation can change it as
           claims or issuer state change.
         </p>
-        {githubEvidence ? (
+        {hasAcceptedEvidence ? (
           <span className="reputation-method__live">Live evidence verified</span>
         ) : null}
       </footer>
@@ -350,8 +372,7 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
 }
 
 function CategoryRow({ category }: { category: ReputationCategory }) {
-  const inactive =
-    category.score === 0 && ["technical", "contribution", "community"].includes(category.id);
+  const inactive = category.score === 0 && ["technical", "contribution"].includes(category.id);
   return (
     <div className={`reputation-category${inactive ? " reputation-category--inactive" : ""}`}>
       <div className="reputation-category__label">

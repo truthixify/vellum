@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { discordSnowflakeTimestamp } from "@vellum/schemas";
 
 import { fetchReputation, ReputationRequestError } from "./reputation";
 
@@ -11,7 +12,7 @@ function availableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v1",
+    policyVersion: "vellum.reputation.v2",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -41,8 +42,89 @@ function availableResponse() {
           verifiedAt: 1_799_500_000,
         },
         contributions: [
-          { category: "tenure", points: 100, ruleId: "github-account-tenure.v1" },
-          { category: "recency", points: 100, ruleId: "github-verification-recency.v1" },
+          { category: "tenure", points: 100, ruleId: "github-account-tenure.v2" },
+          { category: "recency", points: 100, ruleId: "github-verification-recency.v2" },
+        ],
+      },
+    ],
+    excludedEvidence: [],
+  };
+}
+
+function discordAvailableResponse() {
+  const userId = "80351110224678912";
+  const identityClaim = {
+    claimId: `0x${"3".repeat(64)}`,
+    transactionHash: `0x${"4".repeat(64)}`,
+    outputIndex: 0,
+  };
+  return {
+    ok: true,
+    version: "1",
+    network: "ckb_testnet",
+    subject: DID,
+    status: "available",
+    policyVersion: "vellum.reputation.v2",
+    evaluatedAt: 1_800_000_000,
+    overall: { score: 360, maximum: 1_000 },
+    categories: [
+      { id: "technical", score: 0, maximum: 300 },
+      { id: "contribution", score: 0, maximum: 300 },
+      { id: "community", score: 160, maximum: 200 },
+      { id: "tenure", score: 100, maximum: 100 },
+      { id: "recency", score: 100, maximum: 100 },
+    ],
+    evidence: [
+      {
+        claim: identityClaim,
+        issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
+        schemaId: "vellum.social.discord.v1",
+        schemaHash: "0x1d0169167b6c34b7818ba6932974679f8fd5284e4d5d79319da12f7d79df8b69",
+        issuedAt: 1_799_500_000,
+        account: {
+          platform: "discord",
+          id: userId,
+          handle: "truthixify",
+          profileUrl: `https://discord.com/users/${userId}`,
+          createdAt: discordSnowflakeTimestamp(userId),
+          verifiedAt: 1_799_500_000,
+        },
+        contributions: [
+          { category: "tenure", points: 100, ruleId: "discord-account-tenure.v2" },
+          { category: "recency", points: 100, ruleId: "discord-verification-recency.v2" },
+        ],
+      },
+      {
+        claim: {
+          claimId: `0x${"5".repeat(64)}`,
+          transactionHash: identityClaim.transactionHash,
+          outputIndex: 1,
+        },
+        supportingClaims: [{ ...identityClaim }],
+        issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
+        schemaId: "vellum.community.discord.v1",
+        schemaHash: "0x11775e778f3b16d7f62552ab8764f767795a943ad261e9c5aef5239a2ffa892c",
+        issuedAt: 1_799_500_000,
+        account: {
+          platform: "discord",
+          id: userId,
+          handle: "truthixify",
+          profileUrl: `https://discord.com/users/${userId}`,
+          createdAt: discordSnowflakeTimestamp(userId),
+          verifiedAt: 1_799_500_000,
+        },
+        community: {
+          memberships: [
+            {
+              guild_id: "1048098513321902120",
+              community_name: "Nervos Nation",
+              joined_at: 1_700_000_000,
+              recognized_roles: [{ role_id: "1048098513321902121", role_name: "Builder" }],
+            },
+          ],
+        },
+        contributions: [
+          { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v2" },
         ],
       },
     ],
@@ -62,6 +144,35 @@ describe("reputation API client", () => {
     });
   });
 
+  test("accepts linked Discord identity and CKB community evidence", async () => {
+    const fetch = mock(async () => Response.json(discordAvailableResponse()));
+    const result = await fetchReputation(DID, fetch);
+
+    expect(result).toMatchObject({
+      status: "available",
+      overall: { score: 360 },
+      evidence: [
+        { schemaId: "vellum.social.discord.v1" },
+        {
+          schemaId: "vellum.community.discord.v1",
+          community: { memberships: [{ community_name: "Nervos Nation" }] },
+        },
+      ],
+    });
+  });
+
+  test("rejects community evidence without its matching identity claim", async () => {
+    const body = discordAvailableResponse();
+    body.evidence[1].supportingClaims![0].outputIndex = 9;
+
+    await expect(
+      fetchReputation(
+        DID,
+        mock(async () => Response.json(body)),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
   test("preserves an explicit unavailable state", async () => {
     const fetch = mock(async () =>
       Response.json(
@@ -71,7 +182,7 @@ describe("reputation API client", () => {
           network: "ckb_testnet",
           subject: DID,
           status: "unavailable",
-          policyVersion: "vellum.reputation.v1",
+          policyVersion: "vellum.reputation.v2",
           evaluatedAt: 1_800_000_000,
           error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
         },
@@ -131,7 +242,7 @@ describe("reputation API client", () => {
         network: "ckb_testnet",
         subject: DID,
         status: "unavailable",
-        policyVersion: "vellum.reputation.v1",
+        policyVersion: "vellum.reputation.v2",
         evaluatedAt: 1_800_000_000,
         error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
       }),
