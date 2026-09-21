@@ -14,7 +14,7 @@ export function ReputationChip() {
       return typeof value === "string" && isDidCkb(value) ? value : undefined;
     },
   });
-  const subject = routeDid ?? activeDid;
+  const subject = routeDid ?? (network === "testnet" ? activeDid : undefined);
   const reputation = useReputation(subject, network === "testnet" || !!routeDid);
 
   let value = "—";

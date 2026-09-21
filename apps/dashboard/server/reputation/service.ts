@@ -12,6 +12,8 @@ import { claimScripts, issuerMetadata, issuerRpcUrl } from "../verification/issu
 export class InvalidReputationSubjectError extends Error {}
 export class ReputationSubjectNotFoundError extends Error {}
 
+const REPUTATION_RPC_TIMEOUT_MS = 10_000;
+
 type ReputationEnvironment = {
   [key: string]: string | undefined;
   CKB_RPC_URL?: string;
@@ -27,7 +29,12 @@ export type ReputationServiceDependencies = {
 };
 
 const defaultDependencies: ReputationServiceDependencies = {
-  createClient: (rpcUrl) => new ccc.ClientPublicTestnet({ url: rpcUrl }),
+  createClient: (rpcUrl) =>
+    new ccc.ClientPublicTestnet({
+      url: rpcUrl,
+      fallbacks: [],
+      timeout: REPUTATION_RPC_TIMEOUT_MS,
+    }),
   now: () => Math.floor(Date.now() / 1_000),
   readClaims,
   resolveDid: resolveDidCkb,
