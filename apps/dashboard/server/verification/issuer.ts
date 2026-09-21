@@ -1,9 +1,9 @@
 import { ccc } from "@ckb-ccc/core";
 import {
-  writeClaim,
+  writeClaims,
   type ClaimScriptConfigLike,
-  type WriteClaimProps,
-  type WriteClaimResult,
+  type WriteClaimsProps,
+  type WriteClaimsResult,
 } from "@vellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json" with { type: "json" };
@@ -68,16 +68,18 @@ type IssuerEnvironment = {
 
 export type IssuerSigner = ccc.SignerCkbPrivateKey;
 
-type ClaimWriter = (props: WriteClaimProps<VerifiedClaim["payload"]>) => Promise<WriteClaimResult>;
+type ClaimWriter = (
+  props: WriteClaimsProps<VerifiedClaim["payload"]>,
+) => Promise<WriteClaimsResult>;
 
 export type IssuanceDependencies = {
   createSigner: (environment: IssuerEnvironment) => Promise<ccc.Signer>;
-  writeClaim: ClaimWriter;
+  writeClaims: ClaimWriter;
 };
 
 const issuanceDependencies: IssuanceDependencies = {
   createSigner: createIssuerSigner,
-  writeClaim,
+  writeClaims,
 };
 
 export function issuerCredential(environment: IssuerEnvironment): ccc.Hex {
@@ -157,28 +159,20 @@ export async function issueVerifiedClaims(
   }
 
   const issuerSigner = await dependencies.createSigner(environment);
-  const builtClaims: WriteClaimResult[] = [];
-  let tx: ccc.TransactionLike | undefined;
-  for (const claim of claims) {
-    const built = await dependencies.writeClaim({
-      issuerSigner,
-      scripts: claimScripts,
-      input: {
-        subject,
-        issuerDid: issuerMetadata.did,
-        schemaHash: claim.schema.hash,
-        payload: claim.payload,
-        issuedAt: claim.issuedAt,
-        expiresAt: claim.expiresAt,
-      },
-      tx,
-    });
-    builtClaims.push(built);
-    tx = built.tx;
-  }
+  const built = await dependencies.writeClaims({
+    issuerSigner,
+    scripts: claimScripts,
+    inputs: claims.map((claim) => ({
+      subject,
+      issuerDid: issuerMetadata.did,
+      schemaHash: claim.schema.hash,
+      payload: claim.payload,
+      issuedAt: claim.issuedAt,
+      expiresAt: claim.expiresAt,
+    })),
+  });
 
-  const prepared = builtClaims.at(-1)?.tx;
-  if (!prepared) throw new Error("Claim transaction was not prepared.");
+  const prepared = built.tx;
 
   const preparedHash = prepared.hash();
   const signed = await issuerSigner.signOnlyTransaction(prepared);
@@ -187,12 +181,12 @@ export async function issueVerifiedClaims(
   }
   const transactionHash = await issuerSigner.client.sendTransaction(signed);
 
-  return builtClaims.map((built) => ({
+  return built.claims.map((claim) => ({
     status: "submitted",
     network: issuerMetadata.network,
     payer: issuerMetadata.payer,
     transactionHash,
-    claimId: built.claimId,
-    outputIndex: built.outputIndex,
+    claimId: claim.claimId,
+    outputIndex: claim.outputIndex,
   }));
 }

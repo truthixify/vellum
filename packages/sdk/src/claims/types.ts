@@ -172,6 +172,12 @@ export type WriteClaimProps<TPayload = unknown> = {
   tx?: ccc.TransactionLike;
 };
 
+/** Signers, deployments, and claim inputs used to build one atomic transaction. */
+export type WriteClaimsProps<TPayload = unknown> = Omit<WriteClaimProps<TPayload>, "input"> & {
+  /** Between one and eight claims for the same subject and issuer. */
+  inputs: readonly WriteClaimInput<TPayload>[];
+};
+
 /** Location of the issuer DID state selected for Claim Type authorization. */
 export type ClaimIssuerSource =
   | {
@@ -193,6 +199,14 @@ export type WriteClaimResult = {
   tx: ccc.Transaction;
   claimId: ccc.Hex;
   outputIndex: number;
+  issuerSource: ClaimIssuerSource;
+  controllerInputIndex: number;
+};
+
+/** Prepared unsigned transaction containing every requested Claim output. */
+export type WriteClaimsResult = {
+  tx: ccc.Transaction;
+  claims: readonly Pick<WriteClaimResult, "claimId" | "outputIndex">[];
   issuerSource: ClaimIssuerSource;
   controllerInputIndex: number;
 };

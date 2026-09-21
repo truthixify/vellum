@@ -4,7 +4,7 @@ import { argsToDid } from "@ckb-ccc/did-ckb";
 
 import { ClaimData } from "./codec";
 import type { ClaimScriptConfigLike, WriteClaimInput } from "./types";
-import { buildClaimCell, writeClaim } from "./write";
+import { buildClaimCell, writeClaim, writeClaims } from "./write";
 
 function repeatedHex(byte: number, length: number): ccc.Hex {
   return `0x${byte.toString(16).padStart(2, "0").repeat(length)}` as ccc.Hex;
@@ -706,6 +706,54 @@ describe("writeClaim funding and composition", () => {
     expect(result.tx).toBeInstanceOf(ccc.Transaction);
     expect(result.tx.hash()).toMatch(/^0x[0-9a-f]{64}$/);
     expect("sendTransaction" in signer).toBe(false);
+  });
+
+  test("builds multiple claim outputs with one funding pass", async () => {
+    const identity = cell({ byte: 0x54, type: issuerType() });
+    const funding = cell({ byte: 0x55, capacity: 100_000_000_000n });
+    const { client } = fakeClient({ cells: [identity, funding], liveCells: [identity] });
+    const signer = fakeSigner(client, [CONTROLLER_LOCK], [funding]);
+
+    const result = await writeClaims({
+      issuerSigner: signer,
+      scripts: SCRIPTS,
+      inputs: [
+        BASE_INPUT,
+        {
+          ...BASE_INPUT,
+          schemaHash: repeatedHex(0x56, 32),
+          nonce: repeatedHex(0x57, 32),
+          payload: { communities: ["nervos"] },
+        },
+      ],
+    });
+
+    expect(result.claims).toHaveLength(2);
+    expect(new Set(result.claims.map(({ claimId }) => claimId)).size).toBe(2);
+    expect(result.claims.map(({ outputIndex }) => outputIndex)).toEqual([0, 1]);
+    expect(result.tx.outputsData.slice(0, 2)).toHaveLength(2);
+    expect(result.tx.inputs).toHaveLength(1);
+    expect(result.tx.inputs[0].previousOutput).toEqual(funding.outPoint);
+  });
+
+  test("rejects mixed subjects or issuers in one claim batch", async () => {
+    const client = fakeClient().client;
+    const signer = fakeSigner(client, [CONTROLLER_LOCK], []);
+
+    await expect(
+      writeClaims({
+        issuerSigner: signer,
+        scripts: SCRIPTS,
+        inputs: [BASE_INPUT, { ...BASE_INPUT, subject: { did: SUBJECT_DID } }],
+      }),
+    ).rejects.toThrow("same subject and issuer DID");
+    await expect(
+      writeClaims({
+        issuerSigner: signer,
+        scripts: SCRIPTS,
+        inputs: [BASE_INPUT, { ...BASE_INPUT, issuerDid: argsToDid(OTHER_ISSUER_ID) }],
+      }),
+    ).rejects.toThrow("same subject and issuer DID");
   });
 
   test("keeps a separate issuer authorization input whole when another signer pays", async () => {

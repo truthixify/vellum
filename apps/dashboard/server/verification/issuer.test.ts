@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
-import type { WriteClaimResult } from "@vellum/sdk";
+import type { WriteClaimsResult } from "@vellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json";
 import type { VerifiedClaim } from "./contracts";
@@ -20,11 +20,13 @@ const TRANSACTION_HASH = `0x${"22".repeat(32)}` as ccc.Hex;
 const CLAIM_ID = `0x${"33".repeat(32)}` as ccc.Hex;
 const SUBJECT_DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 
-function preparedClaim(tx: ccc.Transaction): WriteClaimResult {
+function preparedClaims(
+  tx: ccc.Transaction,
+  claims: WriteClaimsResult["claims"] = [{ claimId: CLAIM_ID, outputIndex: 1 }],
+): WriteClaimsResult {
   return {
     tx,
-    claimId: CLAIM_ID,
-    outputIndex: 1,
+    claims,
     issuerSource: { kind: "cell-dep", cellDepIndex: 0 },
     controllerInputIndex: 0,
   };
@@ -73,10 +75,10 @@ describe("issuer configuration", () => {
       signOnlyTransaction,
     } as unknown as ccc.Signer;
     const createSigner = mock(async () => signer);
-    const buildClaim = mock(
+    const buildClaims = mock(
       async (
-        _props: Parameters<IssuanceDependencies["writeClaim"]>[0],
-      ): Promise<WriteClaimResult> => preparedClaim(tx),
+        _props: Parameters<IssuanceDependencies["writeClaims"]>[0],
+      ): Promise<WriteClaimsResult> => preparedClaims(tx),
     );
     const subject = { did: SUBJECT_DID } as const;
     const claim = {
@@ -91,22 +93,23 @@ describe("issuer configuration", () => {
       {},
       {
         createSigner,
-        writeClaim: buildClaim,
+        writeClaims: buildClaims,
       },
     );
 
-    expect(buildClaim).toHaveBeenCalledWith({
+    expect(buildClaims).toHaveBeenCalledWith({
       issuerSigner: signer,
       scripts: claimScripts,
-      input: {
-        subject,
-        issuerDid: issuerMetadata.did,
-        schemaHash: claim.schema.hash,
-        payload: claim.payload,
-        issuedAt: claim.issuedAt,
-        expiresAt: undefined,
-      },
-      tx: undefined,
+      inputs: [
+        {
+          subject,
+          issuerDid: issuerMetadata.did,
+          schemaHash: claim.schema.hash,
+          payload: claim.payload,
+          issuedAt: claim.issuedAt,
+          expiresAt: undefined,
+        },
+      ],
     });
     expect(signOnlyTransaction).toHaveBeenCalledWith(tx);
     expect(sendTransaction).toHaveBeenCalledTimes(1);
@@ -121,7 +124,6 @@ describe("issuer configuration", () => {
   });
 
   test("composes multiple verified claims into one signed transaction", async () => {
-    const firstTx = ccc.Transaction.from({});
     const finalTx = ccc.Transaction.from({
       outputs: [{ capacity: 0, lock: { codeHash: HASH, hashType: "type", args: "0x" } }],
       outputsData: ["0x"],
@@ -132,14 +134,12 @@ describe("issuer configuration", () => {
       client: { sendTransaction },
       signOnlyTransaction,
     } as unknown as ccc.Signer;
-    const writeClaim = mock(async (props: Parameters<IssuanceDependencies["writeClaim"]>[0]) => {
-      if (!props.tx) return preparedClaim(firstTx);
-      expect(props.tx).toBe(firstTx);
-      return {
-        ...preparedClaim(finalTx),
-        claimId: `0x${"44".repeat(32)}` as ccc.Hex,
-        outputIndex: 2,
-      };
+    const writeClaims = mock(async (props: Parameters<IssuanceDependencies["writeClaims"]>[0]) => {
+      expect(props.inputs).toHaveLength(2);
+      return preparedClaims(finalTx, [
+        { claimId: CLAIM_ID, outputIndex: 1 },
+        { claimId: `0x${"44".repeat(32)}` as ccc.Hex, outputIndex: 2 },
+      ]);
     });
     const claims: VerifiedClaim[] = [
       {
@@ -159,10 +159,10 @@ describe("issuer configuration", () => {
       { did: SUBJECT_DID },
       claims,
       {},
-      { createSigner: async () => signer, writeClaim },
+      { createSigner: async () => signer, writeClaims },
     );
 
-    expect(writeClaim).toHaveBeenCalledTimes(2);
+    expect(writeClaims).toHaveBeenCalledTimes(1);
     expect(signOnlyTransaction).toHaveBeenCalledWith(finalTx);
     expect(sendTransaction).toHaveBeenCalledTimes(1);
     expect(result).toEqual([
@@ -205,7 +205,7 @@ describe("issuer configuration", () => {
         {},
         {
           createSigner: async () => signer,
-          writeClaim: async () => preparedClaim(tx),
+          writeClaims: async () => preparedClaims(tx),
         },
       ),
     ).rejects.toThrow("The issuer signer changed the prepared transaction.");
