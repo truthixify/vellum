@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
 
 import deployment from "../../../deployments/testnet.json";
-import { readClaims, writeClaim } from "../src";
+import { readClaims, writeClaim, writeClaims } from "../src";
 
 const FIXTURE = {
   txHash: "0xbbe64d73351dbe0faa617f8d5ac0d9624845c329e1d5d7b722a90456cfea4142",
@@ -122,6 +122,42 @@ test("prepares a read-only writeClaim transaction against current Testnet state"
   expect(built.issuerSource.kind).toBe("cell-dep");
   expect(built.tx.outputs[built.outputIndex].capacity).toBe(FIXTURE.capacity);
   expect(built.tx.outputs[built.outputIndex].lock.hash()).toBe(FIXTURE.subjectLockHash);
+  expect(await built.tx.getInputsCapacity(client)).toBeGreaterThanOrEqual(
+    built.tx.getOutputsCapacity(),
+  );
+}, 30_000);
+
+test("prepares two Claim outputs atomically against current Testnet state", async () => {
+  const client = new ccc.ClientPublicTestnet({
+    url: process.env.CKB_RPC_URL ?? "https://testnet.ckbapp.dev",
+  });
+  const signer = new ccc.SignerCkbPublicKey(client, FIXTURE.issuerPublicKey);
+  const built = await writeClaims({
+    issuerSigner: signer,
+    scripts: scripts(),
+    inputs: [
+      {
+        subject: { did: FIXTURE.issuerDid },
+        issuerDid: FIXTURE.issuerDid,
+        schemaHash: FIXTURE.schemaHash,
+        payload: FIXTURE.payload,
+        issuedAt: FIXTURE.issuedAt,
+        nonce: `0x${"41".repeat(32)}`,
+      },
+      {
+        subject: { did: FIXTURE.issuerDid },
+        issuerDid: FIXTURE.issuerDid,
+        schemaHash: FIXTURE.schemaHash,
+        payload: { ...FIXTURE.payload, fixture: "writeClaims" },
+        issuedAt: FIXTURE.issuedAt,
+        nonce: `0x${"42".repeat(32)}`,
+      },
+    ],
+  });
+
+  expect(built.claims).toHaveLength(2);
+  expect(new Set(built.claims.map(({ claimId }) => claimId)).size).toBe(2);
+  expect(new Set(built.claims.map(({ outputIndex }) => outputIndex)).size).toBe(2);
   expect(await built.tx.getInputsCapacity(client)).toBeGreaterThanOrEqual(
     built.tx.getOutputsCapacity(),
   );

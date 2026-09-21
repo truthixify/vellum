@@ -173,6 +173,11 @@ export type WriteClaimProps<TPayload = unknown> = {
   tx?: ccc.TransactionLike;
 };
 
+export type WriteClaimsProps<TPayload = unknown> = Omit<WriteClaimProps<TPayload>, "input"> & {
+  /** Between one and eight claims for the same subject and issuer. */
+  inputs: readonly WriteClaimInput<TPayload>[];
+};
+
 export type ClaimIssuerSource =
   | {
       kind: "input";
@@ -196,6 +201,13 @@ export type WriteClaimResult = {
   controllerInputIndex: number;
 };
 
+export type WriteClaimsResult = {
+  tx: ccc.Transaction;
+  claims: readonly Pick<WriteClaimResult, "claimId" | "outputIndex">[];
+  issuerSource: ClaimIssuerSource;
+  controllerInputIndex: number;
+};
+
 export type ClaimSchema<TPayload> = {
   id: string;
   hash: ccc.HexLike;
@@ -208,6 +220,10 @@ export declare function writeClaim<TPayload = unknown>(
   props: WriteClaimProps<TPayload>,
 ): Promise<WriteClaimResult>;
 
+export declare function writeClaims<TPayload = unknown>(
+  props: WriteClaimsProps<TPayload>,
+): Promise<WriteClaimsResult>;
+
 export declare function parseClaimPayload<TPayload>(
   claim: Claim,
   schema: ClaimSchema<TPayload>,
@@ -217,6 +233,11 @@ export declare function parseClaimPayload<TPayload>(
 The Vellum SDK exports the Molecule-backed `ClaimDataV1` and `ClaimData` entity classes in addition
 to the `Like` types above, following CCC's entity codec pattern. Their encoded field order must
 remain `issuer_id`, `nonce`, `issued_at`, `expires_at`, and `payload`.
+
+`writeClaims` accepts one to eight inputs that share an exact subject and issuer. It appends every
+Claim Cell output before preparing signer groups and balancing capacity and fees once. This keeps a
+multi-claim verification atomic and prevents independent builders from selecting the same payer
+Cell. The returned `claims` preserve input order.
 
 ## Read behavior
 

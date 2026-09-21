@@ -9,6 +9,8 @@ import type {
   WriteClaimInput,
   WriteClaimProps,
   WriteClaimResult,
+  WriteClaimsProps,
+  WriteClaimsResult,
 } from "./types.js";
 
 const CLAIM_TYPE_ARGS_LENGTH = 65;
@@ -700,6 +702,13 @@ function distinctSigners(signers: readonly ccc.Signer[]): ccc.Signer[] {
   return [...new Set(signers)];
 }
 
+function sameSubject(left: ClaimSubjectLike, right: ClaimSubjectLike): boolean {
+  if ("did" in left && left.did !== undefined) {
+    return "did" in right && right.did === left.did;
+  }
+  return "lock" in right && right.lock !== undefined && ccc.Script.from(left.lock).eq(right.lock);
+}
+
 async function validateSignerNetworks(signers: readonly ccc.Signer[]): Promise<void> {
   const prefix = signers[0]?.client.addressPrefix;
   for (const signer of signers.slice(1)) {
@@ -799,9 +808,22 @@ async function assertIdentityState(
  * The caller remains responsible for inspecting, signing, and broadcasting the returned
  * transaction.
  */
-export async function writeClaim<TPayload = unknown>(
-  props: WriteClaimProps<TPayload>,
-): Promise<WriteClaimResult> {
+export async function writeClaims<TPayload = unknown>(
+  props: WriteClaimsProps<TPayload>,
+): Promise<WriteClaimsResult> {
+  if (props.inputs.length < 1 || props.inputs.length > 8) {
+    throw new Error("writeClaims requires between one and eight claim inputs");
+  }
+  const firstInput = props.inputs[0];
+  if (
+    props.inputs.some(
+      (input) =>
+        input.issuerDid !== firstInput.issuerDid || !sameSubject(input.subject, firstInput.subject),
+    )
+  ) {
+    throw new Error("All claim inputs must use the same subject and issuer DID");
+  }
+
   const payerSigner = props.payerSigner ?? props.issuerSigner;
   const signers = distinctSigners([
     props.issuerSigner,
@@ -813,8 +835,8 @@ export async function writeClaim<TPayload = unknown>(
   const client = props.issuerSigner.client;
   const scripts = await resolveScripts(client, props.scripts);
   let tx = ccc.Transaction.from(props.tx ?? {}).clone();
-  const subject = await resolveSubject(tx, client, scripts, props.input.subject);
-  const issuerId = requireByteLength(didToArgs(props.input.issuerDid), 20, "issuer DID ID");
+  const subject = await resolveSubject(tx, client, scripts, firstInput.subject);
+  const issuerId = requireByteLength(didToArgs(firstInput.issuerDid), 20, "issuer DID ID");
   const issuerType = ccc.Script.from({
     codeHash: scripts.didCkb.codeHash,
     hashType: scripts.didCkb.hashType,
@@ -837,17 +859,26 @@ export async function writeClaim<TPayload = unknown>(
     throw new Error("Unable to locate the issuer controller authorization input");
   }
 
-  const built = buildClaimCell({
-    claimType: scripts.claimType,
-    didCkb: scripts.didCkb,
-    subjectLock: subject.lock,
-    input: props.input,
+  const builtClaims = props.inputs.map((input) =>
+    buildClaimCell({
+      claimType: scripts.claimType,
+      didCkb: scripts.didCkb,
+      subjectLock: subject.lock,
+      input,
+    }),
+  );
+  const addedClaimIds = new Set<ccc.Hex>();
+  const claimOutputs = builtClaims.map((built) => {
+    const existingClaimIds = validateExistingClaimOutputs(tx, built.output.type!, issuerId);
+    if (existingClaimIds.has(built.claimId) || addedClaimIds.has(built.claimId)) {
+      throw new Error(`Claim output would duplicate claim ID ${built.claimId}`);
+    }
+    addedClaimIds.add(built.claimId);
+    return {
+      built,
+      outputIndex: tx.addOutput(built.output, built.outputData) - 1,
+    };
   });
-  const existingClaimIds = validateExistingClaimOutputs(tx, built.output.type!, issuerId);
-  if (existingClaimIds.has(built.claimId)) {
-    throw new Error(`Claim output would duplicate claim ID ${built.claimId}`);
-  }
-  const outputIndex = tx.addOutput(built.output, built.outputData) - 1;
 
   await addRequiredScriptDeps(tx, client, scripts, addresses, payerSigner);
   await validateInputCoverage(tx, client, scripts.didLock, addresses);
@@ -868,7 +899,9 @@ export async function writeClaim<TPayload = unknown>(
   }
 
   await validateInputCoverage(tx, client, scripts.didLock, addresses);
-  assertClaimOutput(tx, outputIndex, built);
+  for (const { built, outputIndex } of claimOutputs) {
+    assertClaimOutput(tx, outputIndex, built);
+  }
   const finalState = await assertIdentityState(
     tx,
     client,
@@ -880,9 +913,29 @@ export async function writeClaim<TPayload = unknown>(
 
   return {
     tx,
-    claimId: built.claimId,
-    outputIndex,
+    claims: claimOutputs.map(({ built, outputIndex }) => ({
+      claimId: built.claimId,
+      outputIndex,
+    })),
     issuerSource: finalState.issuer.source,
     controllerInputIndex: finalState.controllerInputIndex,
+  };
+}
+
+/** Builds and balances one unsigned Claim Cell transaction containing a single claim. */
+export async function writeClaim<TPayload = unknown>(
+  props: WriteClaimProps<TPayload>,
+): Promise<WriteClaimResult> {
+  const result = await writeClaims({ ...props, inputs: [props.input] });
+  const claim = result.claims[0];
+  if (!claim) {
+    throw new Error("Claim transaction did not contain the requested output");
+  }
+  return {
+    tx: result.tx,
+    claimId: claim.claimId,
+    outputIndex: claim.outputIndex,
+    issuerSource: result.issuerSource,
+    controllerInputIndex: result.controllerInputIndex,
   };
 }

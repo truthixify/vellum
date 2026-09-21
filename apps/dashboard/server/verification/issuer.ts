@@ -1,9 +1,9 @@
 import { ccc } from "@ckb-ccc/core";
 import {
-  writeClaim,
+  writeClaims,
   type ClaimScriptConfigLike,
-  type WriteClaimProps,
-  type WriteClaimResult,
+  type WriteClaimsProps,
+  type WriteClaimsResult,
 } from "@vellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json" with { type: "json" };
@@ -68,16 +68,18 @@ type IssuerEnvironment = {
 
 export type IssuerSigner = ccc.SignerCkbPrivateKey;
 
-type ClaimWriter = (props: WriteClaimProps<VerifiedClaim["payload"]>) => Promise<WriteClaimResult>;
+type ClaimWriter = (
+  props: WriteClaimsProps<VerifiedClaim["payload"]>,
+) => Promise<WriteClaimsResult>;
 
 export type IssuanceDependencies = {
   createSigner: (environment: IssuerEnvironment) => Promise<ccc.Signer>;
-  writeClaim: ClaimWriter;
+  writeClaims: ClaimWriter;
 };
 
 const issuanceDependencies: IssuanceDependencies = {
   createSigner: createIssuerSigner,
-  writeClaim,
+  writeClaims,
 };
 
 export function issuerCredential(environment: IssuerEnvironment): ccc.Hex {
@@ -142,33 +144,49 @@ export async function issueVerifiedClaim(
   environment: IssuerEnvironment = process.env,
   dependencies: IssuanceDependencies = issuanceDependencies,
 ): Promise<ClaimIssuanceResult> {
+  const [result] = await issueVerifiedClaims(subject, [claim], environment, dependencies);
+  return result;
+}
+
+export async function issueVerifiedClaims(
+  subject: VerificationSubject,
+  claims: readonly VerifiedClaim[],
+  environment: IssuerEnvironment = process.env,
+  dependencies: IssuanceDependencies = issuanceDependencies,
+): Promise<ClaimIssuanceResult[]> {
+  if (claims.length < 1 || claims.length > 8) {
+    throw new TypeError("Claim issuance requires between one and eight claims.");
+  }
+
   const issuerSigner = await dependencies.createSigner(environment);
-  const built = await dependencies.writeClaim({
+  const built = await dependencies.writeClaims({
     issuerSigner,
     scripts: claimScripts,
-    input: {
+    inputs: claims.map((claim) => ({
       subject,
       issuerDid: issuerMetadata.did,
       schemaHash: claim.schema.hash,
       payload: claim.payload,
       issuedAt: claim.issuedAt,
       expiresAt: claim.expiresAt,
-    },
+    })),
   });
 
-  const preparedHash = built.tx.hash();
-  const signed = await issuerSigner.signOnlyTransaction(built.tx);
+  const prepared = built.tx;
+
+  const preparedHash = prepared.hash();
+  const signed = await issuerSigner.signOnlyTransaction(prepared);
   if (signed.hash() !== preparedHash) {
     throw new Error("The issuer signer changed the prepared transaction.");
   }
   const transactionHash = await issuerSigner.client.sendTransaction(signed);
 
-  return {
+  return built.claims.map((claim) => ({
     status: "submitted",
     network: issuerMetadata.network,
     payer: issuerMetadata.payer,
     transactionHash,
-    claimId: built.claimId,
-    outputIndex: built.outputIndex,
-  };
+    claimId: claim.claimId,
+    outputIndex: claim.outputIndex,
+  }));
 }

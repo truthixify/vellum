@@ -28,6 +28,7 @@ import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
 import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
 import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
 import { Route as VerifyIndexRouteImport } from './routes/verify/index'
+import { Route as VerifyDiscordRouteImport } from './routes/verify/discord'
 import { Route as VerifyGithubRouteImport } from './routes/verify/github'
 
 const IndexRoute = IndexRouteImport.update({
@@ -125,6 +126,11 @@ const VerifyIndexRoute = VerifyIndexRouteImport.update({
   path: '/verify/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyDiscordRoute = VerifyDiscordRouteImport.update({
+  id: '/verify/discord',
+  path: '/verify/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyGithubRoute = VerifyGithubRouteImport.update({
   id: '/verify/github',
   path: '/verify/github',
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/docs': typeof DocsIndexRoute
   '/verify': typeof VerifyIndexRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/discord'
     | '/verify/github'
     | '/docs/'
     | '/verify/'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/discord'
     | '/verify/github'
     | '/docs'
     | '/verify'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/discord'
     | '/verify/github'
     | '/docs/'
     | '/verify/'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   ReputationRoute: typeof ReputationRoute
   ResolveRoute: typeof ResolveRoute
   RotateRoute: typeof RotateRoute
+  VerifyDiscordRoute: typeof VerifyDiscordRoute
   VerifyGithubRoute: typeof VerifyGithubRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
 }
@@ -418,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/discord': {
+      id: '/verify/discord'
+      path: '/verify/discord'
+      fullPath: '/verify/discord'
+      preLoaderRoute: typeof VerifyDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify/github': {
       id: '/verify/github'
       path: '/verify/github'
@@ -460,6 +480,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReputationRoute: ReputationRoute,
   ResolveRoute: ResolveRoute,
   RotateRoute: RotateRoute,
+  VerifyDiscordRoute: VerifyDiscordRoute,
   VerifyGithubRoute: VerifyGithubRoute,
   VerifyIndexRoute: VerifyIndexRoute,
 }

@@ -538,6 +538,23 @@
   font-weight: 500;
 }
 
+.reputation-evidence__community {
+  margin-top: 6px;
+  padding: 9px 10px;
+  border-left: 2px solid var(--primary);
+  background: var(--surface-subtle);
+}
+
+.reputation-evidence__community strong,
+.reputation-evidence__community small {
+  display: block;
+}
+
+.reputation-evidence__community small {
+  margin-top: 2px;
+  color: var(--ink-secondary);
+}
+
 .reputation-evidence details {
   text-align: right;
 }
@@ -588,6 +605,12 @@
   margin: 5px 0 18px;
   color: var(--ink-secondary);
   font-size: 13px;
+}
+
+.reputation-evidence-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .reputation-excluded {

@@ -57,14 +57,14 @@ export function Profile() {
         <div className="profile-score">
           <div className="section-heading-row">
             <h2>Reputation score</h2>
-            <StatusMark tone="positive">Policy v1</StatusMark>
+            <StatusMark tone="positive">Policy v2</StatusMark>
           </div>
           <div className="score-number">
-            <span>200</span>
+            <span>360</span>
             <small>/ 1000</small>
           </div>
-          <SignalRail value={200} max={1000} height={10} label="Example score 200 of 1000" />
-          <p>vellum.reputation.v1 - 1 accepted GitHub claim</p>
+          <SignalRail value={360} max={1000} height={10} label="Example score 360 of 1000" />
+          <p>vellum.reputation.v2 - 3 accepted Claim Cells</p>
           <a className="v-button v-button--secondary" href="/transparency">
             <Info size={14} />
             How this is calculated
@@ -75,7 +75,7 @@ export function Profile() {
           {[
             ["Technical", "0", "300"],
             ["Contribution", "0", "300"],
-            ["Community", "0", "200"],
+            ["Community", "160", "200"],
             ["Tenure", "100", "100"],
             ["Recency", "100", "100"],
           ].map(([label, value, max]) => (
@@ -117,6 +117,13 @@ export function Profile() {
               "Example checkpoint",
               "Verified",
             ],
+            [
+              "Discord account - @rmaddox",
+              "Vellum Testnet issuer",
+              "Example checkpoint",
+              "Verified",
+            ],
+            ["Nervos Nation membership", "Vellum Testnet issuer", "Example checkpoint", "Verified"],
           ].map(([claim, issuer, date, state]) => (
             <div className="claims-table__row" key={claim}>
               <strong>{claim}</strong>
@@ -140,7 +147,7 @@ export function Profile() {
               <div>
                 <dt>Accepted evidence</dt>
                 <dd className="positive">
-                  <Check size={12} />1 GitHub claim
+                  <Check size={12} />3 Claim Cells
                 </dd>
               </div>
               <div>
@@ -149,7 +156,7 @@ export function Profile() {
               </div>
               <div>
                 <dt>Scored categories</dt>
-                <dd>Tenure and recency</dd>
+                <dd>Community, tenure, and recency</dd>
               </div>
             </dl>
           </div>
@@ -160,7 +167,7 @@ export function Profile() {
                 <span className="mono">reputation.json</span>
                 <ExternalLink size={13} />
               </div>
-              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v1",\n  "overall": { "score": 200, "maximum": 1000 }\n}`}</pre>
+              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v2",\n  "overall": { "score": 360, "maximum": 1000 }\n}`}</pre>
             </div>
             <p>This record is a design fixture, not a chain response.</p>
           </div>

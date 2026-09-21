@@ -1,5 +1,5 @@
 import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { StatusMark } from "@vellum/ui";
 import {
@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { reputationQueryKey } from "@/hooks/use-reputation";
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
@@ -49,6 +50,7 @@ function shorten(value: string, start = 16, end = 8): string {
 
 function GithubVerificationPage() {
   useDocumentTitle("GitHub verification");
+  const queryClient = useQueryClient();
   const search = Route.useSearch();
   const submission = githubSubmissionFromSearch(search);
   const [existingClaimCount, setExistingClaimCount] = useState(0);
@@ -60,15 +62,22 @@ function GithubVerificationPage() {
     submission && reportedConfirmation?.transactionHash === submission.transactionHash
       ? reportedConfirmation.result
       : undefined;
+  const confirmedSubject = confirmation?.state === "confirmed" ? submission?.subject : undefined;
+
+  useEffect(() => {
+    if (confirmedSubject) {
+      void queryClient.invalidateQueries({ queryKey: reputationQueryKey(confirmedSubject) });
+    }
+  }, [confirmedSubject, queryClient]);
 
   return (
-    <div className="github-verification-page">
-      <Link className="github-verification-back" to="/verify">
+    <div className="account-verification-page">
+      <Link className="account-verification-back" to="/verify">
         <ArrowLeft size={14} aria-hidden="true" /> Verification
       </Link>
-      <header className="github-verification-header">
+      <header className="account-verification-header">
         <div>
-          <span className="github-verification-kicker">
+          <span className="account-verification-kicker">
             <Github size={15} aria-hidden="true" /> GitHub verification
           </span>
           <h1>GitHub verification</h1>
@@ -84,8 +93,8 @@ function GithubVerificationPage() {
         hasExistingClaim={!submission && existingClaimCount > 0}
       />
 
-      <div className="github-verification-workspace">
-        <main className="github-verification-primary">
+      <div className="account-verification-workspace">
+        <main className="account-verification-primary">
           {search.status === "submitted" && !submission ? (
             <IncompleteResult />
           ) : submission ? (
@@ -137,7 +146,7 @@ function VerificationSteps({
   ] as const;
 
   return (
-    <ol className="github-verification-steps" aria-label="Verification progress">
+    <ol className="account-verification-steps" aria-label="Verification progress">
       {steps.map(([label, detail], index) => {
         const isComplete = index < completed;
         return (
@@ -145,10 +154,10 @@ function VerificationSteps({
             key={label}
             className={
               isComplete
-                ? "github-verification-step github-verification-step--complete"
+                ? "account-verification-step account-verification-step--complete"
                 : index === active
-                  ? "github-verification-step github-verification-step--active"
-                  : "github-verification-step"
+                  ? "account-verification-step account-verification-step--active"
+                  : "account-verification-step"
             }
             aria-current={index === active ? "step" : undefined}
           >
@@ -204,7 +213,7 @@ function ConnectionPanel({
   }, [signer]);
 
   const identities = useQuery({
-    queryKey: ["github-verification-dids", lock?.codeHash, lock?.hashType, lock?.args],
+    queryKey: ["account-verification-dids", lock?.codeHash, lock?.hashType, lock?.args],
     queryFn: async () => {
       if (!lock) return [] as DidRecord[];
       return listDidsByLock(TESTNET_CLIENT, lock);
@@ -250,7 +259,8 @@ function ConnectionPanel({
     setStartError(undefined);
     setStarting(true);
     try {
-      const authorizationUrl = await requestGithubAuthorization(selectedDid);
+      if (!signer) throw new GithubVerificationRequestError("subject_control_invalid");
+      const authorizationUrl = await requestGithubAuthorization(selectedDid, signer);
       window.location.assign(authorizationUrl);
     } catch (error) {
       setStartError(
@@ -267,14 +277,14 @@ function ConnectionPanel({
 
   return (
     <section aria-labelledby="github-connect-title">
-      <div className="github-verification-section-heading">
+      <div className="account-verification-section-heading">
         <span>Account source</span>
         <h2 id="github-connect-title">GitHub account</h2>
         <p>Vellum reads your account identity, then releases the OAuth access before issuance.</p>
       </div>
 
       {(callbackError || startError) && (
-        <div className="github-verification-alert" role="alert">
+        <div className="account-verification-alert" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Verification did not complete</strong>
@@ -290,7 +300,7 @@ function ConnectionPanel({
       )}
 
       {!signer ? (
-        <div className="github-verification-empty">
+        <div className="account-verification-empty">
           <WalletCards size={24} strokeWidth={1.7} aria-hidden="true" />
           <h3>Connect your wallet</h3>
           <p>Your Testnet identities are loaded from the lock controlled by your wallet.</p>
@@ -299,7 +309,7 @@ function ConnectionPanel({
           </button>
         </div>
       ) : lockError ? (
-        <div className="github-verification-alert" role="alert">
+        <div className="account-verification-alert" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Wallet address unavailable</strong>
@@ -307,12 +317,12 @@ function ConnectionPanel({
           </div>
         </div>
       ) : !lock || identities.isLoading ? (
-        <div className="github-verification-loading" role="status" aria-live="polite">
+        <div className="account-verification-loading" role="status" aria-live="polite">
           <span className="pulse-dot" aria-hidden="true" />
           Looking up Testnet identities
         </div>
       ) : identities.isError ? (
-        <div className="github-verification-alert" role="alert">
+        <div className="account-verification-alert" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Identity lookup failed</strong>
@@ -327,7 +337,7 @@ function ConnectionPanel({
           </div>
         </div>
       ) : records.length === 0 ? (
-        <div className="github-verification-empty">
+        <div className="account-verification-empty">
           <ShieldCheck size={24} strokeWidth={1.7} aria-hidden="true" />
           <h3>No Testnet DID found</h3>
           <p>This wallet does not control a did:ckb identity on CKB Testnet.</p>
@@ -336,7 +346,7 @@ function ConnectionPanel({
           </Link>
         </div>
       ) : (
-        <div className="github-verification-form">
+        <div className="account-verification-form">
           {records.length > 1 ? (
             <>
               <label htmlFor="github-subject">Target identity</label>
@@ -361,15 +371,15 @@ function ConnectionPanel({
             </>
           ) : (
             <>
-              <span className="github-verification-field-label">Target identity</span>
-              <div className="github-verification-subject mono">{records[0].did}</div>
+              <span className="account-verification-field-label">Target identity</span>
+              <div className="account-verification-subject mono">{records[0].did}</div>
             </>
           )}
           <small>The issued Claim Cell will be locked to this identity.</small>
 
           {issuer.isError || existingClaims.isError ? (
             <div
-              className="github-verification-alert github-verification-alert--inline"
+              className="account-verification-alert account-verification-alert--inline"
               role="alert"
             >
               <AlertCircle size={18} aria-hidden="true" />
@@ -388,7 +398,7 @@ function ConnectionPanel({
               </div>
             </div>
           ) : issuer.isPending || existingClaims.isPending ? (
-            <div className="github-verification-claim-loading" role="status" aria-live="polite">
+            <div className="account-verification-claim-loading" role="status" aria-live="polite">
               <span className="pulse-dot" aria-hidden="true" />
               Checking existing GitHub claims for {shorten(selectedDid)}
             </div>
@@ -399,7 +409,7 @@ function ConnectionPanel({
               onVerifyAgain={() => void startVerification()}
             />
           ) : (
-            <div className="github-verification-action">
+            <div className="account-verification-action">
               <button
                 className="v-button v-button--primary"
                 type="button"
@@ -429,8 +439,8 @@ function ExistingGithubClaims({
   onVerifyAgain: () => void;
 }) {
   return (
-    <div className="github-verification-existing">
-      <div className="github-verification-existing__heading">
+    <div className="account-verification-existing">
+      <div className="account-verification-existing__heading">
         <span aria-hidden="true">
           <Check size={18} />
         </span>
@@ -444,17 +454,17 @@ function ExistingGithubClaims({
         </div>
       </div>
 
-      <ul className="github-verification-account-list">
+      <ul className="account-verification-account-list">
         {claims.map((claim) => (
           <li key={claim.claimId}>
-            <div className="github-verification-account-list__identity">
+            <div className="account-verification-account-list__identity">
               <Github size={18} strokeWidth={1.7} aria-hidden="true" />
               <span>
                 <strong>@{claim.account.login}</strong>
                 <small>Verified {formatGithubClaimDate(claim.account.verified_at)}</small>
               </span>
             </div>
-            <div className="github-verification-account-list__actions">
+            <div className="account-verification-account-list__actions">
               <a
                 className="v-button v-button--quiet"
                 href={claim.account.profile_url}
@@ -476,7 +486,7 @@ function ExistingGithubClaims({
         ))}
       </ul>
 
-      <div className="github-verification-existing__footer">
+      <div className="account-verification-existing__footer">
         <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found on CKB Testnet.</span>
         <button
           className="v-button v-button--secondary"
@@ -538,7 +548,7 @@ function SubmittedVerification({
 
   return (
     <section aria-labelledby="github-result-title">
-      <div className="github-verification-section-heading">
+      <div className="account-verification-section-heading">
         <span>Submission</span>
         <h2 id="github-result-title">@{submission.login}</h2>
         <p>The OAuth credential has been released. Only public claim data remains.</p>
@@ -550,7 +560,7 @@ function SubmittedVerification({
         claimFailed={confirmation.isError}
       />
 
-      <dl className="github-verification-result-grid">
+      <dl className="account-verification-result-grid">
         <div>
           <dt>Subject</dt>
           <dd className="mono" title={submission.subject}>
@@ -615,7 +625,7 @@ function ResultStatus({
 }) {
   if (issuerFailed || claimFailed) {
     return (
-      <div className="github-verification-alert" role="alert">
+      <div className="account-verification-alert" role="alert">
         <AlertCircle size={18} aria-hidden="true" />
         <div>
           <strong>Confirmation is temporarily unavailable</strong>
@@ -626,7 +636,7 @@ function ResultStatus({
   }
   if (result?.state === "rejected") {
     return (
-      <div className="github-verification-alert" role="alert">
+      <div className="account-verification-alert" role="alert">
         <AlertCircle size={18} aria-hidden="true" />
         <div>
           <strong>Transaction rejected</strong>
@@ -638,7 +648,7 @@ function ResultStatus({
   if (result?.state === "confirmed") {
     return (
       <div
-        className="github-verification-status github-verification-status--confirmed"
+        className="account-verification-status account-verification-status--confirmed"
         role="status"
       >
         <Check size={18} aria-hidden="true" />
@@ -653,7 +663,7 @@ function ResultStatus({
   }
   if (result?.state === "indexing") {
     return (
-      <div className="github-verification-status" role="status" aria-live="polite">
+      <div className="account-verification-status" role="status" aria-live="polite">
         <Clock3 size={18} aria-hidden="true" />
         <div>
           <StatusMark tone="warning" icon={false}>
@@ -665,7 +675,7 @@ function ResultStatus({
     );
   }
   return (
-    <div className="github-verification-status" role="status" aria-live="polite">
+    <div className="account-verification-status" role="status" aria-live="polite">
       <span className="pulse-dot" aria-hidden="true" />
       <div>
         <StatusMark tone="info" icon={false}>
@@ -680,7 +690,7 @@ function ResultStatus({
 function IncompleteResult() {
   return (
     <section aria-labelledby="github-incomplete-title">
-      <div className="github-verification-alert" role="alert">
+      <div className="account-verification-alert" role="alert">
         <AlertCircle size={18} aria-hidden="true" />
         <div>
           <strong id="github-incomplete-title">Incomplete callback result</strong>
@@ -696,7 +706,7 @@ function IncompleteResult() {
 
 function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
   return (
-    <aside className="github-verification-summary" aria-label="Verification details">
+    <aside className="account-verification-summary" aria-label="Verification details">
       <div>
         <span>Claim policy</span>
         <h2>What is recorded</h2>

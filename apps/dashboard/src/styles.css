@@ -1700,6 +1700,11 @@
   text-align: right;
 }
 
+.verification-source-list {
+  display: grid;
+  gap: 12px;
+}
+
 .verification-source {
   min-width: 0;
   display: grid;
@@ -1836,11 +1841,11 @@
   line-height: 1.55;
 }
 
-.github-verification-page {
+.account-verification-page {
   width: min(100%, 1120px);
 }
 
-.github-verification-back {
+.account-verification-back {
   width: fit-content;
   min-height: 32px;
   display: inline-flex;
@@ -1852,12 +1857,12 @@
   text-decoration: none;
 }
 
-.github-verification-back:focus-visible {
+.account-verification-back:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.github-verification-header {
+.account-verification-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1865,9 +1870,9 @@
   padding: 8px 0 28px;
 }
 
-.github-verification-kicker,
-.github-verification-section-heading > span,
-.github-verification-summary > div > span {
+.account-verification-kicker,
+.account-verification-section-heading > span,
+.account-verification-summary > div > span {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -1879,25 +1884,25 @@
   text-transform: uppercase;
 }
 
-.github-verification-header h1 {
+.account-verification-header h1 {
   margin: 7px 0 0;
   font-size: 32px;
   font-weight: 600;
   line-height: 1.15;
 }
 
-.github-verification-header p {
+.account-verification-header p {
   max-width: 580px;
   margin: 10px 0 0;
   color: var(--ink-secondary);
   font-size: 14px;
 }
 
-.github-verification-header > .v-status {
+.account-verification-header > .v-status {
   margin-top: 20px;
 }
 
-.github-verification-steps {
+.account-verification-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
@@ -1907,7 +1912,7 @@
   list-style: none;
 }
 
-.github-verification-step {
+.account-verification-step {
   min-width: 0;
   min-height: 72px;
   display: flex;
@@ -1918,11 +1923,11 @@
   color: var(--ink-secondary);
 }
 
-.github-verification-step:last-child {
+.account-verification-step:last-child {
   border-right: 0;
 }
 
-.github-verification-step > span {
+.account-verification-step > span {
   width: 28px;
   height: 28px;
   display: grid;
@@ -1934,20 +1939,20 @@
   font-size: 10px;
 }
 
-.github-verification-step div,
-.github-verification-step strong,
-.github-verification-step small {
+.account-verification-step div,
+.account-verification-step strong,
+.account-verification-step small {
   min-width: 0;
   display: block;
 }
 
-.github-verification-step strong {
+.account-verification-step strong {
   color: var(--ink-secondary);
   font-size: 13px;
   font-weight: 500;
 }
 
-.github-verification-step small {
+.account-verification-step small {
   margin-top: 2px;
   overflow: hidden;
   font-size: 11px;
@@ -1955,60 +1960,60 @@
   white-space: nowrap;
 }
 
-.github-verification-step--active {
+.account-verification-step--active {
   background: var(--surface-subtle);
   color: var(--ink);
 }
 
-.github-verification-step--active > span {
+.account-verification-step--active > span {
   border-color: var(--primary);
   background: var(--primary);
   color: var(--on-primary);
 }
 
-.github-verification-step--active strong,
-.github-verification-step--complete strong {
+.account-verification-step--active strong,
+.account-verification-step--complete strong {
   color: var(--ink);
 }
 
-.github-verification-step--complete > span {
+.account-verification-step--complete > span {
   border-color: var(--primary);
   color: var(--primary);
 }
 
-.github-verification-workspace {
+.account-verification-workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 328px;
   border-bottom: 1px solid var(--line);
 }
 
-.github-verification-primary {
+.account-verification-primary {
   min-width: 0;
   min-height: 460px;
   padding: 40px 48px 48px 0;
 }
 
-.github-verification-primary > section {
+.account-verification-primary > section {
   width: min(100%, 680px);
 }
 
-.github-verification-section-heading h2,
-.github-verification-summary h2 {
+.account-verification-section-heading h2,
+.account-verification-summary h2 {
   margin: 7px 0 0;
   font-size: 21px;
   font-weight: 600;
   line-height: 1.25;
 }
 
-.github-verification-section-heading > p {
+.account-verification-section-heading > p {
   max-width: 560px;
   margin: 8px 0 0;
   color: var(--ink-secondary);
   font-size: 13px;
 }
 
-.github-verification-alert,
-.github-verification-status {
+.account-verification-alert,
+.account-verification-status {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -2019,36 +2024,36 @@
   color: var(--danger);
 }
 
-.github-verification-alert > svg,
-.github-verification-status > svg,
-.github-verification-status > .pulse-dot {
+.account-verification-alert > svg,
+.account-verification-status > svg,
+.account-verification-status > .pulse-dot {
   flex: none;
   margin-top: 2px;
 }
 
-.github-verification-alert strong,
-.github-verification-status strong {
+.account-verification-alert strong,
+.account-verification-status strong {
   color: var(--ink);
   font-size: 13px;
   font-weight: 600;
 }
 
-.github-verification-alert p,
-.github-verification-status p {
+.account-verification-alert p,
+.account-verification-status p {
   margin: 4px 0 0;
   color: var(--ink-secondary);
   font-size: 13px;
 }
 
-.github-verification-alert .v-button {
+.account-verification-alert .v-button {
   margin-top: 12px;
 }
 
-.github-verification-alert--inline {
+.account-verification-alert--inline {
   margin-top: 24px;
 }
 
-.github-verification-empty {
+.account-verification-empty {
   min-height: 260px;
   display: flex;
   flex-direction: column;
@@ -2060,24 +2065,24 @@
   border-bottom: 1px solid var(--line);
 }
 
-.github-verification-empty > svg {
+.account-verification-empty > svg {
   color: var(--primary);
 }
 
-.github-verification-empty h3 {
+.account-verification-empty h3 {
   margin: 14px 0 0;
   font-size: 17px;
   font-weight: 600;
 }
 
-.github-verification-empty p {
+.account-verification-empty p {
   max-width: 480px;
   margin: 7px 0 20px;
   color: var(--ink-secondary);
   font-size: 13px;
 }
 
-.github-verification-loading {
+.account-verification-loading {
   min-height: 260px;
   display: flex;
   align-items: center;
@@ -2090,16 +2095,16 @@
   font-size: 12px;
 }
 
-.github-verification-loading .pulse-dot,
-.github-verification-claim-loading .pulse-dot,
-.github-verification-status > .pulse-dot {
+.account-verification-loading .pulse-dot,
+.account-verification-claim-loading .pulse-dot,
+.account-verification-status > .pulse-dot {
   width: 8px;
   height: 8px;
   display: block;
   background: var(--info);
 }
 
-.github-verification-claim-loading {
+.account-verification-claim-loading {
   min-height: 76px;
   display: flex;
   align-items: center;
@@ -2112,22 +2117,22 @@
   font-size: 12px;
 }
 
-.github-verification-form {
+.account-verification-form {
   margin-top: 28px;
   padding-top: 24px;
   border-top: 1px solid var(--line);
 }
 
-.github-verification-form > label,
-.github-verification-field-label {
+.account-verification-form > label,
+.account-verification-field-label {
   display: block;
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 500;
 }
 
-.github-verification-form select,
-.github-verification-subject {
+.account-verification-form select,
+.account-verification-subject {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line-strong);
@@ -2138,30 +2143,30 @@
   font-size: 12px;
 }
 
-.github-verification-form select {
+.account-verification-form select {
   padding: 0 36px 0 12px;
 }
 
-.github-verification-form select:focus-visible {
+.account-verification-form select:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.github-verification-subject {
+.account-verification-subject {
   display: flex;
   align-items: center;
   padding: 10px 12px;
   overflow-wrap: anywhere;
 }
 
-.github-verification-form > small {
+.account-verification-form > small {
   display: block;
   margin-top: 7px;
   color: var(--ink-secondary);
   font-size: 11px;
 }
 
-.github-verification-action {
+.account-verification-action {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -2170,24 +2175,24 @@
   border-top: 1px solid var(--line);
 }
 
-.github-verification-action > span {
+.account-verification-action > span {
   color: var(--ink-secondary);
   font-size: 11px;
 }
 
-.github-verification-existing {
+.account-verification-existing {
   margin-top: 24px;
   border-top: 1px solid var(--line);
 }
 
-.github-verification-existing__heading {
+.account-verification-existing__heading {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 20px 0;
 }
 
-.github-verification-existing__heading > span {
+.account-verification-existing__heading > span {
   width: 34px;
   height: 34px;
   display: grid;
@@ -2197,20 +2202,20 @@
   color: var(--primary);
 }
 
-.github-verification-existing__heading p {
+.account-verification-existing__heading p {
   margin: 6px 0 0;
   color: var(--ink-secondary);
   font-size: 13px;
 }
 
-.github-verification-account-list {
+.account-verification-account-list {
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--line);
   list-style: none;
 }
 
-.github-verification-account-list > li {
+.account-verification-account-list > li {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -2220,30 +2225,80 @@
   border-bottom: 1px solid var(--line);
 }
 
-.github-verification-account-list__identity,
-.github-verification-account-list__actions {
+.account-verification-account {
+  flex-wrap: wrap;
+}
+
+.account-verification-community-list {
+  min-width: min(100%, 280px);
+  display: grid;
+  flex: 1 1 280px;
+  gap: 8px;
+  padding: 10px 12px;
+  border-left: 1px solid var(--line);
+}
+
+.account-verification-community-list > div,
+.account-verification-community-list > div > span,
+.account-verification-community-expiry {
   min-width: 0;
   display: flex;
   align-items: center;
 }
 
-.github-verification-account-list__identity {
+.account-verification-community-list > div {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.account-verification-community-list > div > span {
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-verification-community-list small,
+.account-verification-community-empty {
+  color: var(--ink-secondary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.account-verification-community-expiry {
+  gap: 5px;
+}
+
+.account-verification-community-empty {
+  flex: 1 1 220px;
+  padding: 10px 12px;
+  border-left: 1px solid var(--line);
+}
+
+.account-verification-account-list__identity,
+.account-verification-account-list__actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.account-verification-account-list__identity {
   gap: 10px;
 }
 
-.github-verification-account-list__identity > svg {
+.account-verification-account-list__identity > svg {
   flex: none;
   color: var(--ink-secondary);
 }
 
-.github-verification-account-list__identity span,
-.github-verification-account-list__identity strong,
-.github-verification-account-list__identity small {
+.account-verification-account-list__identity span,
+.account-verification-account-list__identity strong,
+.account-verification-account-list__identity small {
   min-width: 0;
   display: block;
 }
 
-.github-verification-account-list__identity strong {
+.account-verification-account-list__identity strong {
   overflow: hidden;
   font-size: 13px;
   font-weight: 600;
@@ -2251,24 +2306,24 @@
   white-space: nowrap;
 }
 
-.github-verification-account-list__identity small {
+.account-verification-account-list__identity small {
   margin-top: 3px;
   color: var(--ink-secondary);
   font-size: 10px;
 }
 
-.github-verification-account-list__actions {
+.account-verification-account-list__actions {
   flex: none;
   gap: 8px;
 }
 
-.github-verification-account-list__actions .v-button {
+.account-verification-account-list__actions .v-button {
   min-height: 32px;
   padding: 0 10px;
   font-size: 11px;
 }
 
-.github-verification-existing__footer {
+.account-verification-existing__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2276,28 +2331,28 @@
   padding-top: 18px;
 }
 
-.github-verification-existing__footer > span {
+.account-verification-existing__footer > span {
   color: var(--ink-secondary);
   font-size: 11px;
 }
 
-.github-verification-status {
+.account-verification-status {
   border-color: var(--info);
   background: var(--info-soft);
   color: var(--info);
 }
 
-.github-verification-status--confirmed {
+.account-verification-status--confirmed {
   border-color: var(--primary);
   background: var(--primary-soft);
   color: var(--primary);
 }
 
-.github-verification-status .v-status {
+.account-verification-status .v-status {
   margin-bottom: 2px;
 }
 
-.github-verification-result-grid {
+.account-verification-result-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 28px 0 24px;
@@ -2305,15 +2360,15 @@
   border-left: 1px solid var(--line);
 }
 
-.github-verification-result-grid > div {
+.account-verification-result-grid > div {
   min-width: 0;
   padding: 14px 16px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
 
-.github-verification-result-grid dt,
-.github-verification-summary dt {
+.account-verification-result-grid dt,
+.account-verification-summary dt {
   color: var(--ink-secondary);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 9px;
@@ -2322,7 +2377,7 @@
   text-transform: uppercase;
 }
 
-.github-verification-result-grid dd {
+.account-verification-result-grid dd {
   min-width: 0;
   margin: 6px 0 0;
   overflow: hidden;
@@ -2332,36 +2387,36 @@
   white-space: nowrap;
 }
 
-.github-verification-result-grid a {
+.account-verification-result-grid a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 
-.github-verification-summary {
+.account-verification-summary {
   min-width: 0;
   padding: 40px 0 48px 32px;
   border-left: 1px solid var(--line);
 }
 
-.github-verification-summary dl {
+.account-verification-summary dl {
   margin: 28px 0 0;
   border-top: 1px solid var(--line);
 }
 
-.github-verification-summary dl > div {
+.account-verification-summary dl > div {
   padding: 13px 0;
   border-bottom: 1px solid var(--line);
 }
 
-.github-verification-summary dd {
+.account-verification-summary dd {
   margin: 5px 0 0;
   color: var(--ink);
   font-size: 12px;
   line-height: 1.45;
 }
 
-.github-verification-summary > p {
+.account-verification-summary > p {
   margin: 20px 0 0;
   color: var(--ink-secondary);
   font-size: 11px;
@@ -2393,7 +2448,7 @@
     transform: translateX(2px);
   }
 
-  .github-verification-back:hover {
+  .account-verification-back:hover {
     color: var(--ink);
     text-decoration: none;
   }
@@ -2463,15 +2518,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .github-verification-workspace {
+  .account-verification-workspace {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
 
-  .github-verification-primary {
+  .account-verification-primary {
     padding-right: 32px;
   }
 
-  .github-verification-summary {
+  .account-verification-summary {
     padding-left: 24px;
   }
 }
@@ -2489,6 +2544,27 @@
 
   .dashboard-data-table--accounts .dashboard-data-table__row {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1000px) {
+  .account-verification-step small {
+    display: none;
+  }
+
+  .account-verification-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .account-verification-primary {
+    min-height: 0;
+    padding: 32px 0 40px;
+  }
+
+  .account-verification-summary {
+    padding: 32px 0 40px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 }
 
@@ -2765,69 +2841,78 @@
     padding-left: 0;
   }
 
-  .github-verification-header {
+  .account-verification-header {
     display: block;
     padding-top: 4px;
   }
 
-  .github-verification-header > .v-status {
+  .account-verification-header > .v-status {
     margin-top: 16px;
   }
 
-  .github-verification-step {
+  .account-verification-step {
     min-height: 64px;
     gap: 8px;
     padding: 10px 8px;
   }
 
-  .github-verification-step > span {
+  .account-verification-step > span {
     width: 24px;
     height: 24px;
   }
 
-  .github-verification-step small {
+  .account-verification-step small {
     display: none;
   }
 
-  .github-verification-workspace {
+  .account-verification-workspace {
     grid-template-columns: 1fr;
   }
 
-  .github-verification-primary {
+  .account-verification-primary {
     min-height: 0;
     padding: 32px 0 40px;
   }
 
-  .github-verification-summary {
+  .account-verification-summary {
     padding: 32px 0 40px;
     border-top: 1px solid var(--line);
     border-left: 0;
   }
 
-  .github-verification-action {
+  .account-verification-action {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .github-verification-action .v-button {
+  .account-verification-action .v-button {
     width: 100%;
   }
 
-  .github-verification-account-list > li,
-  .github-verification-existing__footer {
+  .account-verification-account-list > li,
+  .account-verification-existing__footer {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .github-verification-account-list__actions {
+  .account-verification-account-list__actions {
     flex-wrap: wrap;
   }
 
-  .github-verification-existing__footer .v-button {
+  .account-verification-community-list,
+  .account-verification-community-empty {
+    width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .account-verification-existing__footer .v-button {
     width: 100%;
   }
 
-  .github-verification-result-grid {
+  .account-verification-result-grid {
     grid-template-columns: 1fr;
   }
 }

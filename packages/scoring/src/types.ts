@@ -1,3 +1,4 @@
+import type { DiscordCommunityMembership } from "@vellum/schemas";
 import type { ReadClaimsResult } from "@vellum/sdk";
 
 export type ReputationCategoryId =
@@ -40,6 +41,33 @@ export type ReputationPolicy = {
   };
 };
 
+export type ReputationPolicyV2 = {
+  version: string;
+  minimum: 0;
+  maximum: number;
+  categories: readonly ReputationCategoryPolicy[];
+  identity: {
+    tenureBands: readonly ReputationAgeBand[];
+    recencyBands: readonly ReputationRecencyBand[];
+  };
+  github: {
+    issuerDids: readonly string[];
+    schema: { id: string; hash: string };
+    tenureRuleId: string;
+    recencyRuleId: string;
+  };
+  discord: {
+    issuerDids: readonly string[];
+    identitySchema: { id: string; hash: string };
+    communitySchema: { id: string; hash: string };
+    tenureRuleId: string;
+    recencyRuleId: string;
+    communityRuleId: string;
+    communityTtlSeconds: number;
+    communityBands: readonly ReputationAgeBand[];
+  };
+};
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
@@ -52,19 +80,34 @@ export type ReputationContribution = {
   ruleId: string;
 };
 
+export type ReputationAccount =
+  | {
+      platform: "github";
+      id: number;
+      handle: string;
+      profileUrl: string;
+      createdAt: number;
+      verifiedAt: number;
+    }
+  | {
+      platform: "discord";
+      id: string;
+      handle: string;
+      profileUrl: string;
+      createdAt: number;
+      verifiedAt: number;
+    };
+
 export type ReputationEvidence = {
   claim: ReputationClaimReference;
+  supportingClaims?: readonly ReputationClaimReference[];
   issuerDid: string;
   schemaId: string;
   schemaHash: string;
   issuedAt: number;
-  account: {
-    platform: "github";
-    id: number;
-    handle: string;
-    profileUrl: string;
-    createdAt: number;
-    verifiedAt: number;
+  account: ReputationAccount;
+  community?: {
+    memberships: readonly DiscordCommunityMembership[];
   };
   contributions: readonly ReputationContribution[];
 };
@@ -74,6 +117,7 @@ export type ReputationExclusionReason =
   | "duplicate-claim"
   | "expired"
   | "invalid-claim"
+  | "identity-missing"
   | "issuer-ambiguous"
   | "issuer-deactivated"
   | "issuer-missing"

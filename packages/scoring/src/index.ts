@@ -1,7 +1,9 @@
-export { VELLUM_REPUTATION_POLICY_V1 } from "./policy.js";
+export { VELLUM_REPUTATION_POLICY_V1, VELLUM_REPUTATION_POLICY_V2 } from "./policy.js";
 export { scoreReputation } from "./score.js";
 export type {
   AvailableReputationResult,
+  ReputationAccount,
+  ReputationAgeBand,
   ReputationCategoryId,
   ReputationCategoryPolicy,
   ReputationCategoryScore,
@@ -11,6 +13,8 @@ export type {
   ReputationExcludedEvidence,
   ReputationExclusionReason,
   ReputationPolicy,
+  ReputationPolicyV2,
+  ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
   UnavailableReputationResult,

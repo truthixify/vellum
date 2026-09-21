@@ -80,12 +80,40 @@ export const verificationSubjectSchema = z.union([
 
 export const didVerificationSubjectSchema = z.object({ did: didCkbSchema }).strict();
 
-export const githubOAuthStartRequestSchema = z
+export const oauthChallengeRequestSchema = z
   .object({
     version: z.literal(VERIFICATION_API_VERSION),
     subject: didVerificationSubjectSchema,
   })
   .strict();
+
+export const walletSignatureSchema = z
+  .object({
+    signature: z.string().min(1).max(16_384),
+    identity: z.string().min(1).max(16_384),
+    signType: z.enum([
+      "BtcEcdsa",
+      "EvmPersonal",
+      "JoyId",
+      "NostrEvent",
+      "CkbSecp256k1",
+      "DogeEcdsa",
+    ]),
+  })
+  .strict();
+
+export const subjectProofSchema = z
+  .object({
+    challenge: z.string().min(1).max(4_096),
+    signature: walletSignatureSchema,
+  })
+  .strict();
+
+export const oauthStartRequestSchema = oauthChallengeRequestSchema.extend({
+  proof: subjectProofSchema,
+});
+
+export const githubOAuthStartRequestSchema = oauthStartRequestSchema;
 
 export const verificationRequestSchema = z
   .object({
@@ -139,6 +167,9 @@ export const claimIssuanceResultSchema = z
 export type CkbScript = z.infer<typeof ckbScriptSchema>;
 export type VerificationSubject = z.infer<typeof verificationSubjectSchema>;
 export type DidVerificationSubject = z.infer<typeof didVerificationSubjectSchema>;
+export type OAuthStartRequest = z.infer<typeof oauthStartRequestSchema>;
+export type OAuthChallengeRequest = z.infer<typeof oauthChallengeRequestSchema>;
+export type SubjectProof = z.infer<typeof subjectProofSchema>;
 export type GithubOAuthStartRequest = z.infer<typeof githubOAuthStartRequestSchema>;
 export type VerificationRequest = z.infer<typeof verificationRequestSchema>;
 export type VerifiedClaim = z.infer<typeof verifiedClaimSchema>;
@@ -162,6 +193,8 @@ export type VerificationErrorCode =
   | "oauth_configuration_error"
   | "oauth_denied"
   | "oauth_state_invalid"
+  | "subject_control_invalid"
+  | "verification_rate_limited"
   | "provider_rate_limited"
   | "provider_unavailable"
   | "credential_revocation_failed"

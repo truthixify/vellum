@@ -10,6 +10,10 @@
       "destination": "/api/github?action=:action"
     },
     {
+      "source": "/api/verify/discord/:action",
+      "destination": "/api/discord?action=:action"
+    },
+    {
       "source": "/api/verify/:platform",
       "destination": "/api/verify?platform=:platform"
     },

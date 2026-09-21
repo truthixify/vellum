@@ -8,7 +8,7 @@ const SUBJECT_DID = "did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc";
 
 const available: ReputationResult = {
   status: "available",
-  policyVersion: "vellum.reputation.v1",
+  policyVersion: "vellum.reputation.v2",
   evaluatedAt: 2_000_000_000,
   overall: { score: 0, maximum: 1_000 },
   categories: [],
@@ -40,7 +40,7 @@ describe("reputation HTTP boundary", () => {
   test("returns an unavailable result with no partial score", async () => {
     const unavailable: ReputationResult = {
       status: "unavailable",
-      policyVersion: "vellum.reputation.v1",
+      policyVersion: "vellum.reputation.v2",
       evaluatedAt: 2_000_000_000,
       error: {
         code: "claim-read-unavailable",

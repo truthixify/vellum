@@ -1,4 +1,4 @@
-import { VELLUM_REPUTATION_POLICY_V1, type ReputationResult } from "@vellum/scoring";
+import { VELLUM_REPUTATION_POLICY_V2, type ReputationResult } from "@vellum/scoring";
 
 import {
   InvalidReputationSubjectError,
@@ -112,7 +112,7 @@ export async function handleReputationRequest(
     return requestError(
       503,
       "service_unavailable",
-      `Reputation scoring is unavailable for ${VELLUM_REPUTATION_POLICY_V1.version}.`,
+      `Reputation scoring is unavailable for ${VELLUM_REPUTATION_POLICY_V2.version}.`,
     );
   }
 }

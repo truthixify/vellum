@@ -1,15 +1,26 @@
 import { z } from "zod";
-import { GITHUB_CLAIM_SCHEMA_HASH, GITHUB_CLAIM_SCHEMA_ID } from "@vellum/schemas";
+import {
+  DISCORD_CLAIM_SCHEMA_HASH,
+  DISCORD_CLAIM_SCHEMA_ID,
+  DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
+  DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  GITHUB_CLAIM_SCHEMA_HASH,
+  GITHUB_CLAIM_SCHEMA_ID,
+  discordSnowflakeTimestamp,
+} from "@vellum/schemas";
 
 import { isDidCkb } from "@/lib/did-ckb";
 
 const ckbHashSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 
-const claimReferenceSchema = z.object({
-  claimId: ckbHashSchema.optional(),
-  transactionHash: ckbHashSchema,
-  outputIndex: z.number().int().nonnegative(),
-});
+const claimReferenceSchema = z
+  .object({
+    claimId: ckbHashSchema.optional(),
+    transactionHash: ckbHashSchema,
+    outputIndex: z.number().int().nonnegative(),
+  })
+  .strict();
+const acceptedClaimReferenceSchema = claimReferenceSchema.extend({ claimId: ckbHashSchema });
 
 const categoryIdSchema = z.enum(["technical", "contribution", "community", "tenure", "recency"]);
 const categoryMaximums = {
@@ -20,11 +31,158 @@ const categoryMaximums = {
   recency: 100,
 } as const;
 
-const contributionSchema = z.object({
-  category: categoryIdSchema,
-  points: z.number().int().nonnegative(),
-  ruleId: z.string().min(1),
-});
+const contributionSchema = z
+  .object({
+    category: categoryIdSchema,
+    points: z.number().int().nonnegative(),
+    ruleId: z.string().min(1),
+  })
+  .strict();
+
+const githubAccountSchema = z
+  .object({
+    platform: z.literal("github"),
+    id: z.number().int().positive(),
+    handle: z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?$/),
+    profileUrl: z.string().url(),
+    createdAt: z.number().int().positive(),
+    verifiedAt: z.number().int().positive(),
+  })
+  .strict()
+  .refine(
+    (account) =>
+      account.profileUrl === `https://github.com/${account.handle}` &&
+      account.createdAt <= account.verifiedAt,
+  );
+
+const discordSnowflakeSchema = z.string().regex(/^[1-9][0-9]{16,19}$/);
+function hasOnlyLabelCharacters(value: string): boolean {
+  return [...value].every((character) => {
+    const code = character.codePointAt(0)!;
+    return code > 0x1f && code !== 0x7f;
+  });
+}
+
+function isDiscordUsername(value: string): boolean {
+  return [...value].every((character) => {
+    const code = character.codePointAt(0)!;
+    return code > 0x20 && code !== 0x7f;
+  });
+}
+
+const discordLabelSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .refine(hasOnlyLabelCharacters)
+  .refine((value) => value.trim() === value);
+const discordAccountSchema = z
+  .object({
+    platform: z.literal("discord"),
+    id: discordSnowflakeSchema,
+    handle: z.string().min(1).max(32).refine(isDiscordUsername),
+    profileUrl: z.string().url(),
+    createdAt: z.number().int().positive(),
+    verifiedAt: z.number().int().positive(),
+  })
+  .strict()
+  .refine((account) => {
+    try {
+      return (
+        account.profileUrl === `https://discord.com/users/${account.id}` &&
+        account.createdAt === discordSnowflakeTimestamp(account.id) &&
+        account.createdAt <= account.verifiedAt
+      );
+    } catch {
+      return false;
+    }
+  });
+
+const discordRoleSchema = z
+  .object({
+    role_id: discordSnowflakeSchema,
+    role_name: discordLabelSchema,
+  })
+  .strict();
+
+const discordMembershipSchema = z
+  .object({
+    guild_id: discordSnowflakeSchema,
+    community_name: discordLabelSchema,
+    joined_at: z.number().int().positive(),
+    recognized_roles: z.array(discordRoleSchema).max(32),
+  })
+  .strict()
+  .superRefine((membership, context) => {
+    if (
+      membership.recognized_roles.some(
+        (role, index) =>
+          index > 0 &&
+          BigInt(membership.recognized_roles[index - 1].role_id) >= BigInt(role.role_id),
+      )
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Discord roles must be unique and sorted.",
+      });
+    }
+  });
+
+const discordCommunitySchema = z
+  .object({
+    memberships: z.array(discordMembershipSchema).min(1).max(16),
+  })
+  .strict()
+  .superRefine((community, context) => {
+    if (
+      community.memberships.some(
+        (membership, index) =>
+          index > 0 &&
+          BigInt(community.memberships[index - 1].guild_id) >= BigInt(membership.guild_id),
+      )
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Discord communities must be unique and sorted.",
+      });
+    }
+  });
+
+const evidenceFields = {
+  claim: acceptedClaimReferenceSchema,
+  issuerDid: z.string().refine(isDidCkb),
+  issuedAt: z.number().int().nonnegative(),
+  contributions: z.array(contributionSchema),
+} as const;
+
+const evidenceSchema = z.discriminatedUnion("schemaId", [
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(GITHUB_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(GITHUB_CLAIM_SCHEMA_HASH),
+      account: githubAccountSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(DISCORD_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(DISCORD_CLAIM_SCHEMA_HASH),
+      account: discordAccountSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(DISCORD_COMMUNITY_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH),
+      account: discordAccountSchema,
+      supportingClaims: z.array(acceptedClaimReferenceSchema).length(1),
+      community: discordCommunitySchema,
+    })
+    .strict(),
+]);
 
 const availableReputationSchema = z
   .object({
@@ -33,7 +191,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v1"),
+    policyVersion: z.literal("vellum.reputation.v2"),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -46,30 +204,7 @@ const availableReputationSchema = z
         maximum: z.number().int().positive(),
       }),
     ),
-    evidence: z.array(
-      z.object({
-        claim: claimReferenceSchema,
-        issuerDid: z.string().refine(isDidCkb),
-        schemaId: z.literal(GITHUB_CLAIM_SCHEMA_ID),
-        schemaHash: z.literal(GITHUB_CLAIM_SCHEMA_HASH),
-        issuedAt: z.number().int().nonnegative(),
-        account: z
-          .object({
-            platform: z.literal("github"),
-            id: z.number().int().positive(),
-            handle: z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?$/),
-            profileUrl: z.string().url(),
-            createdAt: z.number().int().positive(),
-            verifiedAt: z.number().int().positive(),
-          })
-          .refine(
-            (account) =>
-              account.profileUrl === `https://github.com/${account.handle}` &&
-              account.createdAt <= account.verifiedAt,
-          ),
-        contributions: z.array(contributionSchema),
-      }),
-    ),
+    evidence: z.array(evidenceSchema),
     excludedEvidence: z.array(
       z.object({
         claim: claimReferenceSchema,
@@ -79,6 +214,7 @@ const availableReputationSchema = z
           "additional-account",
           "duplicate-claim",
           "expired",
+          "identity-missing",
           "invalid-claim",
           "issuer-ambiguous",
           "issuer-deactivated",
@@ -110,6 +246,29 @@ const availableReputationSchema = z
         );
       }
     }
+    const evidenceByReference = new Map(
+      value.evidence.map((evidence) => [
+        `${evidence.claim.transactionHash}:${evidence.claim.outputIndex}`,
+        evidence,
+      ]),
+    );
+    const communityEvidenceIsConsistent = value.evidence.every((evidence) => {
+      if (evidence.schemaId !== DISCORD_COMMUNITY_CLAIM_SCHEMA_ID) return true;
+      const supporting = evidence.supportingClaims[0];
+      const identity = evidenceByReference.get(
+        `${supporting.transactionHash}:${supporting.outputIndex}`,
+      );
+      return (
+        identity?.schemaId === DISCORD_CLAIM_SCHEMA_ID &&
+        identity.claim.claimId === supporting.claimId &&
+        identity.account.id === evidence.account.id &&
+        evidence.community.memberships.every(
+          (membership) =>
+            membership.joined_at >= evidence.account.createdAt &&
+            membership.joined_at <= evidence.issuedAt,
+        )
+      );
+    });
     if (
       value.overall.score > value.overall.maximum ||
       value.categories.some((category) => category.score > category.maximum) ||
@@ -120,6 +279,8 @@ const availableReputationSchema = z
       categoryIds.size !== Object.keys(categoryMaximums).length ||
       categoryMaximumTotal !== value.overall.maximum ||
       categoryTotal !== value.overall.score ||
+      evidenceByReference.size !== value.evidence.length ||
+      !communityEvidenceIsConsistent ||
       value.evidence.some(
         (evidence) =>
           evidence.issuedAt > value.evaluatedAt || evidence.account.verifiedAt > value.evaluatedAt,
@@ -138,7 +299,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v1"),
+  policyVersion: z.literal("vellum.reputation.v2"),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),
@@ -189,6 +350,7 @@ export async function fetchReputation(
   let response: Response;
   try {
     response = await fetchImplementation(`/api/reputation/${encodeURIComponent(did)}`, {
+      cache: "no-store",
       headers: { accept: "application/json" },
     });
   } catch {

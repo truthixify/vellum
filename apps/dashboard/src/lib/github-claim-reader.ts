@@ -4,32 +4,10 @@ import {
   parseGithubClaimPayload,
   type GithubClaimPayload,
 } from "@vellum/schemas";
-import { readClaims, type ClaimScriptConfigLike, type ReadClaimsResult } from "@vellum/sdk";
+import { readClaims, type ReadClaimsResult } from "@vellum/sdk";
 
-import deployment from "../../../../deployments/testnet.json";
+import { dashboardClaimScripts } from "./claim-scripts";
 import type { GithubSubmission, PublicIssuerMetadata } from "./github-verification";
-
-function scriptInfo(
-  contract: (typeof deployment.contracts)[keyof typeof deployment.contracts],
-): ccc.ScriptInfoLike {
-  return {
-    codeHash: contract.codeHash,
-    hashType: contract.hashType,
-    cellDeps: [
-      {
-        cellDep: {
-          outPoint: contract.outPoint,
-          depType: contract.depType,
-        },
-      },
-    ],
-  };
-}
-
-export const githubClaimScripts = {
-  claimType: scriptInfo(deployment.contracts.claimType),
-  didLock: scriptInfo(deployment.contracts.didLock),
-} satisfies ClaimScriptConfigLike;
 
 export type GithubClaimConfirmation =
   | { state: "pending" }
@@ -99,7 +77,7 @@ export async function readGithubAccountClaims(
 ): Promise<GithubAccountClaim[]> {
   const result = await readClaims({
     client,
-    scripts: githubClaimScripts,
+    scripts: dashboardClaimScripts,
     filter: {
       subject: { did: subjectDid },
       issuerDid: issuer.did,
@@ -160,7 +138,7 @@ export async function confirmGithubClaim(
 
   const result = await readClaims({
     client,
-    scripts: githubClaimScripts,
+    scripts: dashboardClaimScripts,
     filter: {
       subject: { did: submission.subject },
       issuerDid: issuer.did,

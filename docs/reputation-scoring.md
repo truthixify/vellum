@@ -5,31 +5,31 @@ public evidence, not a second reputation record: the service keeps no reputation
 not issue a score claim. Given the same accepted claims, policy version, and evaluation time, the
 result is identical.
 
-The active policy is `vellum.reputation.v1`. It runs on CKB Testnet and currently understands the
-GitHub account schema. Later schemas must arrive through a new reviewed policy version rather than
-changing the meaning of this one.
+The active Testnet policy is `vellum.reputation.v2`. Policy v1 remains exported for consumers that
+need to interpret older results; its meaning has not changed.
 
 ## Score model
 
 The score is an integer from 0 to 1000. Category caps are fixed and missing evidence remains zero;
 the result is never normalized around the categories a subject happens to have.
 
-| Category     |  Maximum | Evidence scored in v1    |
-| ------------ | -------: | ------------------------ |
-| Technical    |      300 | None                     |
-| Contribution |      300 | None                     |
-| Community    |      200 | None                     |
-| Tenure       |      100 | Verified GitHub account  |
-| Recency      |      100 | GitHub verification time |
-| **Overall**  | **1000** | Sum of category scores   |
+| Category     |  Maximum | Evidence scored in v2                                 |
+| ------------ | -------: | ----------------------------------------------------- |
+| Technical    |      300 | None                                                  |
+| Contribution |      300 | None                                                  |
+| Community    |      200 | Recognized CKB Discord community membership age       |
+| Tenure       |      100 | Best verified GitHub or Discord account age           |
+| Recency      |      100 | Most recent accepted GitHub or Discord identity proof |
+| **Overall**  | **1000** | Sum of category scores                                |
 
-GitHub account ownership does not award technical, contribution, or community points. Those
-categories stay at zero until a future policy names a schema whose evidence actually supports the
-category.
+Account ownership alone does not prove technical work or ecosystem contribution. Those categories
+stay at zero until a future policy names evidence that can substantiate them.
 
-### GitHub tenure
+### Identity tenure
 
-Account age is measured from `account_created_at` to the explicit evaluation time.
+Account age is measured from the provider account creation time to the explicit evaluation time.
+GitHub and Discord use the same bands. When both are present, only the highest qualifying result
+contributes.
 
 | Account age        | Points |
 | ------------------ | -----: |
@@ -40,12 +40,12 @@ Account age is measured from `account_created_at` to the explicit evaluation tim
 | At least 730 days  |     80 |
 | At least 1460 days |    100 |
 
-The contribution is identified by rule `github-account-tenure.v1`.
+The rule IDs are `github-account-tenure.v2` and `discord-account-tenure.v2`.
 
-### GitHub recency
+### Verification recency
 
-Verification age is measured from `verified_at` to the explicit evaluation time. An exact boundary
-enters the next lower band.
+Verification age is measured from `verified_at` to the evaluation time. An exact boundary enters
+the next lower band. Only the highest qualifying result contributes.
 
 | Verification age          | Points |
 | ------------------------- | -----: |
@@ -55,27 +55,47 @@ enters the next lower band.
 | 180 to less than 365 days |     25 |
 | At least 365 days         |      0 |
 
-The contribution is identified by rule `github-verification-recency.v1`.
+The rule IDs are `github-verification-recency.v2` and `discord-verification-recency.v2`.
+
+### CKB community history
+
+Discord community evidence lists only the servers configured as recognized CKB communities. The
+oldest current membership determines the category score; recognized role names remain visible
+evidence but do not award arbitrary points.
+
+| Membership age     | Points |
+| ------------------ | -----: |
+| Less than 30 days  |      0 |
+| At least 30 days   |     40 |
+| At least 180 days  |     80 |
+| At least 365 days  |    120 |
+| At least 730 days  |    160 |
+| At least 1460 days |    200 |
+
+The rule ID is `discord-ckb-membership-tenure.v2`. Community claims expire after exactly 30 days,
+so the server must verify current membership again before stale evidence can contribute.
 
 ## Trust and evidence selection
 
-Policy v1 accepts one source:
+Policy v2 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
 
-- issuer: `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no`;
-- schema: `vellum.social.github.v1`;
-- schema hash: `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c`.
+| Schema                        | Hash                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| `vellum.social.github.v1`     | `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` |
+| `vellum.social.discord.v1`    | `0x1d0169167b6c34b7818ba6932974679f8fd5284e4d5d79319da12f7d79df8b69` |
+| `vellum.community.discord.v1` | `0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550` |
 
-The service scans all live Claim Cells for the subject before applying that trust policy. It does
-not ask the SDK to hide other issuers or schemas. This lets the result report evidence that was
-present but excluded.
+The service scans every live Claim Cell for the subject before applying the trust policy. It does
+not ask the SDK to hide other issuers or schemas, so present but rejected evidence remains visible.
 
 Selection is deterministic:
 
 1. Identical claim IDs count once. Every duplicate Cell is reported as `duplicate-claim`.
-2. Among otherwise eligible claims for one GitHub user ID, the greatest `issued_at` wins. Equal
-   timestamps use the lexicographically smaller claim ID.
-3. If a subject has claims for multiple GitHub user IDs, only the newest remaining account claim
-   contributes. The others are reported as `additional-account` and cannot stack points.
+2. For one provider user ID, the greatest `issued_at` wins. Equal timestamps use the
+   lexicographically smaller claim ID.
+3. Only one account per provider is accepted, and GitHub and Discord cannot stack tenure or recency.
+4. Discord community evidence requires the accepted Discord identity claim for the same user ID.
+5. Only the newest active community claim per Discord user contributes.
 
 Expired claims are inactive when `evaluatedAt >= expiresAt`. Claims issued after the checkpoint,
 malformed payloads, untrusted issuers, unsupported schemas, and claims from missing, ambiguous, or
@@ -97,64 +117,19 @@ The endpoint is public, read-only, CORS-readable, Testnet-only, and does not req
 wallet. The server selects the current Unix time and returns it as `evaluatedAt`; callers cannot ask
 the current-live-Cell endpoint to imply a historical chain snapshot.
 
-An available response has HTTP status `200`:
-
-```json
-{
-  "ok": true,
-  "version": "1",
-  "network": "ckb_testnet",
-  "subject": "did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc",
-  "status": "available",
-  "policyVersion": "vellum.reputation.v1",
-  "evaluatedAt": 1800000000,
-  "overall": { "score": 200, "maximum": 1000 },
-  "categories": [
-    { "id": "technical", "score": 0, "maximum": 300 },
-    { "id": "contribution", "score": 0, "maximum": 300 },
-    { "id": "community", "score": 0, "maximum": 200 },
-    { "id": "tenure", "score": 100, "maximum": 100 },
-    { "id": "recency", "score": 100, "maximum": 100 }
-  ],
-  "evidence": [
-    {
-      "claim": {
-        "claimId": "0x1111111111111111111111111111111111111111111111111111111111111111",
-        "transactionHash": "0x2222222222222222222222222222222222222222222222222222222222222222",
-        "outputIndex": 0
-      },
-      "issuerDid": "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
-      "schemaId": "vellum.social.github.v1",
-      "schemaHash": "0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c",
-      "issuedAt": 1799500000,
-      "account": {
-        "platform": "github",
-        "id": 5830913,
-        "handle": "example",
-        "profileUrl": "https://github.com/example",
-        "createdAt": 1600000000,
-        "verifiedAt": 1799500000
-      },
-      "contributions": [
-        { "category": "tenure", "points": 100, "ruleId": "github-account-tenure.v1" },
-        { "category": "recency", "points": 100, "ruleId": "github-verification-recency.v1" }
-      ]
-    }
-  ],
-  "excludedEvidence": []
-}
-```
-
-Each real `evidence` entry includes the Claim ID, transaction hash, output index, issuer, schema,
-public account fields, and the exact rule contributions. An incomplete chain read returns HTTP
-status `503`, `status: "unavailable"`, and no score fields.
+An available response returns HTTP `200` with the aggregate, all five categories, accepted
+evidence, excluded evidence, and `policyVersion: "vellum.reputation.v2"`. Discord community evidence
+also includes the matching identity Claim reference, configured community names, join timestamps,
+and recognized roles. An incomplete chain read returns HTTP `503`, `status: "unavailable"`, and no
+score fields.
 
 ## Interpretation
 
-A GitHub claim proves that the Vellum issuer verified control of that account at a stated time.
-Account age makes casual account farming more expensive, but it is not proof that one account maps
-to one person. Consumers should inspect the evidence and choose thresholds appropriate to their own
-use; governance eligibility is not defined by this policy.
+A social identity claim proves that the Vellum issuer verified control of that account at a stated
+time. A Discord community claim additionally records current membership facts returned for the
+configured CKB servers. Neither proves uniqueness, technical skill, or a contribution. Consumers
+should inspect the evidence and choose thresholds appropriate to their own use; governance
+eligibility is not defined by this policy.
 
 ## Verification
 

@@ -105,9 +105,10 @@ const profile = parseClaimPayload(claim, {
 
 ## Write claims
 
-`writeClaim` builds and balances a Claim Cell transaction. It does not sign or broadcast. The
-returned metadata lets the caller inspect the output and collect every required signature before
-submitting it.
+`writeClaim` builds and balances one Claim Cell transaction. `writeClaims` adds between one and
+eight claims for the same subject and issuer to one transaction, then performs signer preparation
+and fee balancing once. Neither function signs or broadcasts. The returned metadata lets the
+caller inspect every output and collect every required signature before submitting it.
 
 ```ts
 import { writeClaim } from "@vellum/sdk";
@@ -134,6 +135,10 @@ const txHash = await issuerSigner.client.sendTransaction(signed);
 const claimOutPoint = { txHash, index: built.outputIndex };
 ```
 
+Use `writeClaims({ ...props, inputs: [firstClaim, secondClaim] })` when one verification produces
+multiple claims. Its result contains `claims`, in input order, with each claim's ID and output index.
+Batch construction avoids selecting the same payer Cell independently for several transactions.
+
 The issuer must control the current `did:ckb` controller lock. By default the issuer also pays for
 the Claim Cell and transaction fee. Pass `payerSigner` to use a separate payer and
 `additionalSigners` for pre-existing input lock groups. Every distinct signer must sign the final
@@ -145,18 +150,18 @@ Output capacity defaults to the exact occupied capacity of the serialized Claim 
 
 ## Public API
 
-The package root exports five runtime values:
+The package root exports six runtime values:
 
 - `ClaimDataV1` and `ClaimData` for canonical Claim Cell encoding and decoding;
 - `readClaims` for complete live subject scans;
 - `parseClaimPayload` for schema-bound application parsing; and
-- `writeClaim` for unsigned transaction construction.
+- `writeClaim` and `writeClaims` for unsigned single-claim and atomic batch construction.
 
 It also exports the public types used by those values: `Claim`, `ClaimDataLike`, `ClaimDataV1Like`,
 `ClaimFilter`, `ClaimIssuerSource`, `ClaimIssuerState`, `ClaimReadFailure`,
 `ClaimReadFailureCode`, `ClaimSchema`, `ClaimScriptConfigLike`, `ClaimSubjectLike`,
 `ClaimTimeEvaluation`, `ReadClaimsProps`, `ReadClaimsResult`, `WriteClaimInput`, `WriteClaimProps`,
-and `WriteClaimResult`.
+`WriteClaimResult`, `WriteClaimsProps`, and `WriteClaimsResult`.
 
 ## Verify
 
@@ -174,7 +179,7 @@ publishable tarball.
 
 The network-dependent suite reads committed Testnet fixtures, covers a claim whose issuer and
 subject are different DIDs, proves a destroyed claim's capacity returned to the subject controller,
-and prepares a fresh unsigned transaction without broadcasting:
+and prepares fresh unsigned single-claim and atomic batch transactions without broadcasting:
 
 ```bash
 bun run --cwd packages/sdk test:testnet
