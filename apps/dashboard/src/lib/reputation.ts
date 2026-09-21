@@ -350,6 +350,7 @@ export async function fetchReputation(
   let response: Response;
   try {
     response = await fetchImplementation(`/api/reputation/${encodeURIComponent(did)}`, {
+      cache: "no-store",
       headers: { accept: "application/json" },
     });
   } catch {

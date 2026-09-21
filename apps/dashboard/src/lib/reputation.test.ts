@@ -140,6 +140,7 @@ describe("reputation API client", () => {
     expect(result.status).toBe("available");
     if (result.status === "available") expect(result.overall.score).toBe(200);
     expect(fetch).toHaveBeenCalledWith(`/api/reputation/${encodeURIComponent(DID)}`, {
+      cache: "no-store",
       headers: { accept: "application/json" },
     });
   });

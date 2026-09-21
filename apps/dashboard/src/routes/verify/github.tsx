@@ -1,5 +1,5 @@
 import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { StatusMark } from "@vellum/ui";
 import {
@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { reputationQueryKey } from "@/hooks/use-reputation";
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
@@ -49,6 +50,7 @@ function shorten(value: string, start = 16, end = 8): string {
 
 function GithubVerificationPage() {
   useDocumentTitle("GitHub verification");
+  const queryClient = useQueryClient();
   const search = Route.useSearch();
   const submission = githubSubmissionFromSearch(search);
   const [existingClaimCount, setExistingClaimCount] = useState(0);
@@ -60,6 +62,13 @@ function GithubVerificationPage() {
     submission && reportedConfirmation?.transactionHash === submission.transactionHash
       ? reportedConfirmation.result
       : undefined;
+  const confirmedSubject = confirmation?.state === "confirmed" ? submission?.subject : undefined;
+
+  useEffect(() => {
+    if (confirmedSubject) {
+      void queryClient.invalidateQueries({ queryKey: reputationQueryKey(confirmedSubject) });
+    }
+  }, [confirmedSubject, queryClient]);
 
   return (
     <div className="account-verification-page">
