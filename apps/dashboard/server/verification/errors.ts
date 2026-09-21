@@ -43,3 +43,22 @@ export class GithubOAuthError extends VerificationServiceError {
     this.name = "GithubOAuthError";
   }
 }
+
+export class DiscordOAuthError extends VerificationServiceError {
+  constructor(
+    code: Extract<
+      VerificationErrorCode,
+      | "oauth_denied"
+      | "oauth_state_invalid"
+      | "provider_rate_limited"
+      | "provider_unavailable"
+      | "credential_revocation_failed"
+    >,
+    status: number,
+    message: string,
+    readonly retryAt?: number,
+  ) {
+    super(code, status, message);
+    this.name = "DiscordOAuthError";
+  }
+}

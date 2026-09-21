@@ -23,7 +23,13 @@ export const platformVerifiers: PlatformVerifierRegistry = {
       "Start GitHub verification through the OAuth endpoint.",
     );
   },
-  discord: unavailable("discord"),
+  discord: async () => {
+    throw new VerificationServiceError(
+      "invalid_request",
+      400,
+      "Start Discord verification through the OAuth endpoint.",
+    );
+  },
   telegram: unavailable("telegram"),
   bluesky: unavailable("bluesky"),
 };

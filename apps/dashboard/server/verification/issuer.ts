@@ -142,33 +142,57 @@ export async function issueVerifiedClaim(
   environment: IssuerEnvironment = process.env,
   dependencies: IssuanceDependencies = issuanceDependencies,
 ): Promise<ClaimIssuanceResult> {
-  const issuerSigner = await dependencies.createSigner(environment);
-  const built = await dependencies.writeClaim({
-    issuerSigner,
-    scripts: claimScripts,
-    input: {
-      subject,
-      issuerDid: issuerMetadata.did,
-      schemaHash: claim.schema.hash,
-      payload: claim.payload,
-      issuedAt: claim.issuedAt,
-      expiresAt: claim.expiresAt,
-    },
-  });
+  const [result] = await issueVerifiedClaims(subject, [claim], environment, dependencies);
+  return result;
+}
 
-  const preparedHash = built.tx.hash();
-  const signed = await issuerSigner.signOnlyTransaction(built.tx);
+export async function issueVerifiedClaims(
+  subject: VerificationSubject,
+  claims: readonly VerifiedClaim[],
+  environment: IssuerEnvironment = process.env,
+  dependencies: IssuanceDependencies = issuanceDependencies,
+): Promise<ClaimIssuanceResult[]> {
+  if (claims.length < 1 || claims.length > 8) {
+    throw new TypeError("Claim issuance requires between one and eight claims.");
+  }
+
+  const issuerSigner = await dependencies.createSigner(environment);
+  const builtClaims: WriteClaimResult[] = [];
+  let tx: ccc.TransactionLike | undefined;
+  for (const claim of claims) {
+    const built = await dependencies.writeClaim({
+      issuerSigner,
+      scripts: claimScripts,
+      input: {
+        subject,
+        issuerDid: issuerMetadata.did,
+        schemaHash: claim.schema.hash,
+        payload: claim.payload,
+        issuedAt: claim.issuedAt,
+        expiresAt: claim.expiresAt,
+      },
+      tx,
+    });
+    builtClaims.push(built);
+    tx = built.tx;
+  }
+
+  const prepared = builtClaims.at(-1)?.tx;
+  if (!prepared) throw new Error("Claim transaction was not prepared.");
+
+  const preparedHash = prepared.hash();
+  const signed = await issuerSigner.signOnlyTransaction(prepared);
   if (signed.hash() !== preparedHash) {
     throw new Error("The issuer signer changed the prepared transaction.");
   }
   const transactionHash = await issuerSigner.client.sendTransaction(signed);
 
-  return {
+  return builtClaims.map((built) => ({
     status: "submitted",
     network: issuerMetadata.network,
     payer: issuerMetadata.payer,
     transactionHash,
     claimId: built.claimId,
     outputIndex: built.outputIndex,
-  };
+  }));
 }

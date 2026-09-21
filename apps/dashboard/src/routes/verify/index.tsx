@@ -7,6 +7,7 @@ import {
   Github,
   KeyRound,
   Landmark,
+  MessagesSquare,
   Send,
 } from "lucide-react";
 
@@ -44,43 +45,77 @@ function VerificationPage() {
       <section className="verification-sources" aria-labelledby="verification-sources-title">
         <div className="verification-section-heading">
           <div>
-            <span>Available source</span>
+            <span>Available sources</span>
             <h2 id="verification-sources-title">Choose an account</h2>
           </div>
           <p>Account access is used for verification only and is not written to the claim.</p>
         </div>
 
-        <Link className="verification-source" to="/verify/github">
-          <span className="verification-source__icon" aria-hidden="true">
-            <Github size={22} strokeWidth={1.7} />
-          </span>
-          <span className="verification-source__body">
-            <span className="verification-source__title">
-              <strong>GitHub</strong>
-              <StatusMark tone="positive">Available</StatusMark>
+        <div className="verification-source-list">
+          <Link className="verification-source" to="/verify/github">
+            <span className="verification-source__icon" aria-hidden="true">
+              <Github size={22} strokeWidth={1.7} />
             </span>
-            <span className="verification-source__description">
-              Prove control of a public GitHub account and bind it to an identity you control.
+            <span className="verification-source__body">
+              <span className="verification-source__title">
+                <strong>GitHub</strong>
+                <StatusMark tone="positive">Available</StatusMark>
+              </span>
+              <span className="verification-source__description">
+                Prove account control and record public account age for your identity.
+              </span>
+              <span className="verification-source__meta">
+                <span>
+                  <small>Evidence</small>
+                  Account identity and age
+                </span>
+                <span>
+                  <small>Schema</small>
+                  <code>vellum.social.github.v1</code>
+                </span>
+                <span>
+                  <small>Record</small>
+                  Claim Cell
+                </span>
+              </span>
             </span>
-            <span className="verification-source__meta">
-              <span>
-                <small>Evidence</small>
-                Public account ownership
+            <span className="verification-source__action">
+              View GitHub status <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </Link>
+
+          <Link className="verification-source" to="/verify/discord">
+            <span className="verification-source__icon" aria-hidden="true">
+              <MessagesSquare size={22} strokeWidth={1.7} />
+            </span>
+            <span className="verification-source__body">
+              <span className="verification-source__title">
+                <strong>Discord</strong>
+                <StatusMark tone="positive">Available</StatusMark>
               </span>
-              <span>
-                <small>Schema</small>
-                <code>vellum.social.github.v1</code>
+              <span className="verification-source__description">
+                Verify account control, CKB community membership, join dates, and recognized roles.
               </span>
-              <span>
-                <small>Record</small>
-                Claim Cell
+              <span className="verification-source__meta">
+                <span>
+                  <small>Evidence</small>
+                  CKB community history
+                </span>
+                <span>
+                  <small>Schemas</small>
+                  <code>social + community</code>
+                </span>
+                <span>
+                  <small>Record</small>
+                  Claim Cells
+                </span>
               </span>
             </span>
-          </span>
-          <span className="verification-source__action">
-            View GitHub status <ArrowRight size={15} aria-hidden="true" />
-          </span>
-        </Link>
+            <span className="verification-source__action">
+              View Discord status <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
       </section>
 
       <section className="verification-policy" aria-labelledby="verification-policy-title">

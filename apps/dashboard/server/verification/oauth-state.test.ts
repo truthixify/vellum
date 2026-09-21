@@ -1,13 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 
-import { GithubOAuthError, OAuthConfigurationError } from "./errors";
+import { DiscordOAuthError, GithubOAuthError, OAuthConfigurationError } from "./errors";
 import {
+  DISCORD_OAUTH_COOKIE_NAME,
+  DISCORD_OAUTH_STATE_TTL_SECONDS,
   GITHUB_OAUTH_COOKIE_NAME,
   GITHUB_OAUTH_STATE_TTL_SECONDS,
   clearGithubOAuthCookie,
+  clearDiscordOAuthCookie,
+  consumeDiscordOAuthState,
   consumeGithubOAuthState,
   createGithubOAuthState,
+  createDiscordOAuthState,
 } from "./oauth-state";
 
 const SUBJECT = { did: "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp" } as const;
@@ -78,5 +83,36 @@ describe("GitHub OAuth state", () => {
       `${GITHUB_OAUTH_COOKIE_NAME}=; Path=/api/verify/github/callback; HttpOnly; SameSite=Lax; Max-Age=0; Secure`,
     );
     expect(clearGithubOAuthCookie(false)).not.toContain("Secure");
+  });
+});
+
+describe("Discord OAuth state", () => {
+  test("binds a five-minute state to the Discord callback cookie", () => {
+    const created = createDiscordOAuthState(SUBJECT, SECRET, NOW, true, NONCE);
+
+    expect(created.expiresAt).toBe(NOW + DISCORD_OAUTH_STATE_TTL_SECONDS);
+    expect(created.cookie).toContain(`${DISCORD_OAUTH_COOKIE_NAME}=`);
+    expect(created.cookie).toContain("Path=/api/verify/discord/callback");
+    expect(
+      consumeDiscordOAuthState(requestCookie(created.cookie), created.state, SECRET, NOW + 1),
+    ).toEqual({ subject: SUBJECT });
+    expect(() =>
+      consumeDiscordOAuthState(
+        requestCookie(created.cookie),
+        created.state,
+        SECRET,
+        created.expiresAt,
+      ),
+    ).toThrow(DiscordOAuthError);
+  });
+
+  test("does not accept a GitHub state cookie and clears the exact Discord path", () => {
+    const github = createGithubOAuthState(SUBJECT, SECRET, NOW, true, NONCE);
+    expect(() =>
+      consumeDiscordOAuthState(requestCookie(github.cookie), github.state, SECRET, NOW + 1),
+    ).toThrow(DiscordOAuthError);
+    expect(clearDiscordOAuthCookie(true)).toBe(
+      `${DISCORD_OAUTH_COOKIE_NAME}=; Path=/api/verify/discord/callback; HttpOnly; SameSite=Lax; Max-Age=0; Secure`,
+    );
   });
 });

@@ -5,9 +5,9 @@ Claim Cell transactions. Platform adapters verify the external proof and return 
 payload. The service then uses `@vellum/sdk` to build the Claim Cell transaction, signs it with the
 current issuer DID controller, and submits it to CKB Testnet. There is no detached claim signature.
 
-GitHub uses an OAuth-specific route because an authorization code must never pass through the
-generic proof endpoint. Discord, Telegram, and Bluesky still return a typed `501` response until
-their verification adapters are implemented.
+GitHub and Discord use OAuth-specific routes because authorization codes must never pass through
+the generic proof endpoint. Telegram and Bluesky still return a typed `501` response until their
+verification adapters are implemented.
 
 ## Endpoints
 
@@ -52,13 +52,29 @@ The claim uses schema `vellum.social.github.v1` with hash
 }
 ```
 
+`POST /api/verify/discord/start` accepts the same subject envelope and returns a Discord
+authorization URL. The request uses only `identify` and `guilds.members.read`. Discord returns to
+`GET /api/verify/discord/callback`, where the service validates the state, exchanges the code, reads
+the stable account identity, and checks membership only in explicitly configured CKB Discord
+servers. The credential is revoked before claim issuance.
+
+Every successful Discord verification issues `vellum.social.discord.v1`. When at least one
+configured server membership is found, the same transaction also issues
+`vellum.community.discord.v1`, including the configured community label, Discord join timestamp,
+and any configured roles held by the member. The community claim expires after 30 days. Both Claim
+Cells are signed and broadcast atomically in one CKB transaction.
+
+Standard Discord web OAuth does not expose a member's channel-reading history or message activity.
+The service therefore proves recognized server membership and age, not participation in unrelated
+servers or private channels.
+
 `POST /api/verify/:platform` is the common boundary for non-OAuth adapters and accepts at most 16
 KiB of `application/json`:
 
 ```json
 {
   "version": "1",
-  "platform": "discord",
+  "platform": "telegram",
   "subject": {
     "did": "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp"
   },
@@ -68,8 +84,8 @@ KiB of `application/json`:
 
 `subject` may instead contain a complete CKB `lock` object with `codeHash`, `hashType`, and `args`.
 The path and body platform must match. Unknown fields, malformed CKB values, non-JSON proof values,
-and invalid timestamps are rejected before verification or issuance. Direct GitHub requests are
-rejected and must use the OAuth start route.
+and invalid timestamps are rejected before verification or issuance. Direct GitHub and Discord
+requests are rejected and must use their OAuth start routes.
 
 Errors always use the same envelope:
 
@@ -84,8 +100,9 @@ Errors always use the same envelope:
 }
 ```
 
-Callback failures redirect to `/verify/github?status=error&code=...`. Rate-limit responses also
-include a public `retryAt` Unix timestamp so the dashboard can show when another attempt is useful.
+Callback failures redirect to the relevant verification page with `status=error&code=...`.
+Rate-limit responses also include a public `retryAt` Unix timestamp so the dashboard can show when
+another attempt is useful.
 
 ## Configuration
 
@@ -97,8 +114,30 @@ The Vercel dashboard project needs these environment variables:
 - `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`: credentials for a dedicated GitHub OAuth app.
 - `GITHUB_OAUTH_CALLBACK_URL`: the exact callback URL ending in
   `/api/verify/github/callback`. HTTPS is required outside loopback development.
+- `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`: credentials for a dedicated Discord application.
+- `DISCORD_OAUTH_CALLBACK_URL`: the exact callback URL ending in
+  `/api/verify/discord/callback`. HTTPS is required outside loopback development.
+- `DISCORD_TRUSTED_COMMUNITIES`: a non-empty JSON array of recognized CKB servers and optional
+  roles. Each entry has `guildId`, `name`, and a `roles` array containing `roleId` and `name`. The
+  verifier stays unavailable when this allowlist is missing or empty so configuration mistakes do
+  not appear as an absence of community history.
 - `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
-  the short-lived OAuth state cookie and derive its PKCE verifier.
+  short-lived OAuth state cookies and derive GitHub's PKCE verifier.
+
+For example:
+
+```json
+[
+  {
+    "guildId": "1048098513321902120",
+    "name": "Nervos Nation",
+    "roles": [{ "roleId": "1048098513321902121", "name": "Builder" }]
+  }
+]
+```
+
+Discord requires the production redirect URL to be registered in the application's OAuth settings.
+No bot token is used by this flow.
 
 The repository's `.env.example` intentionally leaves the credential blank. Local credentials belong
 in an ignored `.env.local` file. The service refuses issuance when the credential is absent,

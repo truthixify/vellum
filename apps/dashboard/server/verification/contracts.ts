@@ -80,12 +80,14 @@ export const verificationSubjectSchema = z.union([
 
 export const didVerificationSubjectSchema = z.object({ did: didCkbSchema }).strict();
 
-export const githubOAuthStartRequestSchema = z
+export const oauthStartRequestSchema = z
   .object({
     version: z.literal(VERIFICATION_API_VERSION),
     subject: didVerificationSubjectSchema,
   })
   .strict();
+
+export const githubOAuthStartRequestSchema = oauthStartRequestSchema;
 
 export const verificationRequestSchema = z
   .object({
@@ -139,6 +141,7 @@ export const claimIssuanceResultSchema = z
 export type CkbScript = z.infer<typeof ckbScriptSchema>;
 export type VerificationSubject = z.infer<typeof verificationSubjectSchema>;
 export type DidVerificationSubject = z.infer<typeof didVerificationSubjectSchema>;
+export type OAuthStartRequest = z.infer<typeof oauthStartRequestSchema>;
 export type GithubOAuthStartRequest = z.infer<typeof githubOAuthStartRequestSchema>;
 export type VerificationRequest = z.infer<typeof verificationRequestSchema>;
 export type VerifiedClaim = z.infer<typeof verifiedClaimSchema>;

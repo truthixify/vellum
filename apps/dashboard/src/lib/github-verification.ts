@@ -1,5 +1,8 @@
 import { ccc } from "@ckb-ccc/core";
-import { didToArgs } from "@ckb-ccc/did-ckb";
+
+import { isDidCkb } from "./verification-issuer";
+
+export { fetchPublicIssuerMetadata, type PublicIssuerMetadata } from "./verification-issuer";
 
 const HEX_32_PATTERN = /^0x[0-9a-f]{64}$/;
 const GITHUB_LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?$/;
@@ -39,13 +42,6 @@ export type GithubSubmission = {
   login: string;
 };
 
-export type PublicIssuerMetadata = {
-  did: string;
-  network: "ckb_testnet";
-  payer: "issuer";
-  submission: "service";
-};
-
 type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 function scalar(value: unknown): string | undefined {
@@ -60,14 +56,6 @@ function positiveInteger(value: unknown): number | undefined {
         ? Number(value)
         : Number.NaN;
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
-}
-
-function isDidCkb(value: string): boolean {
-  try {
-    return value.startsWith("did:ckb:") && ccc.bytesFrom(didToArgs(value)).length === 20;
-  } catch {
-    return false;
-  }
 }
 
 function isErrorCode(value: string): value is GithubVerificationErrorCode {
@@ -231,32 +219,4 @@ export async function requestGithubAuthorization(
   }
   if (!response.ok) throw new GithubVerificationRequestError(errorCodeFromResponse(body));
   return parseAuthorizationResponse(body, now());
-}
-
-export async function fetchPublicIssuerMetadata(
-  fetchImplementation: FetchImplementation = globalThis.fetch,
-): Promise<PublicIssuerMetadata> {
-  const response = await fetchImplementation("/api/issuer", {
-    method: "GET",
-    headers: { accept: "application/json" },
-  });
-  if (!response.ok) throw new Error("Issuer metadata is unavailable");
-
-  const body = record(await response.json());
-  const issuer = body && record(body.issuer);
-  const did = issuer && scalar(issuer.did);
-  if (
-    !body ||
-    body.ok !== true ||
-    body.version !== "1" ||
-    !issuer ||
-    !did ||
-    !isDidCkb(did) ||
-    issuer.network !== "ckb_testnet" ||
-    issuer.payer !== "issuer" ||
-    issuer.submission !== "service"
-  ) {
-    throw new Error("Issuer metadata is invalid");
-  }
-  return { did, network: "ckb_testnet", payer: "issuer", submission: "service" };
 }

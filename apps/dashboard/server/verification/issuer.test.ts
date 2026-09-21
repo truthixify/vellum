@@ -3,10 +3,12 @@ import { ccc } from "@ckb-ccc/core";
 import type { WriteClaimResult } from "@vellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json";
+import type { VerifiedClaim } from "./contracts";
 import {
   assertIssuerController,
   claimScripts,
   issueVerifiedClaim,
+  issueVerifiedClaims,
   issuerCredential,
   issuerMetadata,
   issuerRpcUrl,
@@ -104,6 +106,7 @@ describe("issuer configuration", () => {
         issuedAt: claim.issuedAt,
         expiresAt: undefined,
       },
+      tx: undefined,
     });
     expect(signOnlyTransaction).toHaveBeenCalledWith(tx);
     expect(sendTransaction).toHaveBeenCalledTimes(1);
@@ -115,6 +118,65 @@ describe("issuer configuration", () => {
       claimId: CLAIM_ID,
       outputIndex: 1,
     });
+  });
+
+  test("composes multiple verified claims into one signed transaction", async () => {
+    const firstTx = ccc.Transaction.from({});
+    const finalTx = ccc.Transaction.from({
+      outputs: [{ capacity: 0, lock: { codeHash: HASH, hashType: "type", args: "0x" } }],
+      outputsData: ["0x"],
+    });
+    const sendTransaction = mock(async () => TRANSACTION_HASH);
+    const signOnlyTransaction = mock(async () => finalTx.clone());
+    const signer = {
+      client: { sendTransaction },
+      signOnlyTransaction,
+    } as unknown as ccc.Signer;
+    const writeClaim = mock(async (props: Parameters<IssuanceDependencies["writeClaim"]>[0]) => {
+      if (!props.tx) return preparedClaim(firstTx);
+      expect(props.tx).toBe(firstTx);
+      return {
+        ...preparedClaim(finalTx),
+        claimId: `0x${"44".repeat(32)}` as ccc.Hex,
+        outputIndex: 2,
+      };
+    });
+    const claims: VerifiedClaim[] = [
+      {
+        schema: { id: "vellum.social.discord.v1", hash: HASH },
+        payload: { user_id: "80351110224678912" },
+        issuedAt: 1_700_000_000,
+      },
+      {
+        schema: { id: "vellum.community.discord.v1", hash: HASH },
+        payload: { memberships: [] },
+        issuedAt: 1_700_000_000,
+        expiresAt: 1_702_592_000,
+      },
+    ];
+
+    const result = await issueVerifiedClaims(
+      { did: SUBJECT_DID },
+      claims,
+      {},
+      { createSigner: async () => signer, writeClaim },
+    );
+
+    expect(writeClaim).toHaveBeenCalledTimes(2);
+    expect(signOnlyTransaction).toHaveBeenCalledWith(finalTx);
+    expect(sendTransaction).toHaveBeenCalledTimes(1);
+    expect(result).toEqual([
+      expect.objectContaining({
+        transactionHash: TRANSACTION_HASH,
+        claimId: CLAIM_ID,
+        outputIndex: 1,
+      }),
+      expect.objectContaining({
+        transactionHash: TRANSACTION_HASH,
+        claimId: `0x${"44".repeat(32)}`,
+        outputIndex: 2,
+      }),
+    ]);
   });
 
   test("does not broadcast when signing changes the prepared transaction", async () => {

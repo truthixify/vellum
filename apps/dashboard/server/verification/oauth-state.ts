@@ -1,14 +1,19 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { didVerificationSubjectSchema, type DidVerificationSubject } from "./contracts.js";
-import { OAuthConfigurationError, GithubOAuthError } from "./errors.js";
+import { DiscordOAuthError, GithubOAuthError, OAuthConfigurationError } from "./errors.js";
 
 export const GITHUB_OAUTH_STATE_TTL_SECONDS = 5 * 60;
 export const GITHUB_OAUTH_COOKIE_NAME = "vellum_github_oauth";
+export const DISCORD_OAUTH_STATE_TTL_SECONDS = 5 * 60;
+export const DISCORD_OAUTH_COOKIE_NAME = "vellum_discord_oauth";
+
+type OAuthProvider = "github" | "discord";
 
 type OAuthStatePayload = {
   issuedAt: number;
   nonce: string;
+  provider: OAuthProvider;
   subject: DidVerificationSubject;
 };
 
@@ -23,6 +28,24 @@ export type ConsumedOAuthState = {
   codeVerifier: string;
   subject: DidVerificationSubject;
 };
+
+export type CreatedDiscordOAuthState = Omit<CreatedOAuthState, "codeChallenge">;
+export type ConsumedDiscordOAuthState = Pick<ConsumedOAuthState, "subject">;
+
+const PROVIDER_CONFIG = {
+  github: {
+    callbackPath: "/api/verify/github/callback",
+    cookieName: GITHUB_OAUTH_COOKIE_NAME,
+    displayName: "GitHub",
+    ttl: GITHUB_OAUTH_STATE_TTL_SECONDS,
+  },
+  discord: {
+    callbackPath: "/api/verify/discord/callback",
+    cookieName: DISCORD_OAUTH_COOKIE_NAME,
+    displayName: "Discord",
+    ttl: DISCORD_OAUTH_STATE_TTL_SECONDS,
+  },
+} as const;
 
 function stateSecret(value: string | undefined): string {
   if (!value || Buffer.byteLength(value, "utf8") < 32 || Buffer.byteLength(value, "utf8") > 1_024) {
@@ -43,9 +66,18 @@ function codeChallenge(verifier: string): string {
   return createHash("sha256").update(verifier, "ascii").digest("base64url");
 }
 
-function cookieAttributes(maxAge: number, secure: boolean): string {
+function providerError(
+  provider: OAuthProvider,
+  message: string,
+): GithubOAuthError | DiscordOAuthError {
+  return provider === "github"
+    ? new GithubOAuthError("oauth_state_invalid", 400, message)
+    : new DiscordOAuthError("oauth_state_invalid", 400, message);
+}
+
+function cookieAttributes(provider: OAuthProvider, maxAge: number, secure: boolean): string {
   return [
-    `Path=/api/verify/github/callback`,
+    `Path=${PROVIDER_CONFIG[provider].callbackPath}`,
     "HttpOnly",
     "SameSite=Lax",
     `Max-Age=${maxAge}`,
@@ -55,9 +87,9 @@ function cookieAttributes(maxAge: number, secure: boolean): string {
     .join("; ");
 }
 
-function cookieValue(header: string | null): string | undefined {
+function cookieValue(provider: OAuthProvider, header: string | null): string | undefined {
   if (!header) return undefined;
-  const prefix = `${GITHUB_OAUTH_COOKIE_NAME}=`;
+  const prefix = `${PROVIDER_CONFIG[provider].cookieName}=`;
   const matches = header
     .split(";")
     .map((part) => part.trim())
@@ -66,32 +98,31 @@ function cookieValue(header: string | null): string | undefined {
   return matches[0].slice(prefix.length);
 }
 
-function decodeBase64Url(value: string): Buffer {
+function decodeBase64Url(provider: OAuthProvider, value: string): Buffer {
   if (value.length > 2_048 || !/^[A-Za-z0-9_-]+$/.test(value)) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid.",
+    throw providerError(
+      provider,
+      `The ${PROVIDER_CONFIG[provider].displayName} verification session is invalid.`,
     );
   }
   const decoded = Buffer.from(value, "base64url");
   if (decoded.toString("base64url") !== value) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid.",
+    throw providerError(
+      provider,
+      `The ${PROVIDER_CONFIG[provider].displayName} verification session is invalid.`,
     );
   }
   return decoded;
 }
 
-export function createGithubOAuthState(
+function createProviderOAuthState(
+  provider: OAuthProvider,
   subject: DidVerificationSubject,
   secretValue: string | undefined,
   now: number,
   secure: boolean,
-  nonceBytes: () => Uint8Array = () => randomBytes(32),
-): CreatedOAuthState {
+  nonceBytes: () => Uint8Array,
+): { cookie: string; expiresAt: number; nonce: string; secret: string } {
   const secret = stateSecret(secretValue);
   const parsedSubject = didVerificationSubjectSchema.parse(subject);
   if (!Number.isSafeInteger(now) || now <= 0) {
@@ -102,75 +133,104 @@ export function createGithubOAuthState(
   if (!/^[A-Za-z0-9_-]{43}$/.test(nonce)) {
     throw new TypeError("OAuth state nonce must contain 32 random bytes");
   }
-  const payload: OAuthStatePayload = { issuedAt: now, nonce, subject: parsedSubject };
+  const payload: OAuthStatePayload = { issuedAt: now, nonce, provider, subject: parsedSubject };
   const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
   const value = `${encodedPayload}.${signature(encodedPayload, secret)}`;
-  const verifier = codeVerifier(nonce, secret);
+  const config = PROVIDER_CONFIG[provider];
 
   return {
-    codeChallenge: codeChallenge(verifier),
-    state: nonce,
-    expiresAt: now + GITHUB_OAUTH_STATE_TTL_SECONDS,
-    cookie: `${GITHUB_OAUTH_COOKIE_NAME}=${value}; ${cookieAttributes(
-      GITHUB_OAUTH_STATE_TTL_SECONDS,
-      secure,
-    )}`,
+    nonce,
+    secret,
+    expiresAt: now + config.ttl,
+    cookie: `${config.cookieName}=${value}; ${cookieAttributes(provider, config.ttl, secure)}`,
   };
 }
 
-export function consumeGithubOAuthState(
+export function createGithubOAuthState(
+  subject: DidVerificationSubject,
+  secretValue: string | undefined,
+  now: number,
+  secure: boolean,
+  nonceBytes: () => Uint8Array = () => randomBytes(32),
+): CreatedOAuthState {
+  const created = createProviderOAuthState("github", subject, secretValue, now, secure, nonceBytes);
+  const verifier = codeVerifier(created.nonce, created.secret);
+
+  return {
+    codeChallenge: codeChallenge(verifier),
+    state: created.nonce,
+    expiresAt: created.expiresAt,
+    cookie: created.cookie,
+  };
+}
+
+export function createDiscordOAuthState(
+  subject: DidVerificationSubject,
+  secretValue: string | undefined,
+  now: number,
+  secure: boolean,
+  nonceBytes: () => Uint8Array = () => randomBytes(32),
+): CreatedDiscordOAuthState {
+  const created = createProviderOAuthState(
+    "discord",
+    subject,
+    secretValue,
+    now,
+    secure,
+    nonceBytes,
+  );
+  return {
+    state: created.nonce,
+    expiresAt: created.expiresAt,
+    cookie: created.cookie,
+  };
+}
+
+function consumeProviderOAuthState(
+  provider: OAuthProvider,
   cookieHeader: string | null,
   queryState: string,
   secretValue: string | undefined,
   now: number,
-): ConsumedOAuthState {
+): { nonce: string; secret: string; subject: DidVerificationSubject } {
   const secret = stateSecret(secretValue);
-  const value = cookieValue(cookieHeader);
+  const value = cookieValue(provider, cookieHeader);
   const parts = value?.split(".");
+  const displayName = PROVIDER_CONFIG[provider].displayName;
   if (!parts || parts.length !== 2) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is missing or has already been used.",
+    throw providerError(
+      provider,
+      `The ${displayName} verification session is missing or has already been used.`,
     );
   }
 
   const [encodedPayload, suppliedSignature] = parts;
   const expectedSignature = signature(encodedPayload, secret);
-  const suppliedBytes = decodeBase64Url(suppliedSignature);
+  const suppliedBytes = decodeBase64Url(provider, suppliedSignature);
   const expectedBytes = Buffer.from(expectedSignature, "base64url");
   if (
     suppliedBytes.length !== expectedBytes.length ||
     !timingSafeEqual(suppliedBytes, expectedBytes)
   ) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid.",
-    );
+    throw providerError(provider, `The ${displayName} verification session is invalid.`);
   }
 
   let payload: unknown;
   try {
-    payload = JSON.parse(decodeBase64Url(encodedPayload).toString("utf8"));
-  } catch {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid.",
-    );
+    payload = JSON.parse(decodeBase64Url(provider, encodedPayload).toString("utf8"));
+  } catch (error) {
+    if (error instanceof GithubOAuthError || error instanceof DiscordOAuthError) throw error;
+    throw providerError(provider, `The ${displayName} verification session is invalid.`);
   }
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid.",
-    );
+    throw providerError(provider, `The ${displayName} verification session is invalid.`);
   }
 
   const candidate = payload as Partial<OAuthStatePayload>;
   const subject = didVerificationSubjectSchema.safeParse(candidate.subject);
+  const ttl = PROVIDER_CONFIG[provider].ttl;
   if (
+    candidate.provider !== provider ||
     !subject.success ||
     typeof candidate.nonce !== "string" ||
     !/^[A-Za-z0-9_-]{43}$/.test(candidate.nonce) ||
@@ -179,21 +239,42 @@ export function consumeGithubOAuthState(
     typeof candidate.issuedAt !== "number" ||
     candidate.issuedAt <= 0 ||
     candidate.issuedAt > now ||
-    now >= candidate.issuedAt + GITHUB_OAUTH_STATE_TTL_SECONDS
+    now >= candidate.issuedAt + ttl
   ) {
-    throw new GithubOAuthError(
-      "oauth_state_invalid",
-      400,
-      "The GitHub verification session is invalid or expired.",
-    );
+    throw providerError(provider, `The ${displayName} verification session is invalid or expired.`);
   }
 
+  return { nonce: candidate.nonce, secret, subject: subject.data };
+}
+
+export function consumeGithubOAuthState(
+  cookieHeader: string | null,
+  queryState: string,
+  secretValue: string | undefined,
+  now: number,
+): ConsumedOAuthState {
+  const consumed = consumeProviderOAuthState("github", cookieHeader, queryState, secretValue, now);
+
   return {
-    codeVerifier: codeVerifier(candidate.nonce, secret),
-    subject: subject.data,
+    codeVerifier: codeVerifier(consumed.nonce, consumed.secret),
+    subject: consumed.subject,
   };
 }
 
+export function consumeDiscordOAuthState(
+  cookieHeader: string | null,
+  queryState: string,
+  secretValue: string | undefined,
+  now: number,
+): ConsumedDiscordOAuthState {
+  const consumed = consumeProviderOAuthState("discord", cookieHeader, queryState, secretValue, now);
+  return { subject: consumed.subject };
+}
+
 export function clearGithubOAuthCookie(secure: boolean): string {
-  return `${GITHUB_OAUTH_COOKIE_NAME}=; ${cookieAttributes(0, secure)}`;
+  return `${GITHUB_OAUTH_COOKIE_NAME}=; ${cookieAttributes("github", 0, secure)}`;
+}
+
+export function clearDiscordOAuthCookie(secure: boolean): string {
+  return `${DISCORD_OAUTH_COOKIE_NAME}=; ${cookieAttributes("discord", 0, secure)}`;
 }

@@ -5,39 +5,41 @@ import { StatusMark } from "@vellum/ui";
 import {
   AlertCircle,
   ArrowLeft,
+  CalendarDays,
   Check,
   Clock3,
   ExternalLink,
-  Github,
+  MessagesSquare,
   RefreshCw,
   ShieldCheck,
+  Users,
   WalletCards,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import { useActiveIdentity } from "@/lib/active-identity-context";
+import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
 import {
-  confirmGithubClaim,
-  readGithubAccountClaims,
-  type GithubAccountClaim,
-  type GithubClaimConfirmation,
-} from "@/lib/github-claim-reader";
+  confirmDiscordClaims,
+  readDiscordAccountClaims,
+  type DiscordAccountClaim,
+  type DiscordClaimConfirmation,
+} from "@/lib/discord-claim-reader";
 import {
-  GithubVerificationRequestError,
-  fetchPublicIssuerMetadata,
-  githubSubmissionFromSearch,
-  githubVerificationErrorMessage,
-  parseGithubVerificationSearch,
-  requestGithubAuthorization,
-  type GithubSubmission,
-  type GithubVerificationErrorCode,
-} from "@/lib/github-verification";
+  DiscordVerificationRequestError,
+  discordSubmissionFromSearch,
+  discordVerificationErrorMessage,
+  parseDiscordVerificationSearch,
+  requestDiscordAuthorization,
+  type DiscordSubmission,
+  type DiscordVerificationErrorCode,
+} from "@/lib/discord-verification";
+import { fetchPublicIssuerMetadata } from "@/lib/verification-issuer";
 
-export const Route = createFileRoute("/verify/github")({
-  validateSearch: parseGithubVerificationSearch,
-  component: GithubVerificationPage,
+export const Route = createFileRoute("/verify/discord")({
+  validateSearch: parseDiscordVerificationSearch,
+  component: DiscordVerificationPage,
 });
 
 const TESTNET_CLIENT = new ccc.ClientPublicTestnet();
@@ -47,14 +49,20 @@ function shorten(value: string, start = 16, end = 8): string {
   return value.length > start + end + 3 ? `${value.slice(0, start)}...${value.slice(-end)}` : value;
 }
 
-function GithubVerificationPage() {
-  useDocumentTitle("GitHub verification");
+function formatDate(timestamp: number | bigint): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+    Number(timestamp) * 1_000,
+  );
+}
+
+function DiscordVerificationPage() {
+  useDocumentTitle("Discord verification");
   const search = Route.useSearch();
-  const submission = githubSubmissionFromSearch(search);
+  const submission = discordSubmissionFromSearch(search);
   const [existingClaimCount, setExistingClaimCount] = useState(0);
   const [reportedConfirmation, setReportedConfirmation] = useState<{
     transactionHash: ccc.Hex;
-    result?: GithubClaimConfirmation;
+    result?: DiscordClaimConfirmation;
   }>();
   const confirmation =
     submission && reportedConfirmation?.transactionHash === submission.transactionHash
@@ -69,10 +77,13 @@ function GithubVerificationPage() {
       <header className="account-verification-header">
         <div>
           <span className="account-verification-kicker">
-            <Github size={15} aria-hidden="true" /> GitHub verification
+            <MessagesSquare size={15} aria-hidden="true" /> Discord verification
           </span>
-          <h1>GitHub verification</h1>
-          <p>Review or add GitHub account claims for a did:ckb identity you control.</p>
+          <h1>Discord verification</h1>
+          <p>
+            Verify a Discord account and current membership in recognized CKB communities for a
+            did:ckb identity you control.
+          </p>
         </div>
         <StatusMark tone="info" icon={false}>
           CKB Testnet
@@ -111,7 +122,7 @@ function VerificationSteps({
   confirmation,
   hasExistingClaim,
 }: {
-  confirmation: GithubClaimConfirmation | null | undefined;
+  confirmation: DiscordClaimConfirmation | null | undefined;
   hasExistingClaim: boolean;
 }) {
   const completed = hasExistingClaim
@@ -131,9 +142,9 @@ function VerificationSteps({
           ? -1
           : 1;
   const steps = [
-    ["Authorize", "GitHub account"],
+    ["Authorize", "Discord account"],
     ["Submit", "Claim transaction"],
-    ["Confirm", "Live Claim Cell"],
+    ["Confirm", "Live Claim Cells"],
   ] as const;
 
   return (
@@ -169,7 +180,7 @@ function ConnectionPanel({
   retryAt,
   onExistingClaimsChange,
 }: {
-  callbackError?: GithubVerificationErrorCode;
+  callbackError?: DiscordVerificationErrorCode;
   retryAt?: number;
   onExistingClaimsChange: (count: number) => void;
 }) {
@@ -187,9 +198,7 @@ function ConnectionPanel({
     setSelectedDid("");
     setLock(null);
     setLockError(false);
-    if (!signer) {
-      return;
-    }
+    if (!signer) return;
     void signer
       .getRecommendedAddressObj()
       .then((address) => {
@@ -204,7 +213,7 @@ function ConnectionPanel({
   }, [signer]);
 
   const identities = useQuery({
-    queryKey: ["account-verification-dids", lock?.codeHash, lock?.hashType, lock?.args],
+    queryKey: ["discord-verification-dids", lock?.codeHash, lock?.hashType, lock?.args],
     queryFn: async () => {
       if (!lock) return [] as DidRecord[];
       return listDidsByLock(TESTNET_CLIENT, lock);
@@ -234,8 +243,8 @@ function ConnectionPanel({
     staleTime: Number.POSITIVE_INFINITY,
   });
   const existingClaims = useQuery({
-    queryKey: ["github-account-claims", selectedDid, issuer.data?.did],
-    queryFn: () => readGithubAccountClaims(TESTNET_CLIENT, selectedDid, issuer.data!),
+    queryKey: ["discord-account-claims", selectedDid, issuer.data?.did],
+    queryFn: () => readDiscordAccountClaims(TESTNET_CLIENT, selectedDid, issuer.data!),
     enabled: !!selectedDid && !!issuer.data,
     retry: false,
     staleTime: 30_000,
@@ -250,13 +259,13 @@ function ConnectionPanel({
     setStartError(undefined);
     setStarting(true);
     try {
-      const authorizationUrl = await requestGithubAuthorization(selectedDid);
+      const authorizationUrl = await requestDiscordAuthorization(selectedDid);
       window.location.assign(authorizationUrl);
     } catch (error) {
       setStartError(
-        error instanceof GithubVerificationRequestError
+        error instanceof DiscordVerificationRequestError
           ? error.message
-          : "GitHub verification could not be started.",
+          : "Discord verification could not be started.",
       );
       setStarting(false);
     }
@@ -266,11 +275,14 @@ function ConnectionPanel({
   const retryDate = retryAt && retryAt * 1_000 > Date.now() ? new Date(retryAt * 1_000) : undefined;
 
   return (
-    <section aria-labelledby="github-connect-title">
+    <section aria-labelledby="discord-connect-title">
       <div className="account-verification-section-heading">
         <span>Account source</span>
-        <h2 id="github-connect-title">GitHub account</h2>
-        <p>Vellum reads your account identity, then releases the OAuth access before issuance.</p>
+        <h2 id="discord-connect-title">Discord account</h2>
+        <p>
+          Vellum checks your account and recognized CKB communities, then releases OAuth access
+          before issuance.
+        </p>
       </div>
 
       {(callbackError || startError) && (
@@ -278,7 +290,7 @@ function ConnectionPanel({
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Verification did not complete</strong>
-            <p>{startError ?? githubVerificationErrorMessage(callbackError)}</p>
+            <p>{startError ?? discordVerificationErrorMessage(callbackError)}</p>
             {retryDate && (
               <p>
                 Try again after{" "}
@@ -339,9 +351,9 @@ function ConnectionPanel({
         <div className="account-verification-form">
           {records.length > 1 ? (
             <>
-              <label htmlFor="github-subject">Target identity</label>
+              <label htmlFor="discord-subject">Target identity</label>
               <select
-                id="github-subject"
+                id="discord-subject"
                 value={selectedDid}
                 onChange={(event) => {
                   onExistingClaimsChange(0);
@@ -365,7 +377,7 @@ function ConnectionPanel({
               <div className="account-verification-subject mono">{records[0].did}</div>
             </>
           )}
-          <small>The issued Claim Cell will be locked to this identity.</small>
+          <small>Identity and community Claim Cells will be locked to this DID.</small>
 
           {issuer.isError || existingClaims.isError ? (
             <div
@@ -374,8 +386,8 @@ function ConnectionPanel({
             >
               <AlertCircle size={18} aria-hidden="true" />
               <div>
-                <strong>GitHub claim status unavailable</strong>
-                <p>Vellum could not check this identity's active GitHub claims.</p>
+                <strong>Discord claim status unavailable</strong>
+                <p>Vellum could not check this identity's active Discord claims.</p>
                 <button
                   className="v-button v-button--quiet"
                   type="button"
@@ -390,11 +402,11 @@ function ConnectionPanel({
           ) : issuer.isPending || existingClaims.isPending ? (
             <div className="account-verification-claim-loading" role="status" aria-live="polite">
               <span className="pulse-dot" aria-hidden="true" />
-              Checking existing GitHub claims for {shorten(selectedDid)}
+              Checking existing Discord claims for {shorten(selectedDid)}
             </div>
-          ) : existingClaims.data.length > 0 ? (
-            <ExistingGithubClaims
-              claims={existingClaims.data}
+          ) : (existingClaims.data ?? []).length > 0 ? (
+            <ExistingDiscordClaims
+              claims={existingClaims.data ?? []}
               starting={starting}
               onVerifyAgain={() => void startVerification()}
             />
@@ -407,8 +419,8 @@ function ConnectionPanel({
                 aria-busy={starting}
                 onClick={() => void startVerification()}
               >
-                <Github size={15} aria-hidden="true" />
-                {starting ? "Opening GitHub..." : "Continue with GitHub"}
+                <MessagesSquare size={15} aria-hidden="true" />
+                {starting ? "Opening Discord..." : "Continue with Discord"}
               </button>
               <span>Authorization expires after five minutes.</span>
             </div>
@@ -419,12 +431,12 @@ function ConnectionPanel({
   );
 }
 
-function ExistingGithubClaims({
+function ExistingDiscordClaims({
   claims,
   starting,
   onVerifyAgain,
 }: {
-  claims: GithubAccountClaim[];
+  claims: DiscordAccountClaim[];
   starting: boolean;
   onVerifyAgain: () => void;
 }) {
@@ -438,22 +450,47 @@ function ExistingGithubClaims({
           <StatusMark tone="positive">Verified on-chain</StatusMark>
           <p>
             {claims.length === 1
-              ? "This DID already has an active GitHub account claim."
-              : `This DID already has ${claims.length} active GitHub account claims.`}
+              ? "This DID has an active Discord identity claim."
+              : `This DID has ${claims.length} active Discord identity claims.`}
           </p>
         </div>
       </div>
 
       <ul className="account-verification-account-list">
         {claims.map((claim) => (
-          <li key={claim.claimId}>
+          <li className="account-verification-account" key={claim.claimId}>
             <div className="account-verification-account-list__identity">
-              <Github size={18} strokeWidth={1.7} aria-hidden="true" />
+              <MessagesSquare size={18} strokeWidth={1.7} aria-hidden="true" />
               <span>
-                <strong>@{claim.account.login}</strong>
-                <small>Verified {formatGithubClaimDate(claim.account.verified_at)}</small>
+                <strong>@{claim.account.username}</strong>
+                <small>Verified {formatDate(claim.account.verified_at)}</small>
               </span>
             </div>
+            {claim.community ? (
+              <div className="account-verification-community-list">
+                {claim.community.community.memberships.map((membership) => (
+                  <div key={membership.guild_id}>
+                    <span>
+                      <Users size={13} aria-hidden="true" /> {membership.community_name}
+                    </span>
+                    <small>
+                      Joined {formatDate(membership.joined_at)}
+                      {membership.recognized_roles.length > 0
+                        ? ` · ${membership.recognized_roles.map((role) => role.role_name).join(", ")}`
+                        : ""}
+                    </small>
+                  </div>
+                ))}
+                <small className="account-verification-community-expiry">
+                  <CalendarDays size={12} aria-hidden="true" /> Current until{" "}
+                  {formatDate(claim.community.expiresAt)}
+                </small>
+              </div>
+            ) : (
+              <span className="account-verification-community-empty">
+                No current CKB community evidence
+              </span>
+            )}
             <div className="account-verification-account-list__actions">
               <a
                 className="v-button v-button--quiet"
@@ -477,7 +514,7 @@ function ExistingGithubClaims({
       </ul>
 
       <div className="account-verification-existing__footer">
-        <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found on CKB Testnet.</span>
+        <span>Reconnect to refresh current community membership evidence.</span>
         <button
           className="v-button v-button--secondary"
           type="button"
@@ -485,26 +522,22 @@ function ExistingGithubClaims({
           aria-busy={starting}
           onClick={onVerifyAgain}
         >
-          <Github size={14} aria-hidden="true" />
-          {starting ? "Opening GitHub..." : "Verify again"}
+          <RefreshCw size={14} aria-hidden="true" />
+          {starting ? "Opening Discord..." : "Refresh evidence"}
         </button>
       </div>
     </div>
   );
 }
 
-function formatGithubClaimDate(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(timestamp * 1_000);
-}
-
 function SubmittedVerification({
   submission,
   onConfirmation,
 }: {
-  submission: GithubSubmission;
+  submission: DiscordSubmission;
   onConfirmation: (confirmation: {
     transactionHash: ccc.Hex;
-    result?: GithubClaimConfirmation;
+    result?: DiscordClaimConfirmation;
   }) => void;
 }) {
   const issuer = useQuery({
@@ -514,15 +547,18 @@ function SubmittedVerification({
   });
   const confirmation = useQuery({
     queryKey: [
-      "github-claim-confirmation",
+      "discord-claim-confirmation",
       submission.subject,
       submission.transactionHash,
       submission.claimId,
       submission.outputIndex,
-      submission.login,
+      submission.communityClaimId,
+      submission.communityOutputIndex,
+      submission.username,
+      submission.communityCount,
       issuer.data?.did,
     ],
-    queryFn: () => confirmGithubClaim(TESTNET_CLIENT, submission, issuer.data!),
+    queryFn: () => confirmDiscordClaims(TESTNET_CLIENT, submission, issuer.data!),
     enabled: !!issuer.data,
     retry: false,
     refetchInterval: (query) => {
@@ -537,11 +573,14 @@ function SubmittedVerification({
   }, [onConfirmation, result, submission.transactionHash]);
 
   return (
-    <section aria-labelledby="github-result-title">
+    <section aria-labelledby="discord-result-title">
       <div className="account-verification-section-heading">
         <span>Submission</span>
-        <h2 id="github-result-title">@{submission.login}</h2>
-        <p>The OAuth credential has been released. Only public claim data remains.</p>
+        <h2 id="discord-result-title">@{submission.username}</h2>
+        <p>
+          Discord access has been released. The transaction contains public identity evidence
+          {submission.communityCount > 0 ? " and current CKB community evidence" : ""}.
+        </p>
       </div>
 
       <ResultStatus
@@ -558,16 +597,26 @@ function SubmittedVerification({
           </dd>
         </div>
         <div>
-          <dt>Schema</dt>
-          <dd className="mono">vellum.social.github.v1</dd>
+          <dt>Identity schema</dt>
+          <dd className="mono">vellum.social.discord.v1</dd>
         </div>
+        <div>
+          <dt>CKB communities</dt>
+          <dd>{submission.communityCount}</dd>
+        </div>
+        <div>
+          <dt>Identity output</dt>
+          <dd className="mono">{submission.outputIndex}</dd>
+        </div>
+        {submission.communityOutputIndex !== undefined ? (
+          <div>
+            <dt>Community output</dt>
+            <dd className="mono">{submission.communityOutputIndex}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Payer</dt>
           <dd>Vellum issuer</dd>
-        </div>
-        <div>
-          <dt>Output</dt>
-          <dd className="mono">{submission.outputIndex}</dd>
         </div>
         <div>
           <dt>Transaction</dt>
@@ -584,7 +633,7 @@ function SubmittedVerification({
           </dd>
         </div>
         <div>
-          <dt>Claim ID</dt>
+          <dt>Identity claim ID</dt>
           <dd className="mono" title={submission.claimId}>
             {shorten(submission.claimId)}
           </dd>
@@ -609,7 +658,7 @@ function ResultStatus({
   issuerFailed,
   claimFailed,
 }: {
-  result?: GithubClaimConfirmation;
+  result?: DiscordClaimConfirmation;
   issuerFailed: boolean;
   claimFailed: boolean;
 }) {
@@ -630,7 +679,7 @@ function ResultStatus({
         <AlertCircle size={18} aria-hidden="true" />
         <div>
           <strong>Transaction rejected</strong>
-          <p>No live GitHub Claim Cell was created.</p>
+          <p>No live Discord Claim Cells were created.</p>
         </div>
       </div>
     );
@@ -643,9 +692,10 @@ function ResultStatus({
       >
         <Check size={18} aria-hidden="true" />
         <div>
-          <StatusMark tone="positive">Claim confirmed</StatusMark>
+          <StatusMark tone="positive">Claims confirmed</StatusMark>
           <p>
-            The claim is live, readable through the Vellum SDK, and backed by an active issuer DID.
+            The claims are live, readable through the Vellum SDK, and backed by an active issuer
+            DID.
           </p>
         </div>
       </div>
@@ -657,9 +707,9 @@ function ResultStatus({
         <Clock3 size={18} aria-hidden="true" />
         <div>
           <StatusMark tone="warning" icon={false}>
-            Indexing claim
+            Indexing claims
           </StatusMark>
-          <p>The transaction is committed. Waiting for the Testnet indexer to expose the claim.</p>
+          <p>The transaction is committed. Waiting for the Testnet indexer to expose its claims.</p>
         </div>
       </div>
     );
@@ -671,7 +721,7 @@ function ResultStatus({
         <StatusMark tone="info" icon={false}>
           Transaction submitted
         </StatusMark>
-        <p>Vellum submitted the claim. Waiting for the transaction to commit on CKB Testnet.</p>
+        <p>Vellum submitted the claims. Waiting for the transaction to commit on CKB Testnet.</p>
       </div>
     </div>
   );
@@ -679,13 +729,13 @@ function ResultStatus({
 
 function IncompleteResult() {
   return (
-    <section aria-labelledby="github-incomplete-title">
+    <section aria-labelledby="discord-incomplete-title">
       <div className="account-verification-alert" role="alert">
         <AlertCircle size={18} aria-hidden="true" />
         <div>
-          <strong id="github-incomplete-title">Incomplete callback result</strong>
+          <strong id="discord-incomplete-title">Incomplete callback result</strong>
           <p>The public claim references were missing or invalid. Start a new verification.</p>
-          <Link className="v-button v-button--quiet" to="/verify/github" search={{}}>
+          <Link className="v-button v-button--quiet" to="/verify/discord" search={{}}>
             Start again
           </Link>
         </div>
@@ -694,7 +744,7 @@ function IncompleteResult() {
   );
 }
 
-function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
+function ProtocolSummary({ submission }: { submission?: DiscordSubmission }) {
   return (
     <aside className="account-verification-summary" aria-label="Verification details">
       <div>
@@ -703,24 +753,24 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
       </div>
       <dl>
         <div>
-          <dt>GitHub access</dt>
-          <dd>Public profile only</dd>
+          <dt>Discord access</dt>
+          <dd>Identity and configured server membership</dd>
         </div>
         <div>
-          <dt>Claim fields</dt>
-          <dd>User ID, login, profile URL, account age, verification time</dd>
+          <dt>Identity claim</dt>
+          <dd>User ID, username, account age, verification time</dd>
         </div>
         <div>
-          <dt>Claim issuer</dt>
-          <dd>Vellum issuer DID</dd>
+          <dt>Community claim</dt>
+          <dd>CKB server, join date, recognized roles; valid for 30 days</dd>
+        </div>
+        <div>
+          <dt>Not collected</dt>
+          <dd>Messages, unrelated servers, channels, email, and activity history</dd>
         </div>
         <div>
           <dt>Submission</dt>
-          <dd>Automatic after verification</dd>
-        </div>
-        <div>
-          <dt>Network cost</dt>
-          <dd>Paid by Vellum</dd>
+          <dd>Separate claim outputs in one transaction</dd>
         </div>
         <div>
           <dt>OAuth credential</dt>
@@ -728,8 +778,8 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
         </div>
       </dl>
       <p>
-        The claim is public on CKB Testnet. Your GitHub token is not stored in the claim or returned
-        to the dashboard.
+        The claims are public on CKB Testnet. Discord credentials are not stored in either claim or
+        returned to the dashboard.
       </p>
     </aside>
   );
