@@ -157,7 +157,7 @@ export function Profile() {
             <h2>Raw example record</h2>
             <div className="raw-record">
               <div>
-                <span className="mono">did-document.json</span>
+                <span className="mono">reputation.json</span>
                 <ExternalLink size={13} />
               </div>
               <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v1",\n  "overall": { "score": 200, "maximum": 1000 }\n}`}</pre>

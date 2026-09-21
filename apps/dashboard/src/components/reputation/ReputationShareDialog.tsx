@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { Wordmark } from "@vellum/ui";
 import { toPng } from "html-to-image";
 import { Check, Copy, Download, Maximize2, Share2, X } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -21,11 +22,14 @@ const SHARE_ANIMATION = {
   categoryStepMs: 55,
 } as const;
 
-function formatDate(timestamp: number): string {
+function formatTimestamp(timestamp: number): string {
   return new Intl.DateTimeFormat("en", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
     timeZone: "UTC",
   }).format(new Date(timestamp * 1_000));
 }
@@ -76,12 +80,11 @@ function ReputationShareCard({
 
   return (
     <div
-      className={`reputation-share-card${exportSize ? " reputation-share-card--export" : ""}`}
+      className={`reputation-share-card reputation-share-card--${exportSize ? "export" : "preview"}`}
       data-animated={animated ? "true" : "false"}
     >
       <div className="reputation-share-card__brand">
-        <span className="reputation-share-card__mark">V</span>
-        <strong>VELLUM</strong>
+        <Wordmark />
         <span>CKB TESTNET</span>
       </div>
 
@@ -104,14 +107,16 @@ function ReputationShareCard({
         </div>
 
         <div className="reputation-share-card__qr">
-          <QRCode
-            value={shareUrl}
-            size={exportSize ? 168 : 124}
-            bgColor="#f4f5ef"
-            fgColor="#101814"
-            level="M"
-            aria-label="QR code for this public reputation page"
-          />
+          <div className="reputation-share-card__qr-code">
+            <QRCode
+              value={shareUrl}
+              size={exportSize ? 168 : 148}
+              bgColor="#ffffff"
+              fgColor="#151817"
+              level="M"
+              aria-label="QR code for this public reputation page"
+            />
+          </div>
           <span>Scan to inspect evidence</span>
         </div>
       </div>
@@ -146,7 +151,7 @@ function ReputationShareCard({
         </div>
         <div>
           <span>Evaluated</span>
-          <strong>{formatDate(result.evaluatedAt)} UTC</strong>
+          <strong>{formatTimestamp(result.evaluatedAt)} UTC</strong>
         </div>
       </div>
     </div>
@@ -164,12 +169,15 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
   async function renderCard(): Promise<string> {
     if (!exportRef.current) throw new Error("The share card is not ready.");
     await document.fonts.ready;
+    const card = exportRef.current.firstElementChild;
+    if (!(card instanceof HTMLElement)) throw new Error("The share card is not ready.");
+    const backgroundColor = getComputedStyle(card).backgroundColor;
     return toPng(exportRef.current, {
       width: 1200,
       height: 630,
       pixelRatio: 1,
       cacheBust: true,
-      backgroundColor: "#f4f5ef",
+      backgroundColor,
     });
   }
 
@@ -216,8 +224,8 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
         text: `Vellum reputation score: ${result.overall.score}/${result.overall.maximum}`,
         url: shareUrl,
       };
-      if (navigator.canShare?.({ files: [file] })) data.files = [file];
-      await navigator.share(data);
+      const dataWithFile = { ...data, files: [file] };
+      await navigator.share(navigator.canShare?.(dataWithFile) ? dataWithFile : data);
       setStatus("Shared");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -265,7 +273,15 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
           >
             {qrExpanded ? (
               <span className="reputation-share-expanded-qr">
-                <QRCode value={shareUrl} size={236} bgColor="#f4f5ef" fgColor="#101814" level="M" />
+                <span className="reputation-share-expanded-qr__code">
+                  <QRCode
+                    value={shareUrl}
+                    size={236}
+                    bgColor="#ffffff"
+                    fgColor="#151817"
+                    level="M"
+                  />
+                </span>
                 <span>
                   <Maximize2 size={14} aria-hidden="true" /> Tap to return to card
                 </span>

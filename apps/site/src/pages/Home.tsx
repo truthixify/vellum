@@ -464,7 +464,7 @@ export function Home() {
           <StatusMark tone="positive">Live Testnet policy</StatusMark>
           <h2>Portable evidence. Transparent interpretation.</h2>
           <p>
-            A Vellum index is one reading of the evidence attached to an identity. The method is
+            A Vellum score is one reading of the evidence attached to an identity. The method is
             versioned, the inputs are inspectable, and the result never asserts that a person is
             unique or honest.
           </p>
@@ -474,8 +474,8 @@ export function Home() {
               <strong className="mono">0\u20131000 {"\u00b7"} vellum.reputation.v1</strong>
             </div>
             <div>
-              <small>Contributing categories</small>
-              <strong>Technical, contribution, community, tenure, recency</strong>
+              <small>Scored in v1</small>
+              <strong>Tenure and recency; other categories remain at zero</strong>
             </div>
             <div>
               <small>Issuer visibility</small>

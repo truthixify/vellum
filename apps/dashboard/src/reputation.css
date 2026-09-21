@@ -741,9 +741,10 @@
   overflow: hidden;
   border: 1px solid var(--line-strong);
   border-radius: 3px;
-  background: #f4f5ef;
-  color: #101814;
+  background: var(--surface);
+  color: var(--ink);
   text-align: left;
+  container: reputation-share-preview / inline-size;
 }
 
 .reputation-share-preview--qr {
@@ -760,22 +761,35 @@
   padding: 36px;
 }
 
-.reputation-share-expanded-qr > span {
+.reputation-share-expanded-qr__code {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: #fff;
+  color: #151817;
+}
+
+.reputation-share-expanded-qr__code svg {
+  display: block;
+}
+
+.reputation-share-expanded-qr > span:last-child {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #526058;
+  color: var(--ink-secondary);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 10px;
   text-transform: uppercase;
 }
 
 .reputation-share-card {
-  --share-paper: #f4f5ef;
-  --share-ink: #101814;
-  --share-muted: #526058;
-  --share-line: #cbd1ca;
-  --share-primary: #147a49;
+  --share-paper: var(--surface);
+  --share-paper-muted: var(--surface-subtle);
+  --share-ink: var(--ink);
+  --share-muted: var(--ink-secondary);
+  --share-line: var(--line);
+  --share-primary: var(--primary);
   width: 100%;
   aspect-ratio: 1200 / 630;
   display: grid;
@@ -793,14 +807,14 @@
   aspect-ratio: auto;
 }
 
-.reputation-share-card--export .reputation-share-card__mark {
-  width: 28px;
-  height: 28px;
-  font-size: 14px;
+.reputation-share-card--export .reputation-share-card__brand .v-wordmark {
+  gap: 12px;
+  font-size: 18px;
 }
 
-.reputation-share-card--export .reputation-share-card__brand > strong {
-  font-size: 14px;
+.reputation-share-card--export .reputation-share-card__brand .v-wordmark svg {
+  width: 28px;
+  height: 28px;
 }
 
 .reputation-share-card--export .reputation-share-card__brand > span:last-child,
@@ -820,8 +834,9 @@
   height: 10px;
 }
 
-.reputation-share-card--export .reputation-share-card__qr svg {
-  width: 168px;
+.reputation-share-card--export .reputation-share-card__qr-code {
+  width: 184px;
+  padding: 8px;
 }
 
 .reputation-share-card--export .reputation-share-card__qr span,
@@ -846,22 +861,16 @@
   border-bottom: 1px solid var(--share-line);
 }
 
-.reputation-share-card__mark {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  background: var(--share-primary);
-  color: #fff;
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 11px;
+.reputation-share-card__brand .v-wordmark {
+  gap: clamp(5px, 0.83cqw, 10px);
+  color: var(--share-ink);
+  font-size: clamp(10px, 1.42cqw, 17px);
   font-weight: 600;
 }
 
-.reputation-share-card__brand > strong {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: clamp(8px, 1.17cqw, 14px);
-  font-weight: 600;
+.reputation-share-card__brand .v-wordmark svg {
+  width: clamp(14px, 1.83cqw, 22px);
+  height: clamp(14px, 1.83cqw, 22px);
 }
 
 .reputation-share-card__brand > span:last-child {
@@ -908,7 +917,7 @@
   width: 78%;
   height: clamp(5px, 0.83cqw, 10px);
   overflow: hidden;
-  background: #d9ded8;
+  background: var(--share-paper-muted);
 }
 
 .reputation-share-card__rail > span {
@@ -928,9 +937,19 @@
   border-left: 1px solid var(--share-line);
 }
 
-.reputation-share-card__qr svg {
-  width: min(62%, 168px);
+.reputation-share-card__qr-code {
+  width: min(64%, 184px);
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: clamp(4px, 0.67cqw, 8px);
+  background: #fff;
+}
+
+.reputation-share-card__qr-code svg {
+  width: 100%;
   height: auto;
+  display: block;
 }
 
 .reputation-share-card__qr span {
@@ -1004,6 +1023,114 @@
   margin-top: 4px;
   font-size: clamp(7px, 0.92cqw, 11px);
   font-weight: 500;
+}
+
+@container reputation-share-preview (max-width: 540px) {
+  .reputation-share-card--preview {
+    aspect-ratio: 4 / 5;
+    grid-template-rows: 12% 35% 35% 18%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__brand {
+    padding: 0 6%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__brand .v-wordmark {
+    gap: 7px;
+    font-size: clamp(12px, 4cqw, 15px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__brand .v-wordmark svg {
+    width: clamp(17px, 5.2cqw, 20px);
+    height: clamp(17px, 5.2cqw, 20px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__brand > span:last-child,
+  .reputation-share-card--preview .reputation-share-card__score > span,
+  .reputation-share-card--preview .reputation-share-card__qr > span,
+  .reputation-share-card--preview .reputation-share-card__categories span,
+  .reputation-share-card--preview .reputation-share-card__footer span {
+    font-size: clamp(7px, 2.3cqw, 9px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__body {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 5%;
+    padding: 4% 6%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__score strong {
+    font-size: clamp(50px, 18cqw, 68px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__score small {
+    font-size: clamp(11px, 4cqw, 15px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__rail {
+    width: 100%;
+    height: clamp(5px, 1.8cqw, 7px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__qr {
+    gap: 7px;
+    padding-left: 5%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__qr-code {
+    width: clamp(82px, 29cqw, 106px);
+    padding: 6px;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories > div {
+    gap: 2px;
+    padding: 0 12%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories > div + div {
+    border-left: 0;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories > div:nth-child(even) {
+    border-left: 1px solid var(--share-line);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories > div:nth-child(-n + 4) {
+    border-bottom: 1px solid var(--share-line);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories > div:last-child {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__categories strong {
+    font-size: clamp(15px, 4.8cqw, 18px);
+  }
+
+  .reputation-share-card--preview .reputation-share-card__footer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 0 6%;
+    padding: 2% 6%;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__footer > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .reputation-share-card--preview .reputation-share-card__footer strong {
+    margin-top: 2px;
+    font-size: clamp(8px, 2.7cqw, 10px);
+  }
 }
 
 .reputation-share-dialog__url {
@@ -1312,12 +1439,6 @@
     max-width: 260px;
   }
 
-  .reputation-share-card__mark {
-    width: 16px;
-    height: 16px;
-    font-size: 8px;
-  }
-
   .reputation-share-dialog__actions {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1325,8 +1446,11 @@
 
   .reputation-share-dialog__actions .v-button {
     min-width: 0;
-    padding-right: 8px;
-    padding-left: 8px;
+    gap: 5px;
+    padding-right: 6px;
+    padding-left: 6px;
+    font-size: 12px;
+    white-space: nowrap;
   }
 
   @media (prefers-reduced-motion: no-preference) {
