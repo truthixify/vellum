@@ -83,7 +83,7 @@ Policy v2 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these sch
 | ----------------------------- | -------------------------------------------------------------------- |
 | `vellum.social.github.v1`     | `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` |
 | `vellum.social.discord.v1`    | `0x1d0169167b6c34b7818ba6932974679f8fd5284e4d5d79319da12f7d79df8b69` |
-| `vellum.community.discord.v1` | `0x11775e778f3b16d7f62552ab8764f767795a943ad261e9c5aef5239a2ffa892c` |
+| `vellum.community.discord.v1` | `0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550` |
 
 The service scans every live Claim Cell for the subject before applying the trust policy. It does
 not ask the SDK to hide other issuers or schemas, so present but rejected evidence remains visible.

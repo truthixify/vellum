@@ -1,3 +1,5 @@
+import { discordSnowflakeTimestamp } from "../social/discord.v1.js";
+
 export const DISCORD_COMMUNITY_CLAIM_SCHEMA_ID = "vellum.community.discord.v1" as const;
 
 export const discordCommunityClaimSchemaManifest = {
@@ -8,6 +10,7 @@ export const discordCommunityClaimSchemaManifest = {
     constraints: [
       "memberships sorted by guild_id with no duplicates",
       "recognized_roles sorted by role_id with no duplicates",
+      "discord_snowflake_time(user_id) <= joined_at",
       "joined_at <= verified_at",
     ],
     properties: {
@@ -74,7 +77,7 @@ export const discordCommunityClaimSchemaManifest = {
 } as const;
 
 export const DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH =
-  "0x11775e778f3b16d7f62552ab8764f767795a943ad261e9c5aef5239a2ffa892c" as const;
+  "0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550" as const;
 
 export type DiscordRecognizedRole = {
   role_id: string;
@@ -143,7 +146,11 @@ function parseRole(value: unknown): DiscordRecognizedRole {
   return role as DiscordRecognizedRole;
 }
 
-function parseMembership(value: unknown, verifiedAt: number): DiscordCommunityMembership {
+function parseMembership(
+  value: unknown,
+  accountCreatedAt: number,
+  verifiedAt: number,
+): DiscordCommunityMembership {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("Discord community membership must be an object");
   }
@@ -154,6 +161,7 @@ function parseMembership(value: unknown, verifiedAt: number): DiscordCommunityMe
     !SNOWFLAKE_PATTERN.test(membership.guild_id) ||
     !isLabel(membership.community_name) ||
     !isPositiveSafeInteger(membership.joined_at) ||
+    membership.joined_at < accountCreatedAt ||
     membership.joined_at > verifiedAt ||
     !Array.isArray(membership.recognized_roles) ||
     membership.recognized_roles.length > 32
@@ -192,8 +200,9 @@ export function parseDiscordCommunityClaimPayload(value: unknown): DiscordCommun
     );
   }
 
+  const accountCreatedAt = discordSnowflakeTimestamp(payload.user_id);
   const memberships = payload.memberships.map((membership) =>
-    parseMembership(membership, payload.verified_at as number),
+    parseMembership(membership, accountCreatedAt, payload.verified_at as number),
   );
   if (
     memberships.some(

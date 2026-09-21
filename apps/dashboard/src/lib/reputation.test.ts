@@ -103,7 +103,7 @@ function discordAvailableResponse() {
         supportingClaims: [{ ...identityClaim }],
         issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
         schemaId: "vellum.community.discord.v1",
-        schemaHash: "0x11775e778f3b16d7f62552ab8764f767795a943ad261e9c5aef5239a2ffa892c",
+        schemaHash: "0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550",
         issuedAt: 1_799_500_000,
         account: {
           platform: "discord",

@@ -27,8 +27,9 @@ account creation time, and verification time.
 
 `vellum.community.discord.v1` records current membership in explicitly configured CKB Discord
 servers, including join timestamps and configured roles. Memberships and roles use stable Discord
-IDs and canonical ordering. Provider credentials, unrelated servers, messages, and channel history
-are not part of either claim.
+IDs and canonical ordering. A membership join time cannot predate the account timestamp encoded in
+the user's Discord snowflake. Provider credentials, unrelated servers, messages, and channel
+history are not part of either claim.
 
 ## Consumers
 

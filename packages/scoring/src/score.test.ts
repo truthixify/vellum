@@ -369,13 +369,14 @@ describe("vellum.reputation.v2", () => {
     const issuedAt = EVALUATED_AT - DAY;
     const result = scoreReputation({
       claims: readResult([
-        discordCommunityClaim({ id: 41, userId, issuedAt }),
+        discordCommunityClaim({ id: 41, userId, issuedAt, joinedAt: accountCreatedAt }),
         discordClaim({ id: 31, userId: otherUserId, accountCreatedAt }),
         discordCommunityClaim({
           id: 42,
           userId: otherUserId,
           issuedAt: issuedAt - 1,
           expiresAt: issuedAt - 1 + 29 * DAY,
+          joinedAt: accountCreatedAt,
         }),
       ]),
       evaluatedAt: EVALUATED_AT,

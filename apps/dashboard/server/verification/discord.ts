@@ -401,6 +401,7 @@ async function fetchDiscordAccount(
 async function fetchCommunityMembership(
   accessToken: string,
   community: TrustedDiscordCommunity,
+  accountCreatedAt: number,
   verifiedAt: number,
   dependencies: DiscordVerifierDependencies,
 ): Promise<DiscordCommunityMembership | undefined> {
@@ -424,6 +425,7 @@ async function fetchCommunityMembership(
   if (
     !Number.isFinite(joinedAt) ||
     Math.floor(joinedAt / 1_000) <= 0 ||
+    Math.floor(joinedAt / 1_000) < accountCreatedAt ||
     Math.floor(joinedAt / 1_000) > verifiedAt ||
     !Array.isArray(value.roles) ||
     value.roles.some((role) => typeof role !== "string" || !SNOWFLAKE_PATTERN.test(role))
@@ -449,18 +451,23 @@ async function fetchCommunityMembership(
 async function fetchCommunityMemberships(
   accessToken: string,
   config: DiscordOAuthConfig,
+  accountCreatedAt: number,
   verifiedAt: number,
   dependencies: DiscordVerifierDependencies,
 ): Promise<DiscordCommunityMembership[]> {
+  const results = await Promise.allSettled(
+    config.trustedCommunities.map((community) =>
+      fetchCommunityMembership(accessToken, community, accountCreatedAt, verifiedAt, dependencies),
+    ),
+  );
+  const failure = results.find(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failure) throw failure.reason;
+
   const memberships: DiscordCommunityMembership[] = [];
-  for (const community of config.trustedCommunities) {
-    const membership = await fetchCommunityMembership(
-      accessToken,
-      community,
-      verifiedAt,
-      dependencies,
-    );
-    if (membership) memberships.push(membership);
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value) memberships.push(result.value);
   }
   return memberships;
 }
@@ -511,7 +518,13 @@ export async function verifyDiscordAuthorization(
     }
     account = await fetchDiscordAccount(accessToken, dependencies);
     verifiedAt = dependencies.now();
-    memberships = await fetchCommunityMemberships(accessToken, config, verifiedAt, dependencies);
+    memberships = await fetchCommunityMemberships(
+      accessToken,
+      config,
+      discordSnowflakeTimestamp(account.id),
+      verifiedAt,
+      dependencies,
+    );
   } finally {
     if (accessToken) {
       await revokeDiscordCredentials(accessToken, config, dependencies);

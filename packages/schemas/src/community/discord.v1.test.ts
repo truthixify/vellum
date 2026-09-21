@@ -52,5 +52,11 @@ describe("vellum.community.discord.v1", () => {
     expect(() =>
       parseDiscordCommunityClaimPayload({ ...payload, memberships: [], extra: true }),
     ).toThrow();
+    expect(() =>
+      parseDiscordCommunityClaimPayload({
+        ...payload,
+        memberships: [{ ...payload.memberships[0], joined_at: 1_400_000_000 }],
+      }),
+    ).toThrow();
   });
 });

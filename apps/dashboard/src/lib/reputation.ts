@@ -263,7 +263,9 @@ const availableReputationSchema = z
         identity.claim.claimId === supporting.claimId &&
         identity.account.id === evidence.account.id &&
         evidence.community.memberships.every(
-          (membership) => membership.joined_at <= evidence.issuedAt,
+          (membership) =>
+            membership.joined_at >= evidence.account.createdAt &&
+            membership.joined_at <= evidence.issuedAt,
         )
       );
     });

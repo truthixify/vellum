@@ -147,7 +147,7 @@ describe("Discord OAuth verifier", () => {
       {
         schema: {
           id: "vellum.community.discord.v1",
-          hash: "0x11775e778f3b16d7f62552ab8764f767795a943ad261e9c5aef5239a2ffa892c",
+          hash: "0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550",
         },
         payload: {
           user_id: USER_ID,
@@ -184,6 +184,55 @@ describe("Discord OAuth verifier", () => {
     expect(verified.claims).toHaveLength(1);
   });
 
+  test("checks configured communities concurrently", async () => {
+    let releaseFirst: ((response: Response) => void) | undefined;
+    let call = 0;
+    const fetch = mock(async (input: string | URL | Request) => {
+      call += 1;
+      if (call === 1) return tokenResponse();
+      if (call === 2) return userResponse();
+      const url = String(input);
+      if (url.includes(`/guilds/${GUILD_ID}/member`)) {
+        return new Promise<Response>((resolve) => {
+          releaseFirst = resolve;
+        });
+      }
+      if (url.includes(`/guilds/${OTHER_GUILD_ID}/member`)) {
+        releaseFirst?.(memberResponse());
+        return new Response(null, { status: 404 });
+      }
+      if (url.endsWith("/token/revoke")) return new Response(null, { status: 200 });
+      throw new Error("Unexpected Discord request");
+    });
+
+    const verified = await verifyDiscordAuthorization(
+      "one-time-code",
+      discordOAuthConfig(ENVIRONMENT),
+      { fetch, now: () => NOW },
+    );
+
+    expect(verified.memberships).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledTimes(5);
+  });
+
+  test("rejects a membership timestamp before the Discord account existed", async () => {
+    const fetch = sequence(
+      tokenResponse(),
+      userResponse(),
+      memberResponse({ joined_at: "2014-01-01T00:00:00.000Z" }),
+      new Response(null, { status: 404 }),
+      new Response(null, { status: 200 }),
+    );
+
+    await expect(
+      verifyDiscordAuthorization("one-time-code", discordOAuthConfig(ENVIRONMENT), {
+        fetch,
+        now: () => NOW,
+      }),
+    ).rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(fetch).toHaveBeenCalledTimes(5);
+  });
+
   test("revokes access before rejecting unexpected scopes", async () => {
     const fetch = sequence(
       tokenResponse({ scope: "identify guilds.members.read email" }),
@@ -205,6 +254,7 @@ describe("Discord OAuth verifier", () => {
       tokenResponse(),
       userResponse(),
       new Response(null, { status: 429, headers: { "retry-after": "2.5" } }),
+      new Response(null, { status: 404 }),
       new Response(null, { status: 200 }),
     );
     try {
@@ -218,7 +268,7 @@ describe("Discord OAuth verifier", () => {
       expect((error as DiscordOAuthError).code).toBe("provider_rate_limited");
       expect((error as DiscordOAuthError).retryAt).toBe(NOW + 3);
     }
-    expect(limited).toHaveBeenCalledTimes(4);
+    expect(limited).toHaveBeenCalledTimes(5);
 
     const revokeFailure = sequence(
       tokenResponse(),
