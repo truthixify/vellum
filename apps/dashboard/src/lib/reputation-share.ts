@@ -1,5 +1,11 @@
 import { isDidCkb } from "@/lib/did-ckb";
 
+export const REPUTATION_CARD_EXPORT = {
+  width: 1080,
+  height: 1350,
+  pixelRatio: 2,
+} as const;
+
 export function buildReputationShareUrl(did: string, origin?: string): string {
   if (!isDidCkb(did)) throw new Error("A valid did:ckb identifier is required.");
   const base =

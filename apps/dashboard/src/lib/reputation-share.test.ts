@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildReputationShareUrl, reputationCardFilename } from "./reputation-share";
+import {
+  buildReputationShareUrl,
+  REPUTATION_CARD_EXPORT,
+  reputationCardFilename,
+} from "./reputation-share";
 
 const DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 
@@ -13,6 +17,15 @@ describe("reputation sharing", () => {
 
   test("creates a stable image filename without exposing the full DID", () => {
     expect(reputationCardFilename(DID)).toBe("vellum-reputation-p4mescjtrp.png");
+  });
+
+  test("exports a fixed high-resolution portrait card", () => {
+    expect(REPUTATION_CARD_EXPORT).toEqual({
+      width: 1080,
+      height: 1350,
+      pixelRatio: 2,
+    });
+    expect(REPUTATION_CARD_EXPORT.width / REPUTATION_CARD_EXPORT.height).toBe(4 / 5);
   });
 
   test("rejects invalid subjects", () => {

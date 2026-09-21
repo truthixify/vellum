@@ -6,7 +6,11 @@ import QRCode from "react-qr-code";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AvailableReputation } from "@/lib/reputation";
-import { buildReputationShareUrl, reputationCardFilename } from "@/lib/reputation-share";
+import {
+  buildReputationShareUrl,
+  REPUTATION_CARD_EXPORT,
+  reputationCardFilename,
+} from "@/lib/reputation-share";
 
 const CATEGORY_LABELS: Record<AvailableReputation["categories"][number]["id"], string> = {
   technical: "Technical",
@@ -69,18 +73,16 @@ function ReputationShareCard({
   result,
   shareUrl,
   animated,
-  exportSize = false,
 }: {
   result: AvailableReputation;
   shareUrl: string;
   animated: boolean;
-  exportSize?: boolean;
 }) {
   const score = useAnimatedScore(result.overall.score, animated);
 
   return (
     <div
-      className={`reputation-share-card reputation-share-card--${exportSize ? "export" : "preview"}`}
+      className="reputation-share-card reputation-share-card--preview"
       data-animated={animated ? "true" : "false"}
     >
       <div className="reputation-share-card__brand">
@@ -110,7 +112,7 @@ function ReputationShareCard({
           <div className="reputation-share-card__qr-code">
             <QRCode
               value={shareUrl}
-              size={exportSize ? 168 : 148}
+              size={148}
               bgColor="#ffffff"
               fgColor="#151817"
               level="M"
@@ -165,6 +167,8 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
   const [working, setWorking] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
   const shareUrl = useMemo(() => buildReputationShareUrl(result.subject), [result.subject]);
+  const exportRenderWidth = REPUTATION_CARD_EXPORT.width / REPUTATION_CARD_EXPORT.pixelRatio;
+  const exportRenderHeight = REPUTATION_CARD_EXPORT.height / REPUTATION_CARD_EXPORT.pixelRatio;
 
   async function renderCard(): Promise<string> {
     if (!exportRef.current) throw new Error("The share card is not ready.");
@@ -173,9 +177,9 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
     if (!(card instanceof HTMLElement)) throw new Error("The share card is not ready.");
     const backgroundColor = getComputedStyle(card).backgroundColor;
     return toPng(exportRef.current, {
-      width: 1200,
-      height: 630,
-      pixelRatio: 1,
+      width: exportRenderWidth,
+      height: exportRenderHeight,
+      pixelRatio: REPUTATION_CARD_EXPORT.pixelRatio,
       cacheBust: true,
       backgroundColor,
     });
@@ -320,14 +324,13 @@ export function ReputationShareDialog({ result }: { result: AvailableReputation 
             {working ? "Preparing card…" : status}
           </div>
 
-          <div className="reputation-share-export" aria-hidden="true">
-            <div ref={exportRef}>
-              <ReputationShareCard
-                result={result}
-                shareUrl={shareUrl}
-                animated={false}
-                exportSize
-              />
+          <div
+            className="reputation-share-export"
+            style={{ width: exportRenderWidth, height: exportRenderHeight }}
+            aria-hidden="true"
+          >
+            <div ref={exportRef} className="reputation-share-export__canvas">
+              <ReputationShareCard result={result} shareUrl={shareUrl} animated={false} />
             </div>
           </div>
         </Dialog.Content>

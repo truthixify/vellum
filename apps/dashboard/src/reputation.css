@@ -801,58 +801,6 @@
   font-family: "IBM Plex Sans", system-ui, sans-serif;
 }
 
-.reputation-share-card--export {
-  width: 1200px;
-  height: 630px;
-  aspect-ratio: auto;
-}
-
-.reputation-share-card--export .reputation-share-card__brand .v-wordmark {
-  gap: 12px;
-  font-size: 18px;
-}
-
-.reputation-share-card--export .reputation-share-card__brand .v-wordmark svg {
-  width: 28px;
-  height: 28px;
-}
-
-.reputation-share-card--export .reputation-share-card__brand > span:last-child,
-.reputation-share-card--export .reputation-share-card__score > span {
-  font-size: 11px;
-}
-
-.reputation-share-card--export .reputation-share-card__score strong {
-  font-size: 112px;
-}
-
-.reputation-share-card--export .reputation-share-card__score small {
-  font-size: 21px;
-}
-
-.reputation-share-card--export .reputation-share-card__rail {
-  height: 10px;
-}
-
-.reputation-share-card--export .reputation-share-card__qr-code {
-  width: 184px;
-  padding: 8px;
-}
-
-.reputation-share-card--export .reputation-share-card__qr span,
-.reputation-share-card--export .reputation-share-card__categories span,
-.reputation-share-card--export .reputation-share-card__footer span {
-  font-size: 9px;
-}
-
-.reputation-share-card--export .reputation-share-card__categories strong {
-  font-size: 24px;
-}
-
-.reputation-share-card--export .reputation-share-card__footer strong {
-  font-size: 11px;
-}
-
 .reputation-share-card__brand {
   display: flex;
   align-items: center;
@@ -1166,9 +1114,13 @@
   position: fixed;
   left: -10000px;
   top: 0;
-  width: 1200px;
-  height: 630px;
+  container: reputation-share-preview / inline-size;
   pointer-events: none;
+}
+
+.reputation-share-export__canvas {
+  width: 100%;
+  height: 100%;
 }
 
 @media (prefers-reduced-motion: no-preference) {
