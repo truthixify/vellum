@@ -28,6 +28,7 @@ import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
 import { Route as DocsMigrationRouteImport } from './routes/docs/migration'
 import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
 import { Route as VerifyIndexRouteImport } from './routes/verify/index'
+import { Route as VerifyBlueskyRouteImport } from './routes/verify/bluesky'
 import { Route as VerifyDiscordRouteImport } from './routes/verify/discord'
 import { Route as VerifyGithubRouteImport } from './routes/verify/github'
 import { Route as VerifyTelegramRouteImport } from './routes/verify/telegram'
@@ -127,6 +128,11 @@ const VerifyIndexRoute = VerifyIndexRouteImport.update({
   path: '/verify/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyBlueskyRoute = VerifyBlueskyRouteImport.update({
+  id: '/verify/bluesky',
+  path: '/verify/bluesky',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyDiscordRoute = VerifyDiscordRouteImport.update({
   id: '/verify/discord',
   path: '/verify/discord',
@@ -161,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/bluesky': typeof VerifyBlueskyRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/verify/telegram': typeof VerifyTelegramRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/bluesky': typeof VerifyBlueskyRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/verify/telegram': typeof VerifyTelegramRoute
@@ -209,6 +217,7 @@ export interface FileRoutesById {
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
   '/docs/resolution': typeof DocsResolutionRoute
+  '/verify/bluesky': typeof VerifyBlueskyRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
   '/verify/telegram': typeof VerifyTelegramRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/bluesky'
     | '/verify/discord'
     | '/verify/github'
     | '/verify/telegram'
@@ -258,6 +268,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/bluesky'
     | '/verify/discord'
     | '/verify/github'
     | '/verify/telegram'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/docs/did-ckb'
     | '/docs/migration'
     | '/docs/resolution'
+    | '/verify/bluesky'
     | '/verify/discord'
     | '/verify/github'
     | '/verify/telegram'
@@ -303,6 +315,7 @@ export interface RootRouteChildren {
   ReputationRoute: typeof ReputationRoute
   ResolveRoute: typeof ResolveRoute
   RotateRoute: typeof RotateRoute
+  VerifyBlueskyRoute: typeof VerifyBlueskyRoute
   VerifyDiscordRoute: typeof VerifyDiscordRoute
   VerifyGithubRoute: typeof VerifyGithubRoute
   VerifyTelegramRoute: typeof VerifyTelegramRoute
@@ -444,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/bluesky': {
+      id: '/verify/bluesky'
+      path: '/verify/bluesky'
+      fullPath: '/verify/bluesky'
+      preLoaderRoute: typeof VerifyBlueskyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify/discord': {
       id: '/verify/discord'
       path: '/verify/discord'
@@ -500,6 +520,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReputationRoute: ReputationRoute,
   ResolveRoute: ResolveRoute,
   RotateRoute: RotateRoute,
+  VerifyBlueskyRoute: VerifyBlueskyRoute,
   VerifyDiscordRoute: VerifyDiscordRoute,
   VerifyGithubRoute: VerifyGithubRoute,
   VerifyTelegramRoute: VerifyTelegramRoute,

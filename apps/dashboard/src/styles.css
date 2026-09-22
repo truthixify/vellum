@@ -2166,6 +2166,90 @@
   font-size: 11px;
 }
 
+.account-verification-credentials {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 16px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.account-verification-credential-field {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.account-verification-credential-field > label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.account-verification-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.account-verification-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.account-verification-input:disabled {
+  opacity: 0.65;
+}
+
+.account-verification-password {
+  position: relative;
+  min-width: 0;
+}
+
+.account-verification-password .account-verification-input {
+  padding-right: 44px;
+}
+
+.account-verification-password > button {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--ink-secondary);
+  cursor: pointer;
+}
+
+.account-verification-password > button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -3px;
+}
+
+.account-verification-credential-note {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  color: var(--ink-secondary);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.account-verification-credential-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
 .account-verification-action {
   display: flex;
   align-items: center;
@@ -2883,6 +2967,10 @@
   .account-verification-action {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-verification-credentials {
+    grid-template-columns: 1fr;
   }
 
   .account-verification-action .v-button {

@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BadgeCheck,
   CircleDollarSign,
+  Cloud,
   Github,
   KeyRound,
   Landmark,
@@ -145,6 +146,38 @@ function VerificationPage() {
             </span>
             <span className="verification-source__action">
               View Telegram status <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </Link>
+
+          <Link className="verification-source" to="/verify/bluesky" search={{}}>
+            <span className="verification-source__icon" aria-hidden="true">
+              <Cloud size={22} strokeWidth={1.7} />
+            </span>
+            <span className="verification-source__body">
+              <span className="verification-source__title">
+                <strong>Bluesky</strong>
+                <StatusMark tone="positive">Available</StatusMark>
+              </span>
+              <span className="verification-source__description">
+                Link a current Bluesky handle and its stable AT Protocol identity.
+              </span>
+              <span className="verification-source__meta">
+                <span>
+                  <small>Evidence</small>
+                  Stable account identity
+                </span>
+                <span>
+                  <small>Schema</small>
+                  <code>vellum.social.bluesky.v1</code>
+                </span>
+                <span>
+                  <small>Record</small>
+                  Claim Cell
+                </span>
+              </span>
+            </span>
+            <span className="verification-source__action">
+              View Bluesky status <ArrowRight size={15} aria-hidden="true" />
             </span>
           </Link>
         </div>
