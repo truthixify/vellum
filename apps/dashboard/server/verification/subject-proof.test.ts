@@ -66,6 +66,39 @@ describe("subject controller proof", () => {
     ).rejects.toMatchObject({ code: "subject_control_invalid" });
   });
 
+  test("accepts a Telegram challenge signed by the live DID controller", async () => {
+    const { controller, dependencies, signer } = await fixture();
+    const challenge = await createSubjectChallenge(
+      "telegram",
+      SUBJECT,
+      SECRET,
+      NOW,
+      {},
+      dependencies,
+    );
+    const signed = await signer.signMessage(challenge.message);
+
+    await expect(
+      verifySubjectProof(
+        "telegram",
+        SUBJECT,
+        {
+          challenge: challenge.challenge,
+          signature: {
+            identity: signed.identity,
+            signature: signed.signature,
+            signType: "CkbSecp256k1",
+          },
+        },
+        SECRET,
+        NOW,
+        new MemoryVerificationCoordinator(),
+        {},
+        dependencies,
+      ),
+    ).resolves.toBe(controller.hash());
+  });
+
   test("rejects the wrong signer, provider, subject, and expired challenge", async () => {
     const { client, dependencies } = await fixture();
     const otherSigner = new ccc.SignerCkbPrivateKey(client, `0x${"12".repeat(32)}`);

@@ -4,7 +4,12 @@ import { ccc } from "@ckb-ccc/core";
 import { resolveDidCkb } from "@ckb-ccc/did-ckb";
 import { verifyCredential, type CredentialKeyType, type SigningAlg } from "@joyid/ckb";
 
-import type { DidVerificationSubject, SubjectProof, VerificationPlatform } from "./contracts.js";
+import {
+  isVerificationPlatform,
+  type DidVerificationSubject,
+  type SubjectProof,
+  type VerificationPlatform,
+} from "./contracts.js";
 import type { VerificationCoordinator } from "./coordination.js";
 import { OAuthConfigurationError, VerificationServiceError } from "./errors.js";
 import { issuerRpcUrl } from "./issuer.js";
@@ -94,7 +99,7 @@ function decode(value: string, secretValue: string): ChallengePayload {
     Object.keys(candidate).sort().join(",") !==
       "controllerLockHash,expiresAt,issuedAt,nonce,platform,subject,version" ||
     candidate.version !== 1 ||
-    !["github", "discord"].includes(candidate.platform ?? "") ||
+    !isVerificationPlatform(candidate.platform ?? "") ||
     !candidate.subject ||
     typeof candidate.subject.did !== "string" ||
     typeof candidate.controllerLockHash !== "string" ||
