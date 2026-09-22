@@ -12,8 +12,8 @@ import { ClaimData } from "@vellum/sdk";
 
 import { GithubOAuthError } from "./errors.js";
 import {
+  getTrustedGithubRepository,
   GITHUB_REPOSITORY_REGISTRY_VERSION,
-  isTrustedGithubRepositoryId,
 } from "./github-repositories.js";
 
 const GITHUB_API_VERSION = "2026-03-10";
@@ -312,7 +312,8 @@ async function fetchRepository(
   ) {
     providerUnavailable("GitHub returned malformed repository evidence.");
   }
-  if (value.fork || !isTrustedGithubRepositoryId(value.node_id)) return undefined;
+  const trustedRepository = getTrustedGithubRepository(value.node_id);
+  if (!trustedRepository || (value.fork && !trustedRepository.allowFork)) return undefined;
   return { id: value.node_id, name: value.full_name, url };
 }
 

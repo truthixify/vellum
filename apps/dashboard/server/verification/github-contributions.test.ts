@@ -15,6 +15,9 @@ const ACCOUNT = { id: 5_830_913, login: "truthixify" };
 const REPOSITORY_ID = "R_kgDOLw3gsg";
 const REPOSITORY_NAME = "ckb-devrel/ccc-next";
 const REPOSITORY_URL = `https://api.github.com/repos/${REPOSITORY_NAME}`;
+const APPROVED_FORK_ID = "R_kgDOJ1JJHg";
+const APPROVED_FORK_NAME = "nervosnetwork/ckb-auth-next";
+const APPROVED_FORK_URL = `https://api.github.com/repos/${APPROVED_FORK_NAME}`;
 
 function searchResponse(total: number, items: unknown[], incomplete = false): Response {
   return Response.json({ total_count: total, incomplete_results: incomplete, items });
@@ -52,7 +55,7 @@ function pullResponse(number = 376, overrides: Record<string, unknown> = {}): Re
 describe("GitHub contribution evidence", () => {
   test("publishes a stable repository registry with unique IDs and names", () => {
     expect(GITHUB_REPOSITORY_REGISTRY_VERSION).toBe("ckb.public-contributions.v1");
-    expect(TRUSTED_GITHUB_REPOSITORIES.length).toBeGreaterThan(20);
+    expect(TRUSTED_GITHUB_REPOSITORIES).toHaveLength(69);
     expect(new Set(TRUSTED_GITHUB_REPOSITORIES.map(({ id }) => id)).size).toBe(
       TRUSTED_GITHUB_REPOSITORIES.length,
     );
@@ -63,6 +66,18 @@ describe("GitHub contribution evidence", () => {
     expect(TRUSTED_GITHUB_REPOSITORIES.every((repository) => Object.isFrozen(repository))).toBe(
       true,
     );
+    expect(
+      TRUSTED_GITHUB_REPOSITORIES.filter(({ allowFork }) => allowFork).map(({ name }) => name),
+    ).toEqual([
+      "ckb-devrel/nervdao",
+      "nervosnetwork/tentacle",
+      "nervosnetwork/ckb-auth",
+      "RGBPlusPlus/rgbpp-sdk",
+      "RGBPlusPlus/btc-assets-api",
+      "RGBPlusPlus/rgbpp-explorer",
+      "RGBPlusPlus/ckb-bitcoin-spv",
+      "RGBPlusPlus/ckb-bitcoin-spv-contracts",
+    ]);
   });
 
   test("follows search and file pagination and recognizes a renamed trusted repository", async () => {
@@ -209,6 +224,56 @@ describe("GitHub contribution evidence", () => {
     ]);
   });
 
+  test("accepts an explicitly approved fork by stable repository ID", async () => {
+    const fetch = mock(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/search/issues") {
+        return url.searchParams.get("q")?.startsWith("author:")
+          ? searchResponse(1, [{ number: 10, repository_url: APPROVED_FORK_URL }])
+          : searchResponse(0, []);
+      }
+      if (url.href === APPROVED_FORK_URL) {
+        return Response.json({
+          node_id: APPROVED_FORK_ID,
+          full_name: APPROVED_FORK_NAME,
+          fork: true,
+          url: APPROVED_FORK_URL,
+        });
+      }
+      if (url.pathname.endsWith("/pulls/10")) {
+        return Response.json({
+          node_id: "PR_approved_fork_10",
+          number: 10,
+          title: "Harden authentication",
+          html_url: `https://github.com/${APPROVED_FORK_NAME}/pull/10`,
+          merged_at: new Date((NOW - 100) * 1_000).toISOString(),
+          merge_commit_sha: "a".repeat(40),
+          changed_files: 1,
+          user: { id: ACCOUNT.id },
+          base: { repo: { node_id: APPROVED_FORK_ID } },
+        });
+      }
+      if (url.pathname.endsWith("/pulls/10/files")) {
+        return Response.json([{ filename: "src/auth.rs" }]);
+      }
+      throw new Error(`Unexpected GitHub request: ${url}`);
+    });
+
+    const result = await collectGithubContributions(TOKEN, ACCOUNT, NOW, {
+      fetch,
+      now: () => NOW,
+    });
+
+    expect(result?.artifacts).toEqual([
+      expect.objectContaining({
+        repository_id: APPROVED_FORK_ID,
+        repository: APPROVED_FORK_NAME,
+        number: 10,
+        classification: "technical",
+      }),
+    ]);
+  });
+
   test("ignores a pending review without a submission time", async () => {
     const fetch = mock(async (input: string | URL | Request) => {
       const url = new URL(String(input));
@@ -242,7 +307,7 @@ describe("GitHub contribution evidence", () => {
     ).resolves.toBeUndefined();
   });
 
-  test("ignores forks, repositories outside the registry, and deleted artifacts", async () => {
+  test("ignores unapproved forks, repositories outside the registry, and deleted artifacts", async () => {
     for (const repository of [
       repositoryResponse({ fork: true }),
       repositoryResponse({ node_id: "R_untrusted_repository" }),

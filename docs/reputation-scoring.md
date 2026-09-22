@@ -67,18 +67,31 @@ points.
 
 Repository eligibility comes from `ckb.public-contributions.v1`, a versioned registry keyed by
 GitHub's stable repository node IDs. Names are display snapshots, so a rename does not change the
-repository's identity. The initial registry contains:
+repository's identity. The registry contains 69 repositories:
 
-- `ckb-devrel`: `ccc`, `offckb`, `create-ccc-app`, `known-scripts`, and `ccc-locks`
+- `ckb-devrel`: `ccc`, `offckb`, `create-ccc-app`, `known-scripts`, `ccc-locks`,
+  `CKB-Developer-Resource`, `ssri-server`, `ccc-schedule-send`, and `nervdao`
 - `nervosnetwork`: `ckb`, `ckb-vm`, `ckb-std`, `ckb-testtool`, `ckb-system-scripts`,
   `ckb-c-stdlib`, `ckb-cli`, `ckb-light-client`, `ckb-sdk-rust`, `ckb-sdk-go`, `ckb-sdk-java`,
-  `neuron`, `molecule`, `sparse-merkle-tree`, `rfcs`, `docs.nervos.org`, `fiber`, and `omnilock`
+  `ckb-sdk-ruby`, `neuron`, `molecule`, `sparse-merkle-tree`, `rfcs`, `docs.nervos.org`, `fiber`,
+  `fiber-docs`, `fiber-py-integration-test`, `fiber-dashboard`, `fiber-scripts`, `fiber-sphinx`,
+  `omnilock`, `anyone-can-pay`, `quantum-resistant-lock-script`, `ckb-py-integration-test`,
+  `ckb-vm-contrib`, `ckb-standalone-debugger`, `ckb-script-templates`, `ckb-explorer`,
+  `ckb-explorer-frontend`, `ckb-tui`, `ckb-discovery`, `ckb-sync`, `ckb-rpc-resources`,
+  `ckb-vm-fuzzing-test`, `ckb-contract-tests`, `ckb-treasury-lab`, `CkbGuardian`, `ckb-js-vm`,
+  `ckb-production-scripts`, `ckb-miscellaneous-scripts`, `capsule`, `ckb-light-test`,
+  `force-bridge`, `force-bridge-btc`, `force-bridge-eth`, `tentacle`, and `ckb-auth`
 - `ckb-js`: `ckb-sdk-js`, `lumos`, `kuai`, `ckit`, and `nexus`
+- `RGBPlusPlus`: `rgbpp-sdk`, `btc-assets-api`, `rgbpp-explorer`, `ckb-bitcoin-spv`, and
+  `ckb-bitcoin-spv-contracts`
 
 The canonical IDs and current names live in
 [`github-repositories.ts`](../apps/dashboard/server/verification/github-repositories.ts). Adding or
-removing a repository requires a reviewed registry change. Forks, keyword matches, repository
-ownership, stars, and activity outside the registry do not establish eligibility.
+removing a repository requires a reviewed registry change. Forks are rejected unless their stable
+repository ID has an explicit `allowFork` entry. The approved forks are `ckb-devrel/nervdao`,
+`nervosnetwork/tentacle`, `nervosnetwork/ckb-auth`, and the five listed `RGBPlusPlus` repositories.
+Keyword matches, repository ownership, stars, and activity outside the registry do not establish
+eligibility.
 
 Two artifact types qualify:
 
