@@ -27,7 +27,12 @@ import {
   VerificationCoordinationError,
   VerificationServiceError,
 } from "./errors.js";
-import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
+import {
+  jsonResponse,
+  parseJsonBody,
+  RequestBodyError,
+  setRouterSearchParameters,
+} from "./http.js";
 import { coordinateIssuance } from "./issuance-control.js";
 import { issueVerifiedClaims } from "./issuer.js";
 import { logVerificationFailure, type VerificationFailureLogger } from "./logging.js";
@@ -127,9 +132,7 @@ function callbackRedirect(
   parameters: Record<string, string | number | undefined>,
 ): Response {
   const url = new URL("/verify/telegram", callbackUrl ?? new URL(request.url));
-  for (const [name, value] of Object.entries(parameters)) {
-    if (value !== undefined) url.searchParams.set(name, String(value));
-  }
+  setRouterSearchParameters(url, parameters);
   return new Response(null, {
     status: 303,
     headers: {

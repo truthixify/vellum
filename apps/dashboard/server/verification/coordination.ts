@@ -10,6 +10,10 @@ const ISSUANCE_COOLDOWN_SECONDS = 7 * 24 * 60 * 60;
 const ISSUER_LOCK_SECONDS = 3 * 60;
 const ISSUER_SETTLE_SECONDS = 30;
 
+function issuanceNamespace(platform: VerificationPlatform): string {
+  return platform === "telegram" ? "telegram-user-id" : platform;
+}
+
 export type CoordinationEnvironment = {
   [key: string]: string | undefined;
   UPSTASH_REDIS_REST_TOKEN?: string;
@@ -178,9 +182,10 @@ export class RedisVerificationCoordinator implements VerificationCoordinator {
   ): Promise<IssuanceReservationResult> {
     assertTimestamp(now, "Current time");
     const reservationToken = token();
+    const namespace = issuanceNamespace(platform);
     const keys = [
-      `${ISSUANCE_PREFIX}:account:${platform}:${digest(accountId)}`,
-      `${ISSUANCE_PREFIX}:subject:${platform}:${digest(subjectDid)}`,
+      `${ISSUANCE_PREFIX}:account:${namespace}:${digest(accountId)}`,
+      `${ISSUANCE_PREFIX}:subject:${namespace}:${digest(subjectDid)}`,
     ] as const;
     const result = await this.redis.command([
       "EVAL",
@@ -270,9 +275,10 @@ export class MemoryVerificationCoordinator implements VerificationCoordinator {
     subjectDid: string,
     now: number,
   ): Promise<IssuanceReservationResult> {
+    const namespace = issuanceNamespace(platform);
     const keys = [
-      `${ISSUANCE_PREFIX}:account:${platform}:${digest(accountId)}`,
-      `${ISSUANCE_PREFIX}:subject:${platform}:${digest(subjectDid)}`,
+      `${ISSUANCE_PREFIX}:account:${namespace}:${digest(accountId)}`,
+      `${ISSUANCE_PREFIX}:subject:${namespace}:${digest(subjectDid)}`,
     ] as const;
     const existing = keys.map((key) => this.get(key, now)).filter(Boolean) as MemoryEntry[];
     if (existing.length > 0) {

@@ -12,6 +12,8 @@ import {
 const NOW = 1_800_000_000;
 const CLIENT_ID = "123456789012345678";
 const BOT_USER_ID = "987654321";
+const OIDC_SUBJECT = "1234123412341234123";
+const ACCOUNT_ID = "2468101214";
 const BOT_TOKEN = `${BOT_USER_ID}:telegram-bot-token-for-tests-only`;
 const CHAT_ID = "-1006577996900705";
 const ENVIRONMENT = {
@@ -37,7 +39,8 @@ function tokenResponse(overrides: Record<string, unknown> = {}): Response {
 
 function dependencies(
   claims: Record<string, unknown> = {
-    sub: "1234123412341234123",
+    sub: OIDC_SUBJECT,
+    id: Number(ACCOUNT_ID),
     name: "Vellum Builder",
     preferred_username: "vellum_builder",
   },
@@ -53,7 +56,7 @@ function dependencies(
         ok: true,
         result: {
           status: userId === BOT_USER_ID ? botStatus : membershipStatus,
-          user: { id: userId },
+          user: { id: Number(userId) },
         },
       });
     }),
@@ -117,7 +120,7 @@ describe("Telegram OAuth verifier", () => {
 
     expect(verified).toEqual({
       account: {
-        id: "1234123412341234123",
+        id: ACCOUNT_ID,
         displayName: "Vellum Builder",
         username: "vellum_builder",
       },
@@ -128,7 +131,7 @@ describe("Telegram OAuth verifier", () => {
             hash: "0xe8b7f0ba94a55a5676ab205d9e1a997e1953d1e5cb6b89fd295ad5d69356467f",
           },
           payload: {
-            user_id: "1234123412341234123",
+            user_id: ACCOUNT_ID,
             display_name: "Vellum Builder",
             username: "vellum_builder",
             profile_url: "https://t.me/vellum_builder",
@@ -142,7 +145,7 @@ describe("Telegram OAuth verifier", () => {
             hash: "0x8f8b0b59997ff96fde030314498c56008cb743006ae53b368339382640f8bd59",
           },
           payload: {
-            user_id: "1234123412341234123",
+            user_id: ACCOUNT_ID,
             verified_at: NOW,
             memberships: [
               {
@@ -179,6 +182,7 @@ describe("Telegram OAuth verifier", () => {
     expect(deps.fetch).toHaveBeenCalledTimes(3);
     const botRequests = deps.fetch.mock.calls.slice(1);
     expect(botRequests.every(([input]) => String(input).includes("/getChatMember"))).toBe(true);
+    expect(new URLSearchParams(String(botRequests[1][1]?.body)).get("user_id")).toBe(ACCOUNT_ID);
   });
 
   test("supports accounts without a public username", async () => {
@@ -186,15 +190,15 @@ describe("Telegram OAuth verifier", () => {
       "one-time-code",
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       telegramOAuthConfig(ENVIRONMENT),
-      dependencies({ sub: "1234123412341234123", name: "Private Builder" }),
+      dependencies({ sub: OIDC_SUBJECT, id: Number(ACCOUNT_ID), name: "Private Builder" }),
     );
 
     expect(verified.account).toEqual({
-      id: "1234123412341234123",
+      id: ACCOUNT_ID,
       displayName: "Private Builder",
     });
     expect(verified.claims[0].payload).toEqual({
-      user_id: "1234123412341234123",
+      user_id: ACCOUNT_ID,
       display_name: "Private Builder",
       verified_at: NOW,
     });
@@ -224,6 +228,33 @@ describe("Telegram OAuth verifier", () => {
     ).rejects.toMatchObject({ code: "oauth_configuration_error", status: 503 });
   });
 
+  test("fails closed when Telegram cannot return a trusted community member", async () => {
+    const deps = dependencies();
+    deps.fetch = mock(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input) === "https://oauth.telegram.org/token") return tokenResponse();
+      const userId = new URLSearchParams(String(init?.body)).get("user_id");
+      if (userId === BOT_USER_ID) {
+        return Response.json({
+          ok: true,
+          result: { status: "administrator", user: { id: Number(BOT_USER_ID) } },
+        });
+      }
+      return Response.json(
+        { ok: false, error_code: 400, description: "Bad Request: user not found" },
+        { status: 400 },
+      );
+    });
+
+    await expect(
+      verifyTelegramAuthorization(
+        "one-time-code",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        telegramOAuthConfig(ENVIRONMENT),
+        deps,
+      ),
+    ).rejects.toMatchObject({ code: "provider_unavailable", status: 502 });
+  });
+
   test("rejects malformed tokens, account data, and provider failures", async () => {
     const config = telegramOAuthConfig(ENVIRONMENT);
     await expect(
@@ -231,7 +262,15 @@ describe("Telegram OAuth verifier", () => {
         "one-time-code",
         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         config,
-        dependencies({ sub: "not-a-telegram-id", name: "Builder" }),
+        dependencies({ sub: "not-a-telegram-id", id: Number(ACCOUNT_ID), name: "Builder" }),
+      ),
+    ).rejects.toMatchObject({ code: "provider_unavailable" });
+    await expect(
+      verifyTelegramAuthorization(
+        "one-time-code",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        config,
+        dependencies({ sub: OIDC_SUBJECT, name: "Builder" }),
       ),
     ).rejects.toMatchObject({ code: "provider_unavailable" });
 

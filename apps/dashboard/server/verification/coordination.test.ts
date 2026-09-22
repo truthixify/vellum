@@ -58,6 +58,13 @@ describe("verification coordination", () => {
       authorization: "Bearer secret-token",
       "content-type": "application/json",
     });
+
+    await coordinator.reserveIssuance("telegram", "telegram-account", "did:ckb:telegram", NOW);
+    const telegramRequest = fetch.mock.calls[1];
+    const telegramCommand = String(telegramRequest[1]?.body);
+    expect(telegramCommand).toContain("telegram-user-id");
+    expect(telegramCommand).not.toContain("telegram-account");
+    expect(telegramCommand).not.toContain("did:ckb:telegram");
   });
 
   test("fails closed on malformed Redis responses", async () => {

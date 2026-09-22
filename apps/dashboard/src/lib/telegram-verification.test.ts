@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
+import { defaultParseSearch } from "@tanstack/react-router";
 
 import {
   TelegramVerificationRequestError,
@@ -12,6 +13,7 @@ const DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 const TX_HASH = `0x${"11".repeat(32)}` as `0x${string}`;
 const CLAIM_ID = `0x${"22".repeat(32)}` as `0x${string}`;
 const COMMUNITY_CLAIM_ID = `0x${"33".repeat(32)}` as `0x${string}`;
+const ACCOUNT_ID = "2468101214";
 const STATE = "A".repeat(43);
 const CHALLENGE = "B".repeat(43);
 const NOW = 1_800_000_000;
@@ -24,28 +26,32 @@ const SIGNER = { signMessage: mock(async () => SIGNATURE) };
 
 describe("Telegram verification client contract", () => {
   test("accepts a complete callback and binds community references to the count", () => {
-    const valid = parseTelegramVerificationSearch({
-      status: "submitted",
-      subject: DID,
-      transaction: TX_HASH,
-      claim: CLAIM_ID,
-      output: "1",
-      communityClaim: COMMUNITY_CLAIM_ID,
-      communityOutput: "2",
-      communities: "1",
-      account: "1234123412341234123",
-      name: "Vellum Builder",
-      username: "vellum_builder",
-    });
+    const valid = parseTelegramVerificationSearch(
+      defaultParseSearch(
+        `?${new URLSearchParams({
+          status: "submitted",
+          subject: DID,
+          transaction: TX_HASH,
+          claim: CLAIM_ID,
+          output: "0",
+          communityClaim: COMMUNITY_CLAIM_ID,
+          communityOutput: "1",
+          communities: "1",
+          account: ACCOUNT_ID,
+          name: "Vellum Builder",
+          username: "vellum_builder",
+        })}`,
+      ),
+    );
     expect(telegramSubmissionFromSearch(valid)).toEqual({
       subject: DID,
       transactionHash: TX_HASH,
       claimId: CLAIM_ID,
-      outputIndex: 1,
+      outputIndex: 0,
       communityClaimId: COMMUNITY_CLAIM_ID,
-      communityOutputIndex: 2,
+      communityOutputIndex: 1,
       communityCount: 1,
-      accountId: "1234123412341234123",
+      accountId: ACCOUNT_ID,
       displayName: "Vellum Builder",
       username: "vellum_builder",
     });
@@ -62,7 +68,7 @@ describe("Telegram verification client contract", () => {
       claim: CLAIM_ID,
       output: "1",
       communities: "0",
-      account: "1234123412341234123",
+      account: ACCOUNT_ID,
       name: "Private Builder",
     });
 
@@ -79,7 +85,7 @@ describe("Telegram verification client contract", () => {
         status: ["submitted"],
         subject: "not-a-did",
         transaction: "javascript:alert(1)",
-        account: "0",
+        account: Number.MAX_SAFE_INTEGER + 1,
         name: " Builder ",
         username: "bad name",
         communities: "17",

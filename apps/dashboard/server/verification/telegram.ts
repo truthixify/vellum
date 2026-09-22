@@ -319,8 +319,7 @@ async function fetchChatMember(
   community: TrustedTelegramCommunity,
   config: TelegramOAuthConfig,
   dependencies: TelegramVerifierDependencies,
-  allowMissing: boolean,
-): Promise<Record<string, unknown> | undefined> {
+): Promise<Record<string, unknown>> {
   const response = await providerFetch(
     dependencies.fetch,
     `${TELEGRAM_BOT_API_URL}/bot${config.botToken}/getChatMember`,
@@ -335,7 +334,6 @@ async function fetchChatMember(
     },
   );
   const body = await jsonBody(response);
-  if (allowMissing && response.status === 400) return undefined;
   if (!response.ok || body.ok !== true) {
     const limited = response.status === 429;
     throw new TelegramOAuthError(
@@ -364,9 +362,7 @@ function memberUserId(member: Record<string, unknown>): string | undefined {
       : undefined;
   return typeof user?.id === "number" && Number.isSafeInteger(user.id) && user.id > 0
     ? String(user.id)
-    : typeof user?.id === "string" && USER_ID_PATTERN.test(user.id)
-      ? user.id
-      : undefined;
+    : undefined;
 }
 
 function membershipRole(
@@ -391,9 +387,8 @@ async function fetchCommunityMembership(
   config: TelegramOAuthConfig,
   dependencies: TelegramVerifierDependencies,
 ): Promise<TelegramCommunityMembership | undefined> {
-  const bot = await fetchChatMember(config.botUserId, community, config, dependencies, false);
+  const bot = await fetchChatMember(config.botUserId, community, config, dependencies);
   if (
-    !bot ||
     memberUserId(bot) !== config.botUserId ||
     (bot.status !== "creator" && bot.status !== "administrator")
   ) {
@@ -404,8 +399,7 @@ async function fetchCommunityMembership(
     );
   }
 
-  const member = await fetchChatMember(userId, community, config, dependencies, true);
-  if (!member) return undefined;
+  const member = await fetchChatMember(userId, community, config, dependencies);
   if (memberUserId(member) !== userId) {
     throw new TelegramOAuthError(
       "provider_unavailable",
@@ -450,6 +444,12 @@ function isDisplayName(value: unknown): value is string {
       return code > 0x1f && code !== 0x7f;
     })
   );
+}
+
+function telegramUserId(value: unknown): string | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? String(value)
+    : undefined;
 }
 
 export async function verifyTelegramAuthorization(
@@ -523,9 +523,11 @@ export async function verifyTelegramAuthorization(
     );
   }
 
+  const accountId = telegramUserId(payload.id);
   if (
     typeof payload.sub !== "string" ||
     !USER_ID_PATTERN.test(payload.sub) ||
+    !accountId ||
     !isDisplayName(payload.name) ||
     (payload.preferred_username !== undefined &&
       (typeof payload.preferred_username !== "string" ||
@@ -539,7 +541,7 @@ export async function verifyTelegramAuthorization(
   }
 
   const account = {
-    id: payload.sub,
+    id: accountId,
     displayName: payload.name,
     ...(payload.preferred_username ? { username: payload.preferred_username } : {}),
   };

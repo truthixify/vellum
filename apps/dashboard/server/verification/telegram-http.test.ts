@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { defaultParseSearch } from "@tanstack/react-router";
 
 import type { ClaimIssuanceResult } from "./contracts";
 import { MemoryVerificationCoordinator } from "./coordination";
@@ -14,7 +15,8 @@ import type { TelegramOAuthEnvironment } from "./telegram";
 const SUBJECT_DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 const NOW = 1_800_000_000;
 const CONTROLLER_LOCK_HASH = `0x${"44".repeat(32)}` as const;
-const ACCOUNT_ID = "1234123412341234123";
+const OIDC_SUBJECT = "1234123412341234123";
+const ACCOUNT_ID = "2468101214";
 const BOT_USER_ID = "987654321";
 const CHAT_ID = "-1006577996900705";
 const TRANSACTION_HASH = `0x${"11".repeat(32)}`;
@@ -35,12 +37,12 @@ const ISSUANCE: ClaimIssuanceResult = {
   payer: "issuer",
   transactionHash: TRANSACTION_HASH,
   claimId: `0x${"22".repeat(32)}`,
-  outputIndex: 1,
+  outputIndex: 0,
 };
 const COMMUNITY_ISSUANCE: ClaimIssuanceResult = {
   ...ISSUANCE,
   claimId: `0x${"23".repeat(32)}`,
-  outputIndex: 2,
+  outputIndex: 1,
 };
 const SUBJECT_PROOF = {
   challenge: "signed-challenge",
@@ -71,7 +73,7 @@ function dependencies() {
         ok: true,
         result: {
           status: userId === BOT_USER_ID ? "administrator" : "member",
-          user: { id: userId },
+          user: { id: Number(userId) },
         },
       });
     }),
@@ -90,7 +92,8 @@ function dependencies() {
     })),
     verifySubjectProof: mock(async () => CONTROLLER_LOCK_HASH),
     verifyIdToken: mock(async () => ({
-      sub: ACCOUNT_ID,
+      sub: OIDC_SUBJECT,
+      id: Number(ACCOUNT_ID),
       name: "Vellum Builder",
       preferred_username: "vellum_builder",
     })),
@@ -166,20 +169,24 @@ describe("Telegram OAuth HTTP boundary", () => {
       deps,
     );
     const location = new URL(response.headers.get("location") ?? "");
+    const search = defaultParseSearch(location.search);
 
     expect(response.status).toBe(303);
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
     expect(location.pathname).toBe("/verify/telegram");
-    expect(location.searchParams.get("status")).toBe("submitted");
-    expect(location.searchParams.get("subject")).toBe(SUBJECT_DID);
-    expect(location.searchParams.get("transaction")).toBe(TRANSACTION_HASH);
-    expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
-    expect(location.searchParams.get("communityClaim")).toBe(COMMUNITY_ISSUANCE.claimId);
-    expect(location.searchParams.get("communityOutput")).toBe("2");
-    expect(location.searchParams.get("communities")).toBe("1");
-    expect(location.searchParams.get("account")).toBe(ACCOUNT_ID);
-    expect(location.searchParams.get("name")).toBe("Vellum Builder");
-    expect(location.searchParams.get("username")).toBe("vellum_builder");
+    expect(search).toMatchObject({
+      status: "submitted",
+      subject: SUBJECT_DID,
+      transaction: TRANSACTION_HASH,
+      claim: ISSUANCE.claimId,
+      output: 0,
+      communityClaim: COMMUNITY_ISSUANCE.claimId,
+      communityOutput: 1,
+      communities: 1,
+      account: ACCOUNT_ID,
+      name: "Vellum Builder",
+      username: "vellum_builder",
+    });
     expect(deps.assertSubjectController).toHaveBeenCalledWith(
       { did: SUBJECT_DID },
       CONTROLLER_LOCK_HASH,

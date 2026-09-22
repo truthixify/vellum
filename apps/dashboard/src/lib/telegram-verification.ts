@@ -70,6 +70,15 @@ function nonnegativeInteger(value: unknown): number | undefined {
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+function telegramAccountId(value: unknown): string | undefined {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value > 0 ? String(value) : undefined;
+  }
+  if (typeof value !== "string" || !TELEGRAM_USER_ID_PATTERN.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 && String(parsed) === value ? value : undefined;
+}
+
 function isDisplayName(value: string): boolean {
   return (
     value.length >= 1 &&
@@ -97,7 +106,7 @@ export function parseTelegramVerificationSearch(
   const communityClaim = scalar(search.communityClaim);
   const communityOutput = nonnegativeInteger(search.communityOutput);
   const communities = nonnegativeInteger(search.communities);
-  const account = scalar(search.account);
+  const account = telegramAccountId(search.account);
   const name = scalar(search.name);
   const username = scalar(search.username);
   const code = scalar(search.code);
