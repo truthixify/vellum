@@ -40,7 +40,7 @@ function GovernancePage() {
         <section>
           <h2>Policy</h2>
           <span className="mono governance-id">
-            policy:example-community/v1 - reads vellum.reputation.v2
+            policy:example-community/v1 - reads vellum.reputation.v3
           </span>
           <dl className="governance-rules">
             <div>

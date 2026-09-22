@@ -18,11 +18,11 @@ carried between apps instead of disappearing into separate databases.
 [Website](https://usevellum.xyz) | [Dashboard](https://dashboard.usevellum.xyz) |
 [Public roadmap](https://github.com/users/truthixify/projects/2)
 
-> **Where things stand:** Vellum's identity tools, Claim contracts, GitHub verification, and a
-> deterministic reputation policy are live on CKB Testnet. The Discord verification flow is
-> implemented and awaits production OAuth and community configuration. The dashboard reads the
-> public scoring service and shows the score together with the evidence that produced it. Activity
-> and governance remain separate demonstration surfaces.
+> **Where things stand:** Vellum's identity tools, Claim contracts, GitHub and Discord verification,
+> and a deterministic reputation policy are live on CKB Testnet. GitHub claims can now carry
+> accepted work from important CKB repositories into the Technical and Contribution categories.
+> The dashboard reads the public scoring service and shows the score together with the artifacts
+> and rules that produced it. Activity and governance remain separate demonstration surfaces.
 
 ## Why Vellum
 
@@ -47,13 +47,13 @@ without requiring those products to share one backend.
 
 ## What exists today
 
-| Part                 | Status                          | What that means                                                                                                                                        |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `did:ckb` identity   | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                                                                 |
-| Vellum website       | Live                            | The public site explains the project and includes a Testnet DID resolver.                                                                              |
-| Vellum dashboard     | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable.                                        |
-| Reputation protocol  | Live on CKB Testnet             | Claim contracts, the core SDK, GitHub verification, and the versioned scoring API are available. Discord verification awaits deployment configuration. |
-| Reputation dashboard | Live on CKB Testnet             | Scores, categories, contributing evidence, exclusions, and share cards come from the scoring service.                                                  |
+| Part                 | Status                          | What that means                                                                                                                     |
+| -------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `did:ckb` identity   | Live on CKB Testnet and Mainnet | People can establish and manage a durable identity through wallet-signed transactions.                                              |
+| Vellum website       | Live                            | The public site explains the project and includes a Testnet DID resolver.                                                           |
+| Vellum dashboard     | Live                            | The dashboard provides the wallet-connected identity experience and defaults to Testnet. Mainnet is selectable.                     |
+| Reputation protocol  | Live on CKB Testnet             | Claim contracts, the core SDK, GitHub and Discord verification, contribution evidence, and the versioned scoring API are available. |
+| Reputation dashboard | Live on CKB Testnet             | Scores, categories, contributing evidence, exclusions, and share cards come from the scoring service.                               |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
 the identity operations used by Vellum. The Vellum SDK builds on those primitives with Claim Cell
@@ -64,11 +64,12 @@ without depending on the Vellum interface.
 
 The public roadmap moves from the primitive to real use:
 
-1. Add evidence that can substantiate technical work and ecosystem contribution.
-2. Turn those claims into public builder profiles and connect CKBoost quest completions as a real
+1. Turn contribution claims into richer public builder profiles and connect CKBoost quest
+   completions as a real
    participation signal.
-3. Show how other projects can use the record through claim issuance tools and a small governance
+2. Show how other projects can use the record through claim issuance tools and a small governance
    gating reference.
+3. Expand the reviewed issuer and repository ecosystem without weakening the evidence model.
 
 The work is deliberately testnet-first. A formal audit and promotion of the reputation protocol to
 Mainnet are separate decisions, not implied by completing this roadmap.

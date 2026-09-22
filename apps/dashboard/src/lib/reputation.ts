@@ -6,6 +6,10 @@ import {
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_ARTIFACT_LIMIT,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_WINDOW_SECONDS,
   discordSnowflakeTimestamp,
 } from "@vellum/schemas";
 
@@ -148,6 +152,91 @@ const discordCommunitySchema = z
     }
   });
 
+const githubNodeIdSchema = z.string().regex(/^[A-Za-z0-9_=-]{4,128}$/);
+const githubRepositorySchema = z
+  .string()
+  .regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38}[A-Za-z0-9])?\/[A-Za-z0-9_.-]{1,100}$/);
+const githubContributionArtifactSchema = z
+  .object({
+    artifact_id: githubNodeIdSchema,
+    changed_files: z.number().int().positive().max(3_000),
+    classification: z.enum(["ecosystem", "technical"]),
+    kind: z.enum(["merged_pull_request", "pull_request_review"]),
+    merge_commit_sha: z.string().regex(/^[0-9a-f]{40}$/),
+    merged_at: z.number().int().positive(),
+    number: z.number().int().positive(),
+    occurred_at: z.number().int().positive(),
+    pull_request_id: githubNodeIdSchema,
+    repository: githubRepositorySchema,
+    repository_id: githubNodeIdSchema,
+    title: z.string().min(1).max(256),
+    url: z.string().url(),
+    contributions: z.array(contributionSchema),
+  })
+  .strict();
+
+type GithubContributionArtifactResponse = z.infer<typeof githubContributionArtifactSchema>;
+
+const githubArtifactRules = {
+  "merged_pull_request:technical": [
+    {
+      category: "technical",
+      points: 60,
+      ruleId: "github-merged-technical-pr.v3",
+    },
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+  ],
+  "merged_pull_request:ecosystem": [
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+  ],
+  "pull_request_review:technical": [
+    { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+  ],
+  "pull_request_review:ecosystem": [
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+  ],
+} as const;
+
+function githubArtifactContributionsAreConsistent(
+  artifacts: readonly GithubContributionArtifactResponse[],
+): boolean {
+  const awarded = { technical: 0, contribution: 0 };
+
+  return artifacts.every((artifact) => {
+    const key = `${artifact.kind}:${artifact.classification}` as keyof typeof githubArtifactRules;
+    const expected = githubArtifactRules[key].flatMap((rule) => {
+      const points = Math.min(
+        rule.points,
+        categoryMaximums[rule.category] - awarded[rule.category],
+      );
+      awarded[rule.category] += points;
+      return points > 0 ? [{ category: rule.category, points, ruleId: rule.ruleId }] : [];
+    });
+    return (
+      artifact.contributions.length === expected.length &&
+      artifact.contributions.every(
+        (contribution, index) =>
+          contribution.category === expected[index].category &&
+          contribution.points === expected[index].points &&
+          contribution.ruleId === expected[index].ruleId,
+      )
+    );
+  });
+}
+
+const githubContributionsSchema = z
+  .object({
+    registryVersion: z.literal("ckb.public-contributions.v1"),
+    windowStartedAt: z.number().int().positive(),
+    eligibleArtifactCount: z.number().int().positive(),
+    artifacts: z
+      .array(githubContributionArtifactSchema)
+      .min(1)
+      .max(GITHUB_CONTRIBUTION_ARTIFACT_LIMIT),
+  })
+  .strict();
+
 const evidenceFields = {
   claim: acceptedClaimReferenceSchema,
   issuerDid: z.string().refine(isDidCkb),
@@ -162,6 +251,16 @@ const evidenceSchema = z.discriminatedUnion("schemaId", [
       schemaId: z.literal(GITHUB_CLAIM_SCHEMA_ID),
       schemaHash: z.literal(GITHUB_CLAIM_SCHEMA_HASH),
       account: githubAccountSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH),
+      account: githubAccountSchema,
+      supportingClaims: z.array(acceptedClaimReferenceSchema).length(1),
+      githubContributions: githubContributionsSchema,
     })
     .strict(),
   z
@@ -191,7 +290,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v2"),
+    policyVersion: z.literal("vellum.reputation.v3"),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -269,6 +368,68 @@ const availableReputationSchema = z
         )
       );
     });
+    const githubEvidenceIsConsistent = value.evidence.every((evidence) => {
+      if (evidence.schemaId !== GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID) return true;
+      const supporting = evidence.supportingClaims[0];
+      const identity = evidenceByReference.get(
+        `${supporting.transactionHash}:${supporting.outputIndex}`,
+      );
+      const artifactIds = new Set<string>();
+      const pullRequestIds = new Set<string>();
+      const artifactTotals = new Map<string, number>();
+      let previous: (typeof evidence.githubContributions.artifacts)[number] | undefined;
+      const artifactsAreConsistent = evidence.githubContributions.artifacts.every((artifact) => {
+        for (const contribution of artifact.contributions) {
+          const key = `${contribution.category}:${contribution.ruleId}`;
+          artifactTotals.set(key, (artifactTotals.get(key) ?? 0) + contribution.points);
+        }
+        const ordered =
+          !previous ||
+          previous.occurred_at > artifact.occurred_at ||
+          (previous.occurred_at === artifact.occurred_at &&
+            previous.artifact_id < artifact.artifact_id);
+        previous = artifact;
+        const unique =
+          !artifactIds.has(artifact.artifact_id) && !pullRequestIds.has(artifact.pull_request_id);
+        artifactIds.add(artifact.artifact_id);
+        pullRequestIds.add(artifact.pull_request_id);
+        return (
+          ordered &&
+          unique &&
+          artifact.url === `https://github.com/${artifact.repository}/pull/${artifact.number}` &&
+          artifact.occurred_at >= evidence.githubContributions.windowStartedAt &&
+          artifact.occurred_at <= artifact.merged_at &&
+          artifact.merged_at <= evidence.issuedAt &&
+          (artifact.kind === "merged_pull_request"
+            ? artifact.artifact_id === artifact.pull_request_id &&
+              artifact.occurred_at === artifact.merged_at
+            : artifact.artifact_id !== artifact.pull_request_id) &&
+          artifact.contributions.every(
+            (contribution) =>
+              contribution.points > 0 &&
+              (contribution.category === "technical" || contribution.category === "contribution"),
+          )
+        );
+      });
+      const evidenceTotals = new Map<string, number>();
+      for (const contribution of evidence.contributions) {
+        const key = `${contribution.category}:${contribution.ruleId}`;
+        evidenceTotals.set(key, (evidenceTotals.get(key) ?? 0) + contribution.points);
+      }
+      return (
+        identity?.schemaId === GITHUB_CLAIM_SCHEMA_ID &&
+        identity.claim.claimId === supporting.claimId &&
+        identity.account.id === evidence.account.id &&
+        evidence.githubContributions.windowStartedAt ===
+          evidence.issuedAt - GITHUB_CONTRIBUTION_WINDOW_SECONDS &&
+        evidence.githubContributions.eligibleArtifactCount >=
+          evidence.githubContributions.artifacts.length &&
+        artifactsAreConsistent &&
+        githubArtifactContributionsAreConsistent(evidence.githubContributions.artifacts) &&
+        evidenceTotals.size === artifactTotals.size &&
+        [...evidenceTotals].every(([key, points]) => artifactTotals.get(key) === points)
+      );
+    });
     if (
       value.overall.score > value.overall.maximum ||
       value.categories.some((category) => category.score > category.maximum) ||
@@ -281,6 +442,7 @@ const availableReputationSchema = z
       categoryTotal !== value.overall.score ||
       evidenceByReference.size !== value.evidence.length ||
       !communityEvidenceIsConsistent ||
+      !githubEvidenceIsConsistent ||
       value.evidence.some(
         (evidence) =>
           evidence.issuedAt > value.evaluatedAt || evidence.account.verifiedAt > value.evaluatedAt,
@@ -299,7 +461,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v2"),
+  policyVersion: z.literal("vellum.reputation.v3"),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),
