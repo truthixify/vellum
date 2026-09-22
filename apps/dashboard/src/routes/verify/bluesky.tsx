@@ -48,6 +48,12 @@ export const Route = createFileRoute("/verify/bluesky")({
 const TESTNET_CLIENT = new ccc.ClientPublicTestnet();
 const TESTNET_EXPLORER = "https://testnet.explorer.nervos.org";
 const BLUESKY_APP_PASSWORD_PATTERN = /^[a-z0-9]{4}(?:-[a-z0-9]{4}){3}$/;
+const BLUESKY_USERNAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+function normalizeHandleInput(value: string): string {
+  const handle = value.trim().replace(/^@/, "").toLowerCase();
+  return BLUESKY_USERNAME_PATTERN.test(handle) ? `${handle}.bsky.social` : handle;
+}
 
 function shorten(value: string, start = 16, end = 8): string {
   return value.length > start + end + 3 ? `${value.slice(0, start)}...${value.slice(-end)}` : value;
@@ -265,11 +271,12 @@ function ConnectionPanel({
     onExistingClaimsChange(existingClaims.data?.length ?? 0);
   }, [existingClaims.data, onExistingClaimsChange, selectedDid]);
 
-  const normalizedHandle = handle.trim().replace(/^@/, "").toLowerCase();
+  const normalizedHandle = normalizeHandleInput(handle);
+  const normalizedAppPassword = appPassword.trim().toLowerCase();
   const canSubmit =
     !!selectedDid &&
-    BLUESKY_HANDLE_PATTERN.test(normalizedHandle) &&
-    BLUESKY_APP_PASSWORD_PATTERN.test(appPassword) &&
+    handle.trim().length > 0 &&
+    appPassword.trim().length > 0 &&
     !!formSpec.data &&
     !!issuer.data &&
     !submitting;
@@ -278,10 +285,18 @@ function ConnectionPanel({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!signer || !canSubmit) return;
+    if (!BLUESKY_HANDLE_PATTERN.test(normalizedHandle)) {
+      setRequestError("Enter a valid Bluesky handle, such as name.bsky.social.");
+      return;
+    }
+    if (!BLUESKY_APP_PASSWORD_PATTERN.test(normalizedAppPassword)) {
+      setRequestError("Use a Bluesky app password in the format xxxx-xxxx-xxxx-xxxx.");
+      return;
+    }
     setSubmitting(true);
     setRequestError(undefined);
     setRetryAt(undefined);
-    const password = appPassword;
+    const password = normalizedAppPassword;
     setAppPassword("");
     try {
       const result = await submitBlueskyVerification(
@@ -465,9 +480,7 @@ function ConnectionPanel({
                       className="account-verification-input"
                       type={showPassword ? "text" : "password"}
                       autoComplete="off"
-                      minLength={19}
-                      maxLength={19}
-                      pattern="[a-z0-9]{4}(?:-[a-z0-9]{4}){3}"
+                      maxLength={128}
                       spellCheck={false}
                       aria-describedby="bluesky-app-password-help"
                       value={appPassword}
