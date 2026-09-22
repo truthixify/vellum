@@ -28,7 +28,7 @@ export type IssuanceReservationResult =
   | { ok: false; retryAt: number };
 
 export interface VerificationCoordinator {
-  consumeChallenge(id: string, expiresAt: number, now: number): Promise<boolean>;
+  consumeOnce(id: string, expiresAt: number, now: number): Promise<boolean>;
   reserveIssuance(
     platform: VerificationPlatform,
     accountId: string,
@@ -154,7 +154,7 @@ export class RedisVerificationCoordinator implements VerificationCoordinator {
     this.redis = new RedisRest(coordinationConfig(environment), fetchImplementation);
   }
 
-  async consumeChallenge(id: string, expiresAt: number, now: number): Promise<boolean> {
+  async consumeOnce(id: string, expiresAt: number, now: number): Promise<boolean> {
     assertTimestamp(expiresAt, "Challenge expiry");
     assertTimestamp(now, "Current time");
     const ttl = expiresAt - now;
@@ -257,7 +257,7 @@ export class MemoryVerificationCoordinator implements VerificationCoordinator {
     return entry;
   }
 
-  async consumeChallenge(id: string, expiresAt: number, now: number): Promise<boolean> {
+  async consumeOnce(id: string, expiresAt: number, now: number): Promise<boolean> {
     const key = `${CHALLENGE_PREFIX}:${digest(id)}`;
     if (expiresAt <= now || this.get(key, now)) return false;
     this.values.set(key, { expiresAt, value: "consumed" });

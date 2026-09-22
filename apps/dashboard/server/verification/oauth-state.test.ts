@@ -1,18 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 
-import { DiscordOAuthError, GithubOAuthError, OAuthConfigurationError } from "./errors";
+import {
+  DiscordOAuthError,
+  GithubOAuthError,
+  OAuthConfigurationError,
+  TelegramOAuthError,
+} from "./errors";
 import {
   DISCORD_OAUTH_COOKIE_NAME,
   DISCORD_OAUTH_STATE_TTL_SECONDS,
   GITHUB_OAUTH_COOKIE_NAME,
   GITHUB_OAUTH_STATE_TTL_SECONDS,
+  TELEGRAM_OAUTH_COOKIE_NAME,
+  TELEGRAM_OAUTH_STATE_TTL_SECONDS,
+  clearTelegramOAuthCookie,
   clearGithubOAuthCookie,
   clearDiscordOAuthCookie,
   consumeDiscordOAuthState,
   consumeGithubOAuthState,
   createGithubOAuthState,
   createDiscordOAuthState,
+  consumeTelegramOAuthState,
+  createTelegramOAuthState,
 } from "./oauth-state";
 
 const SUBJECT = { did: "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp" } as const;
@@ -122,6 +132,48 @@ describe("Discord OAuth state", () => {
     ).toThrow(DiscordOAuthError);
     expect(clearDiscordOAuthCookie(true)).toBe(
       `${DISCORD_OAUTH_COOKIE_NAME}=; Path=/api/verify/discord/callback; HttpOnly; SameSite=Lax; Max-Age=0; Secure`,
+    );
+  });
+});
+
+describe("Telegram OAuth state", () => {
+  test("binds a five-minute PKCE state to the Telegram callback cookie", () => {
+    const created = createTelegramOAuthState(
+      SUBJECT,
+      CONTROLLER_LOCK_HASH,
+      SECRET,
+      NOW,
+      true,
+      NONCE,
+    );
+    const consumed = consumeTelegramOAuthState(
+      requestCookie(created.cookie),
+      created.state,
+      SECRET,
+      NOW + 1,
+    );
+
+    expect(created.expiresAt).toBe(NOW + TELEGRAM_OAUTH_STATE_TTL_SECONDS);
+    expect(created.cookie).toContain(`${TELEGRAM_OAUTH_COOKIE_NAME}=`);
+    expect(created.cookie).toContain("Path=/api/verify/telegram/callback");
+    expect(consumed).toMatchObject({
+      controllerLockHash: CONTROLLER_LOCK_HASH,
+      expiresAt: created.expiresAt,
+      subject: SUBJECT,
+    });
+    expect(created.codeChallenge).toBe(
+      createHash("sha256").update(consumed.codeVerifier, "ascii").digest("base64url"),
+    );
+    expect(() =>
+      consumeTelegramOAuthState(
+        requestCookie(created.cookie),
+        created.state,
+        SECRET,
+        created.expiresAt,
+      ),
+    ).toThrow(TelegramOAuthError);
+    expect(clearTelegramOAuthCookie(true)).toBe(
+      `${TELEGRAM_OAUTH_COOKIE_NAME}=; Path=/api/verify/telegram/callback; HttpOnly; SameSite=Lax; Max-Age=0; Secure`,
     );
   });
 });

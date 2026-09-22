@@ -8,8 +8,8 @@ describe("verification coordination", () => {
   test("consumes challenges once and releases failed issuance reservations", async () => {
     const coordinator = new MemoryVerificationCoordinator();
 
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).resolves.toBe(true);
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).resolves.toBe(false);
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).resolves.toBe(true);
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).resolves.toBe(false);
 
     const first = await coordinator.reserveIssuance("github", "account", "did:ckb:subject", NOW);
     expect(first.ok).toBe(true);
@@ -69,7 +69,7 @@ describe("verification coordination", () => {
       async () => Response.json({ error: { message: "unexpected" }, result: "OK" }),
     );
 
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).rejects.toMatchObject({
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).rejects.toMatchObject({
       code: "issuer_unavailable",
     });
   });

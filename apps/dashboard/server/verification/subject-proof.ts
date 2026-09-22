@@ -292,7 +292,7 @@ export async function verifySubjectProof(
     verified = false;
   }
   if (!verified) proofError();
-  if (!(await coordinator.consumeChallenge(payload.nonce, payload.expiresAt, now))) {
+  if (!(await coordinator.consumeOnce(payload.nonce, payload.expiresAt, now))) {
     proofError("The wallet verification challenge expired or has already been used.");
   }
   return payload.controllerLockHash;

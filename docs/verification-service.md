@@ -7,9 +7,9 @@ issuer DID controller, and submits it to CKB Testnet. Redis-backed coordination 
 replay, repeated subsidized issuance, and concurrent use of the issuer's funding Cell. There is no
 detached claim signature.
 
-GitHub and Discord use OAuth-specific routes because authorization codes must never pass through
-the generic proof endpoint. Telegram and Bluesky still return a typed `501` response until their
-verification adapters are implemented.
+GitHub, Discord, and Telegram use OAuth-specific routes because authorization codes must never pass
+through the generic proof endpoint. Bluesky still returns a typed `501` response until its
+verification adapter is implemented.
 
 ## Endpoints
 
@@ -87,6 +87,25 @@ Standard Discord web OAuth does not expose a member's channel-reading history or
 The service therefore proves recognized server membership and age, not participation in unrelated
 servers or private channels.
 
+Telegram uses the same wallet challenge and signed start sequence under
+`/api/verify/telegram`. The authorization request uses Telegram OpenID Connect with the `openid`
+and `profile` scopes, Authorization Code flow, and S256 PKCE. Telegram returns to
+`GET /api/verify/telegram/callback`, where the service validates the one-time subject-bound state,
+exchanges the code server-side, and verifies the ID token against Telegram's published signing
+keys, issuer, audience, timestamps, and supported signing algorithms.
+
+Every successful Telegram verification issues `vellum.social.telegram.v1`. The claim contains the
+stable Telegram user ID, display name, verification time, and the public username and profile URL
+when the account has one. The access credential is never returned to the browser or stored.
+
+The service also checks the account against each explicitly configured Nervos group or channel by
+calling the Telegram Bot API. It first confirms that the configured Vellum bot is an administrator
+in that chat; without that guarantee, membership verification fails closed. When at least one
+current membership is found, the same transaction issues `vellum.community.telegram.v1` with the
+configured community label, chat type, and the member's current role. The community claim expires
+after 30 days. Telegram does not expose a member join timestamp through this API, so the claim and
+score do not imply membership age.
+
 `POST /api/verify/:platform` is the common boundary for non-OAuth adapters and accepts at most 16
 KiB of `application/json`:
 
@@ -103,8 +122,8 @@ KiB of `application/json`:
 
 `subject` may instead contain a complete CKB `lock` object with `codeHash`, `hashType`, and `args`.
 The path and body platform must match. Unknown fields, malformed CKB values, non-JSON proof values,
-and invalid timestamps are rejected before verification or issuance. Direct GitHub and Discord
-requests are rejected and must use their OAuth start routes.
+and invalid timestamps are rejected before verification or issuance. Direct GitHub, Discord, and
+Telegram requests are rejected and must use their OAuth start routes.
 
 Errors always use the same envelope:
 
@@ -140,8 +159,20 @@ The Vercel dashboard project needs these environment variables:
   roles. Each entry has `guildId`, `name`, and a `roles` array containing `roleId` and `name`. The
   verifier stays unavailable when this allowlist is missing or empty so configuration mistakes do
   not appear as an absence of community history.
+- `TELEGRAM_CLIENT_ID` and `TELEGRAM_CLIENT_SECRET`: OpenID Connect credentials shown by BotFather
+  for the Vellum bot's Login Widget configuration.
+- `TELEGRAM_BOT_TOKEN`: the Vellum bot token used only by the server to query configured chat
+  membership. The bot must be an administrator in every configured chat.
+- `TELEGRAM_OAUTH_CALLBACK_URL`: the exact callback URL ending in
+  `/api/verify/telegram/callback`. HTTPS is required outside loopback development and the URL must
+  be registered with BotFather.
+- `TELEGRAM_TRUSTED_COMMUNITIES`: a non-empty JSON array of recognized Nervos chats. Each entry has
+  a negative numeric `chatId`, a public `name`, and `type` set to `channel`, `group`, or
+  `supergroup`. Missing, empty, duplicate, or malformed configuration keeps verification
+  unavailable.
 - `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
-  short-lived wallet challenges and OAuth state cookies, and to derive GitHub's PKCE verifier.
+  short-lived wallet challenges and OAuth state cookies, and to derive GitHub and Telegram PKCE
+  verifiers.
 - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: server-side credentials from an Upstash
   Redis integration. They are required in deployed environments for challenge replay protection,
   weekly account and DID cooldowns, and the issuer transaction lease.
@@ -160,6 +191,22 @@ For example:
 
 Discord requires the production redirect URL to be registered in the application's OAuth settings.
 No bot token is used by this flow.
+
+For Telegram, a trusted-chat allowlist looks like:
+
+```json
+[
+  {
+    "chatId": "-1001234567890",
+    "name": "Nervos Network",
+    "type": "supergroup"
+  }
+]
+```
+
+Replace the example ID with the chat's exact Bot API ID. Register the production callback URL in
+BotFather and add the same Vellum bot as an administrator in every listed chat before enabling the
+flow.
 
 The repository's `.env.example` intentionally leaves the credential blank. Local credentials belong
 in an ignored `.env.local` file. The service refuses issuance when the credential is absent,

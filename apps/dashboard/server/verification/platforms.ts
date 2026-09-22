@@ -30,6 +30,12 @@ export const platformVerifiers: PlatformVerifierRegistry = {
       "Start Discord verification through the OAuth endpoint.",
     );
   },
-  telegram: unavailable("telegram"),
+  telegram: async () => {
+    throw new VerificationServiceError(
+      "invalid_request",
+      400,
+      "Start Telegram verification through the OAuth endpoint.",
+    );
+  },
   bluesky: unavailable("bluesky"),
 };
