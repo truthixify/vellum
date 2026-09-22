@@ -1,4 +1,5 @@
 const SECRET_HEX_PATTERN = /0x[0-9a-f]{64}/gi;
+const BLUESKY_APP_PASSWORD_PATTERN = /\b[a-z0-9]{4}(?:-[a-z0-9]{4}){3}\b/gi;
 
 function replaceControlCharacters(value: string): string {
   return [...value]
@@ -11,14 +12,18 @@ function replaceControlCharacters(value: string): string {
 
 function safeMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  return replaceControlCharacters(message.replace(SECRET_HEX_PATTERN, "[redacted]")).slice(0, 512);
+  return replaceControlCharacters(
+    message
+      .replace(SECRET_HEX_PATTERN, "[redacted]")
+      .replace(BLUESKY_APP_PASSWORD_PATTERN, "[redacted]"),
+  ).slice(0, 512);
 }
 
 export type VerificationFailure = {
   error: unknown;
-  platform: "github" | "discord" | "telegram";
+  platform: "github" | "discord" | "telegram" | "bluesky";
   requestId: string;
-  stage: "challenge" | "start" | "provider" | "issuance" | "callback";
+  stage: "challenge" | "start" | "provider" | "issuance" | "callback" | "submit";
 };
 
 export type VerificationFailureLogger = (failure: VerificationFailure) => void;

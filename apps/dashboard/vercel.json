@@ -18,6 +18,10 @@
       "destination": "/api/telegram?action=:action"
     },
     {
+      "source": "/api/verify/bluesky/:action",
+      "destination": "/api/bluesky?action=:action"
+    },
+    {
       "source": "/api/verify/:platform",
       "destination": "/api/verify?platform=:platform"
     },

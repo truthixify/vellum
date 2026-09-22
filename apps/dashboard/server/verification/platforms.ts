@@ -37,5 +37,11 @@ export const platformVerifiers: PlatformVerifierRegistry = {
       "Start Telegram verification through the OAuth endpoint.",
     );
   },
-  bluesky: unavailable("bluesky"),
+  bluesky: async () => {
+    throw new VerificationServiceError(
+      "invalid_request",
+      400,
+      "Start Bluesky verification through the protected submission endpoint.",
+    );
+  },
 };
