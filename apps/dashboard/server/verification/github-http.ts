@@ -515,6 +515,9 @@ async function handleCallback(
     });
   } catch (error) {
     if (error instanceof GithubOAuthError) {
+      if (error.code !== "oauth_denied" && error.code !== "oauth_state_invalid") {
+        dependencies.logFailure({ error, platform: "github", requestId, stage: "provider" });
+      }
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
         code: error.code,

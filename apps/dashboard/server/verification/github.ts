@@ -157,7 +157,8 @@ async function providerFetch(
 function retryTimestamp(response: Response, now: number): number | undefined {
   const retryAfter = response.headers.get("retry-after");
   if (retryAfter && /^\d+$/.test(retryAfter)) {
-    return now + Number(retryAfter);
+    const timestamp = now + Number(retryAfter);
+    if (Number.isSafeInteger(timestamp) && timestamp >= now) return timestamp;
   }
   const reset = response.headers.get("x-ratelimit-reset");
   if (reset && /^\d+$/.test(reset)) {
@@ -167,11 +168,17 @@ function retryTimestamp(response: Response, now: number): number | undefined {
   return undefined;
 }
 
-function throwProviderResponse(response: Response, now: number): never {
-  if (
+function isRateLimited(response: Response): boolean {
+  return (
     response.status === 429 ||
-    (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")
-  ) {
+    (response.status === 403 &&
+      (response.headers.get("x-ratelimit-remaining") === "0" ||
+        response.headers.has("retry-after")))
+  );
+}
+
+function throwProviderResponse(response: Response, now: number): never {
+  if (isRateLimited(response)) {
     throw new GithubOAuthError(
       "provider_rate_limited",
       429,
@@ -309,10 +316,7 @@ async function revokeGithubCredentials(
     },
   );
   if (response.status === 204 || response.status === 404) return;
-  if (
-    response.status === 429 ||
-    (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")
-  ) {
+  if (isRateLimited(response)) {
     throw new GithubOAuthError(
       "credential_revocation_failed",
       502,

@@ -119,6 +119,16 @@ describe("GitHub contribution evidence", () => {
         return headers.authorization === `Bearer ${TOKEN}`;
       }),
     ).toBe(true);
+    expect(
+      fetch.mock.calls.every((call) => {
+        const path = new URL(String(call[0])).pathname;
+        const headers = call[1]?.headers as Record<string, string>;
+        return (
+          headers["x-github-api-version"] ===
+          (/\/pulls\/\d+$/.test(path) ? "2022-11-28" : "2026-03-10")
+        );
+      }),
+    ).toBe(true);
     expect(JSON.stringify(result)).not.toContain(TOKEN);
   });
 
@@ -302,6 +312,20 @@ describe("GitHub contribution evidence", () => {
       }),
     ).rejects.toMatchObject({ code: "provider_rate_limited", retryAt: NOW + 60 });
 
+    const secondaryRateLimited = mock(
+      async () =>
+        new Response(null, {
+          status: 403,
+          headers: { "retry-after": "90", "x-ratelimit-remaining": "42" },
+        }),
+    );
+    await expect(
+      collectGithubContributions(TOKEN, ACCOUNT, NOW, {
+        fetch: secondaryRateLimited,
+        now: () => NOW,
+      }),
+    ).rejects.toMatchObject({ code: "provider_rate_limited", retryAt: NOW + 90 });
+
     const truncated = mock(async (input: string | URL | Request) => {
       const url = new URL(String(input));
       return url.searchParams.get("q")?.startsWith("author:")
@@ -314,6 +338,103 @@ describe("GitHub contribution evidence", () => {
         now: () => NOW,
       }),
     ).rejects.toMatchObject({ code: "provider_unavailable" });
+  });
+
+  test("waits for in-flight provider reads before surfacing a failure", async () => {
+    const slowRepositoryName = "ckb-devrel/slow-fixture";
+    const slowRepositoryUrl = `https://api.github.com/repos/${slowRepositoryName}`;
+    let releaseSlowResponse!: (response: Response) => void;
+    const slowResponse = new Promise<Response>((resolve) => {
+      releaseSlowResponse = resolve;
+    });
+    let slowStarted = false;
+    let slowCompleted = false;
+    const fetch = mock(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.pathname === "/search/issues") {
+        return url.searchParams.get("q")?.startsWith("author:")
+          ? searchResponse(2, [searchItem(), { number: 1, repository_url: slowRepositoryUrl }])
+          : searchResponse(0, []);
+      }
+      if (url.href === REPOSITORY_URL) return Response.json({});
+      if (url.href === slowRepositoryUrl) {
+        slowStarted = true;
+        const response = await slowResponse;
+        slowCompleted = true;
+        return response;
+      }
+      throw new Error(`Unexpected GitHub request: ${url}`);
+    });
+
+    const collection = collectGithubContributions(TOKEN, ACCOUNT, NOW, {
+      fetch,
+      now: () => NOW,
+    });
+    let settled = false;
+    void collection.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(slowStarted).toBe(true);
+    expect(settled).toBe(false);
+    releaseSlowResponse(
+      Response.json({
+        node_id: "R_untrusted_slow_fixture",
+        full_name: slowRepositoryName,
+        fork: false,
+        url: slowRepositoryUrl,
+      }),
+    );
+    await expect(collection).rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(slowCompleted).toBe(true);
+  });
+
+  test("waits for both contribution searches before surfacing a failure", async () => {
+    let releaseReviewSearch!: (response: Response) => void;
+    const reviewSearchResponse = new Promise<Response>((resolve) => {
+      releaseReviewSearch = resolve;
+    });
+    let reviewSearchStarted = false;
+    let reviewSearchCompleted = false;
+    const fetch = mock(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const query = url.searchParams.get("q") ?? "";
+      if (query.startsWith("author:")) return Response.json({});
+      if (query.startsWith("reviewed-by:")) {
+        reviewSearchStarted = true;
+        const response = await reviewSearchResponse;
+        reviewSearchCompleted = true;
+        return response;
+      }
+      throw new Error(`Unexpected GitHub request: ${url}`);
+    });
+
+    const collection = collectGithubContributions(TOKEN, ACCOUNT, NOW, {
+      fetch,
+      now: () => NOW,
+    });
+    let settled = false;
+    void collection.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(reviewSearchStarted).toBe(true);
+    expect(settled).toBe(false);
+    releaseReviewSearch(searchResponse(0, []));
+    await expect(collection).rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(reviewSearchCompleted).toBe(true);
   });
 
   test("drops the oldest artifacts until the canonical Claim data fits", async () => {

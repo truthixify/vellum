@@ -164,12 +164,33 @@ describe("GitHub OAuth verifier", () => {
     );
   });
 
-  test("revokes a token after provider failure and exposes an actionable reset time", async () => {
+  test("rejects bot identities before contribution collection and revokes their token", async () => {
+    const fetch = sequence(
+      tokenResponse(),
+      userResponse({ type: "Bot" }),
+      new Response(null, { status: 204 }),
+    );
+    const dependencies = verifierDependencies(fetch);
+
+    await expect(
+      verifyGithubAuthorization(
+        "one-time-code",
+        CODE_VERIFIER,
+        githubOAuthConfig(ENVIRONMENT),
+        dependencies,
+      ),
+    ).rejects.toMatchObject({ code: "provider_unavailable" });
+    expect(dependencies.collectContributions).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(String(fetch.mock.calls[2][0])).toContain("/applications/client-id-for-tests/token");
+  });
+
+  test("revokes a token after a secondary rate limit and exposes an actionable retry time", async () => {
     const fetch = sequence(
       tokenResponse(),
       new Response(null, {
-        status: 429,
-        headers: { "retry-after": "60" },
+        status: 403,
+        headers: { "retry-after": "60", "x-ratelimit-remaining": "42" },
       }),
       new Response(null, { status: 204 }),
     );

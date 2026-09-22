@@ -17,6 +17,8 @@ import {
 } from "./github-repositories.js";
 
 const GITHUB_API_VERSION = "2026-03-10";
+// The v1 claim records merge_commit_sha, which was removed from newer pull request responses.
+const GITHUB_PULL_REQUEST_API_VERSION = "2022-11-28";
 const GITHUB_API_ORIGIN = "https://api.github.com";
 const PROVIDER_TIMEOUT_MS = 10_000;
 const PAGE_SIZE = 100;
@@ -67,6 +69,11 @@ type PullRequest = {
   url: string;
 };
 
+type GithubFetchOptions = {
+  allowNotFound?: boolean;
+  apiVersion?: string;
+};
+
 type Review = {
   id: string;
   submittedAt: number;
@@ -84,17 +91,32 @@ function timeoutSignal(): AbortSignal {
 
 function retryTimestamp(response: Response, now: number): number | undefined {
   const retryAfter = response.headers.get("retry-after");
-  if (retryAfter && /^\d+$/.test(retryAfter)) return now + Number(retryAfter);
+  if (retryAfter && /^\d+$/.test(retryAfter)) {
+    const timestamp = now + Number(retryAfter);
+    if (Number.isSafeInteger(timestamp) && timestamp >= now) return timestamp;
+  }
   const reset = response.headers.get("x-ratelimit-reset");
-  if (reset && /^\d+$/.test(reset) && Number(reset) > now) return Number(reset);
+  if (reset && /^\d+$/.test(reset)) {
+    const timestamp = Number(reset);
+    if (Number.isSafeInteger(timestamp) && timestamp > now) return timestamp;
+  }
   return undefined;
+}
+
+function isRateLimited(response: Response): boolean {
+  return (
+    response.status === 429 ||
+    (response.status === 403 &&
+      (response.headers.get("x-ratelimit-remaining") === "0" ||
+        response.headers.has("retry-after")))
+  );
 }
 
 async function githubFetch(
   url: string | URL,
   accessToken: string,
   dependencies: GithubContributionDependencies,
-  allowNotFound = false,
+  options: GithubFetchOptions = {},
 ): Promise<Response | undefined> {
   let response: Response;
   try {
@@ -104,7 +126,7 @@ async function githubFetch(
         accept: "application/vnd.github+json",
         authorization: `Bearer ${accessToken}`,
         "user-agent": "Vellum GitHub verifier",
-        "x-github-api-version": GITHUB_API_VERSION,
+        "x-github-api-version": options.apiVersion ?? GITHUB_API_VERSION,
       },
       signal: timeoutSignal(),
     });
@@ -112,11 +134,8 @@ async function githubFetch(
     providerUnavailable("GitHub did not respond while contribution evidence was checked.");
   }
 
-  if (allowNotFound && response.status === 404) return undefined;
-  if (
-    response.status === 429 ||
-    (response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0")
-  ) {
+  if (options.allowNotFound && response.status === 404) return undefined;
+  if (isRateLimited(response)) {
     throw new GithubOAuthError(
       "provider_rate_limited",
       429,
@@ -159,15 +178,25 @@ async function mapConcurrent<T, TResult>(
 ): Promise<TResult[]> {
   const results = new Array<TResult>(values.length);
   let nextIndex = 0;
+  let failed = false;
+  let firstError: unknown;
   await Promise.all(
     Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-      while (nextIndex < values.length) {
+      while (!failed && nextIndex < values.length) {
         const index = nextIndex;
         nextIndex += 1;
-        results[index] = await operation(values[index]);
+        try {
+          results[index] = await operation(values[index]);
+        } catch (error) {
+          if (!failed) {
+            failed = true;
+            firstError = error;
+          }
+        }
       }
     }),
   );
+  if (failed) throw firstError;
   return results;
 }
 
@@ -271,7 +300,7 @@ async function fetchRepository(
   accessToken: string,
   dependencies: GithubContributionDependencies,
 ): Promise<Repository | undefined> {
-  const response = await githubFetch(url, accessToken, dependencies, true);
+  const response = await githubFetch(url, accessToken, dependencies, { allowNotFound: true });
   if (!response) return undefined;
   const value = await objectBody(response);
   if (
@@ -313,7 +342,10 @@ async function fetchPullRequest(
     `${repository.url}/pulls/${candidate.number}`,
     accessToken,
     dependencies,
-    true,
+    {
+      allowNotFound: true,
+      apiVersion: GITHUB_PULL_REQUEST_API_VERSION,
+    },
   );
   if (!response) return undefined;
   const value = await objectBody(response);
@@ -600,7 +632,7 @@ export async function collectGithubContributions(
   const windowStartedAt = verifiedAt - GITHUB_CONTRIBUTION_WINDOW_SECONDS;
   if (windowStartedAt <= 0) providerUnavailable("The GitHub contribution window is invalid.");
   const since = new Date(windowStartedAt * 1_000).toISOString().slice(0, 10);
-  const [authored, reviewed] = await Promise.all([
+  const [authoredResult, reviewedResult] = await Promise.allSettled([
     searchPullRequests(
       `author:${account.login} is:pr is:merged merged:>=${since}`,
       accessToken,
@@ -612,6 +644,10 @@ export async function collectGithubContributions(
       dependencies,
     ),
   ]);
+  if (authoredResult.status === "rejected") throw authoredResult.reason;
+  if (reviewedResult.status === "rejected") throw reviewedResult.reason;
+  const authored = authoredResult.value;
+  const reviewed = reviewedResult.value;
 
   const authoredKeys = new Set(authored.map((item) => `${item.repositoryUrl}#${item.number}`));
   const reviewedKeys = new Set(reviewed.map((item) => `${item.repositoryUrl}#${item.number}`));

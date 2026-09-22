@@ -2,7 +2,11 @@ import { describe, expect, mock, test } from "bun:test";
 import type { GithubContributionClaimPayload } from "@vellum/schemas";
 
 import type { ClaimIssuanceResult, VerificationSubject, VerifiedClaim } from "./contracts";
-import { VerificationCoordinationError, VerificationServiceError } from "./errors";
+import {
+  GithubOAuthError,
+  VerificationCoordinationError,
+  VerificationServiceError,
+} from "./errors";
 import { handleGithubOAuthRequest, githubActionFromUrl } from "./github-http";
 import type { GithubOAuthEnvironment } from "./github";
 import type { VerificationFailureLogger } from "./logging";
@@ -276,6 +280,37 @@ describe("GitHub OAuth HTTP boundary", () => {
       "provider_unavailable",
     );
     expect(deps.issueClaims).not.toHaveBeenCalled();
+  });
+
+  test("logs provider failures without attempting issuance", async () => {
+    const deps = dependencies();
+    const providerFailure = new GithubOAuthError(
+      "provider_unavailable",
+      502,
+      "GitHub returned malformed pull request evidence.",
+    );
+    deps.collectContributions = mock(async () => Promise.reject(providerFailure));
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.GITHUB_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+
+    const response = await handleGithubOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.searchParams.get("code")).toBe("provider_unavailable");
+    expect(deps.issueClaims).not.toHaveBeenCalled();
+    expect(deps.logFailure).toHaveBeenCalledTimes(1);
+    expect(deps.logFailure.mock.calls[0][0]).toMatchObject({
+      error: providerFailure,
+      platform: "github",
+      stage: "provider",
+    });
   });
 
   test("logs the issuer failure and returns a safe issuance error", async () => {
