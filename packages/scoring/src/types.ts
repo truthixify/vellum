@@ -117,6 +117,14 @@ export type ReputationPolicyV4 = ReputationPolicyV3 & {
   };
 };
 
+export type ReputationPolicyV5 = ReputationPolicyV4 & {
+  bluesky: {
+    issuerDids: readonly string[];
+    identitySchema: { id: string; hash: string };
+    recencyRuleId: string;
+  };
+};
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
@@ -156,6 +164,13 @@ export type ReputationAccount =
       displayName: string;
       handle?: string;
       profileUrl?: string;
+      verifiedAt: number;
+    }
+  | {
+      platform: "bluesky";
+      id: string;
+      handle: string;
+      profileUrl: string;
       verifiedAt: number;
     };
 

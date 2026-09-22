@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  AT_PROTOCOL_DID_PATTERN,
+  BLUESKY_CLAIM_SCHEMA_HASH,
+  BLUESKY_CLAIM_SCHEMA_ID,
+  BLUESKY_HANDLE_PATTERN,
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
@@ -127,6 +131,17 @@ const telegramAccountSchema = z
         : account.profileUrl === `https://t.me/${account.handle}`),
   );
 
+const blueskyAccountSchema = z
+  .object({
+    platform: z.literal("bluesky"),
+    id: z.string().regex(AT_PROTOCOL_DID_PATTERN),
+    handle: z.string().max(253).regex(BLUESKY_HANDLE_PATTERN),
+    profileUrl: z.string().url(),
+    verifiedAt: z.number().int().positive(),
+  })
+  .strict()
+  .refine((account) => account.profileUrl === `https://bsky.app/profile/${account.id}`);
+
 const discordRoleSchema = z
   .object({
     role_id: discordSnowflakeSchema,
@@ -236,19 +251,19 @@ const githubArtifactRules = {
     {
       category: "technical",
       points: 60,
-      ruleId: "github-merged-technical-pr.v4",
+      ruleId: "github-merged-technical-pr.v5",
     },
-    { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v5" },
   ],
   "merged_pull_request:ecosystem": [
-    { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v5" },
   ],
   "pull_request_review:technical": [
-    { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
-    { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
+    { category: "technical", points: 15, ruleId: "github-technical-review.v5" },
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v5" },
   ],
   "pull_request_review:ecosystem": [
-    { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v5" },
   ],
 } as const;
 
@@ -353,6 +368,14 @@ const evidenceSchema = z.discriminatedUnion("schemaId", [
       community: telegramCommunitySchema,
     })
     .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(BLUESKY_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(BLUESKY_CLAIM_SCHEMA_HASH),
+      account: blueskyAccountSchema,
+    })
+    .strict(),
 ]);
 
 const availableReputationSchema = z
@@ -362,7 +385,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v4"),
+    policyVersion: z.literal("vellum.reputation.v5"),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -444,7 +467,7 @@ const availableReputationSchema = z
             (evidence.contributions.length === 1 &&
               contribution.category === "community" &&
               contribution.points === 40 &&
-              contribution.ruleId === "telegram-ckb-membership.v4"))
+              contribution.ruleId === "telegram-ckb-membership.v5"))
         );
       }
       return (
@@ -551,7 +574,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v4"),
+  policyVersion: z.literal("vellum.reputation.v5"),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),

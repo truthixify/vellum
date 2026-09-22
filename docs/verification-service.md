@@ -8,8 +8,8 @@ replay, repeated subsidized issuance, and concurrent use of the issuer's funding
 detached claim signature.
 
 GitHub, Discord, and Telegram use OAuth-specific routes because authorization codes must never pass
-through the generic proof endpoint. Bluesky still returns a typed `501` response until its
-verification adapter is implemented.
+through the generic proof endpoint. Bluesky uses a dedicated wallet-bound submission route because
+its MVP verifies a handle with a user-created app password.
 
 ## Endpoints
 
@@ -106,6 +106,30 @@ configured community label, chat type, and the member's current role. The commun
 after 30 days. Telegram does not expose a member join timestamp through this API, so the claim and
 score do not imply membership age.
 
+Bluesky exposes `GET /api/verify/bluesky/start` for the public form contract,
+`POST /api/verify/bluesky/challenge` for the five-minute wallet challenge, and
+`POST /api/verify/bluesky/submit` for the signed proof, handle, and dedicated app password. The
+server authenticates against Bluesky, resolves the current handle independently, and requires both
+results to name the same stable AT Protocol DID. It closes the temporary provider session before
+claim issuance and never returns, logs, or records the app password or session tokens. The app
+password itself remains valid at Bluesky until the user revokes it.
+
+Successful verification issues `vellum.social.bluesky.v1` with hash
+`0x60bfe9263501d3d17513463b9a3163793690dcf2b614ecc17d7dd52688a083f6` and the exact payload shape:
+
+```json
+{
+  "did": "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+  "handle": "example.bsky.social",
+  "profile_url": "https://bsky.app/profile/did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+  "verified_at": 1800000000
+}
+```
+
+The stable DID, rather than the mutable handle, identifies a Bluesky account across verification
+runs. The claim makes no assertion about account creation time, followers, posts, or community
+membership.
+
 `POST /api/verify/:platform` is the common boundary for non-OAuth adapters and accepts at most 16
 KiB of `application/json`:
 
@@ -122,8 +146,8 @@ KiB of `application/json`:
 
 `subject` may instead contain a complete CKB `lock` object with `codeHash`, `hashType`, and `args`.
 The path and body platform must match. Unknown fields, malformed CKB values, non-JSON proof values,
-and invalid timestamps are rejected before verification or issuance. Direct GitHub, Discord, and
-Telegram requests are rejected and must use their OAuth start routes.
+and invalid timestamps are rejected before verification or issuance. Direct GitHub, Discord,
+Telegram, and Bluesky requests are rejected in favor of their dedicated routes.
 
 Errors always use the same envelope:
 
@@ -138,9 +162,9 @@ Errors always use the same envelope:
 }
 ```
 
-Callback failures redirect to the relevant verification page with `status=error&code=...`.
-Rate-limit responses also include a public `retryAt` Unix timestamp so the dashboard can show when
-another attempt is useful.
+OAuth callback failures redirect to the relevant verification page with `status=error&code=...`.
+Bluesky submission failures return the same safe error envelope directly. Rate-limit responses also
+include a public `retryAt` Unix timestamp so the dashboard can show when another attempt is useful.
 
 ## Configuration
 
@@ -172,7 +196,8 @@ The Vercel dashboard project needs these environment variables:
   unavailable.
 - `VELLUM_OAUTH_STATE_SECRET`: a random server-side secret of at least 32 bytes used to authenticate
   short-lived wallet challenges and OAuth state cookies, and to derive GitHub and Telegram PKCE
-  verifiers.
+  verifiers. Bluesky reuses it for its wallet-bound challenge and needs no provider application
+  secret.
 - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: server-side credentials from an Upstash
   Redis integration. They are required in deployed environments for challenge replay protection,
   weekly account and DID cooldowns, and the issuer transaction lease.

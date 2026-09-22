@@ -1,5 +1,6 @@
 import { useCcc } from "@ckb-ccc/connector-react";
 import {
+  BLUESKY_CLAIM_SCHEMA_ID,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   TELEGRAM_CLAIM_SCHEMA_ID,
@@ -48,7 +49,13 @@ function accountLabel(account: AvailableReputation["evidence"][number]["account"
 function platformLabel(
   platform: AvailableReputation["evidence"][number]["account"]["platform"],
 ): string {
-  return platform === "github" ? "GitHub" : platform === "discord" ? "Discord" : "Telegram";
+  return platform === "github"
+    ? "GitHub"
+    : platform === "discord"
+      ? "Discord"
+      : platform === "telegram"
+        ? "Telegram"
+        : "Bluesky";
 }
 
 function Overview() {
@@ -336,6 +343,7 @@ function EvidenceCoverage({
   const telegramCommunity = available?.evidence.find(
     (item) => item.schemaId === TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   );
+  const bluesky = available?.evidence.find((item) => item.schemaId === BLUESKY_CLAIM_SCHEMA_ID);
   const scoredCategories =
     available?.categories.filter((category) => category.score > 0).length ?? 0;
   const checking = loading && !mainnet;
@@ -450,6 +458,31 @@ function EvidenceCoverage({
         </span>
         <Link className="v-button v-button--quiet" to="/verify/telegram">
           <BadgeCheck size={13} aria-hidden="true" /> {telegram ? "View" : "Verify"}
+        </Link>
+      </div>
+      <div className="coverage-action">
+        <span>
+          <strong>
+            {checking
+              ? "Checking Bluesky evidence"
+              : bluesky
+                ? `Bluesky · @${bluesky.account.handle}`
+                : unavailable
+                  ? "Bluesky evidence unavailable"
+                  : "Bluesky is not verified"}
+          </strong>
+          <small>
+            {checking
+              ? "Reading active claims and issuer state"
+              : bluesky
+                ? `Stable AT Protocol identity accepted under ${available?.policyVersion}`
+                : unavailable
+                  ? "No conclusion was drawn from unavailable evidence"
+                  : "Add an issuer-backed Bluesky claim to the active identity"}
+          </small>
+        </span>
+        <Link className="v-button v-button--quiet" to="/verify/bluesky" search={{}}>
+          <BadgeCheck size={13} aria-hidden="true" /> {bluesky ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">

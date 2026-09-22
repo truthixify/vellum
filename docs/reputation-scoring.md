@@ -5,7 +5,7 @@ public evidence, not a second reputation record: the service keeps no reputation
 not issue a score claim. Given the same accepted claims, policy version, and evaluation time, the
 result is identical.
 
-The active Testnet policy is `vellum.reputation.v4`. Policies v1 through v3 remain exported for
+The active Testnet policy is `vellum.reputation.v5`. Policies v1 through v4 remain exported for
 consumers that need to interpret older results; their meaning has not changed.
 
 ## Score model
@@ -13,14 +13,14 @@ consumers that need to interpret older results; their meaning has not changed.
 The score is an integer from 0 to 1000. Category caps are fixed and missing evidence remains zero;
 the result is never normalized around the categories a subject happens to have.
 
-| Category     |  Maximum | Evidence scored in v4                                            |
-| ------------ | -------: | ---------------------------------------------------------------- |
-| Technical    |      300 | Accepted code-bearing GitHub work                                |
-| Contribution |      300 | Accepted GitHub pull requests and substantive reviews            |
-| Community    |      200 | Strongest recognized Discord or Telegram community evidence      |
-| Tenure       |      100 | Best verified GitHub or Discord account age                      |
-| Recency      |      100 | Most recent accepted GitHub, Discord, or Telegram identity proof |
-| **Overall**  | **1000** | Sum of category scores                                           |
+| Category     |  Maximum | Evidence scored in v5                                                     |
+| ------------ | -------: | ------------------------------------------------------------------------- |
+| Technical    |      300 | Accepted code-bearing GitHub work                                         |
+| Contribution |      300 | Accepted GitHub pull requests and substantive reviews                     |
+| Community    |      200 | Strongest recognized Discord or Telegram community evidence               |
+| Tenure       |      100 | Best verified GitHub or Discord account age                               |
+| Recency      |      100 | Most recent accepted GitHub, Discord, Telegram, or Bluesky identity proof |
+| **Overall**  | **1000** | Sum of category scores                                                    |
 
 Account ownership alone does not prove technical work or ecosystem contribution. Those categories
 stay at zero unless an active GitHub contribution claim contains qualifying artifacts.
@@ -40,9 +40,9 @@ contributes.
 | At least 730 days  |     80 |
 | At least 1460 days |    100 |
 
-The rule IDs are `github-account-tenure.v4` and `discord-account-tenure.v4`. Telegram does not
-publish an account creation timestamp through the selected OpenID Connect scopes, so a Telegram
-identity claim does not contribute tenure points.
+The rule IDs are `github-account-tenure.v5` and `discord-account-tenure.v5`. Telegram and Bluesky
+claims do not contain a provider-backed account creation timestamp, so neither contributes tenure
+points.
 
 ### Verification recency
 
@@ -57,8 +57,8 @@ the next lower band. Only the highest qualifying result contributes.
 | 180 to less than 365 days |     25 |
 | At least 365 days         |      0 |
 
-The rule IDs are `github-verification-recency.v4`, `discord-verification-recency.v4`, and
-`telegram-verification-recency.v4`.
+The rule IDs are `github-verification-recency.v5`, `discord-verification-recency.v5`,
+`telegram-verification-recency.v5`, and `bluesky-verification-recency.v5`.
 
 ### GitHub ecosystem contributions
 
@@ -113,10 +113,10 @@ affect points.
 
 | Accepted artifact       | Technical | Contribution | Rule IDs                                                     |
 | ----------------------- | --------: | -----------: | ------------------------------------------------------------ |
-| Technical merged PR     |        60 |           30 | `github-merged-technical-pr.v4`, `github-merged-pr.v4`       |
-| Non-technical merged PR |         0 |           30 | `github-merged-pr.v4`                                        |
-| Technical formal review |        15 |           10 | `github-technical-review.v4`, `github-substantive-review.v4` |
-| Other formal review     |         0 |           10 | `github-substantive-review.v4`                               |
+| Technical merged PR     |        60 |           30 | `github-merged-technical-pr.v5`, `github-merged-pr.v5`       |
+| Non-technical merged PR |         0 |           30 | `github-merged-pr.v5`                                        |
+| Technical formal review |        15 |           10 | `github-technical-review.v5`, `github-substantive-review.v5` |
+| Other formal review     |         0 |           10 | `github-substantive-review.v5`                               |
 
 Up to the 20 most recent qualifying artifacts are recorded, sorted by occurrence time and then
 stable artifact ID. Fewer are retained when necessary to keep the exact encoded Claim data within
@@ -144,12 +144,12 @@ evidence but do not award arbitrary points.
 | At least 730 days  |    160 |
 | At least 1460 days |    200 |
 
-The rule ID is `discord-ckb-membership-tenure.v4`. Community claims expire after exactly 30 days,
+The rule ID is `discord-ckb-membership-tenure.v5`. Community claims expire after exactly 30 days,
 so the server must verify current membership again before stale evidence can contribute.
 
 Telegram's Bot API proves current membership in configured chats but does not expose when a member
 joined. An active `vellum.community.telegram.v1` claim therefore contributes a conservative fixed
-40 points under `telegram-ckb-membership.v4`. It records the configured community name, chat type,
+40 points under `telegram-ckb-membership.v5`. It records the configured community name, chat type,
 and current member role and expires after exactly 30 days.
 
 Discord and Telegram community points do not stack. The source with more points contributes; equal
@@ -158,7 +158,7 @@ valid community claim remains visible accepted evidence with no direct contribut
 
 ## Trust and evidence selection
 
-Policy v4 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
+Policy v5 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
 
 | Schema                          | Hash                                                                 |
 | ------------------------------- | -------------------------------------------------------------------- |
@@ -168,6 +168,7 @@ Policy v4 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these sch
 | `vellum.community.discord.v1`   | `0x3cba5b1c2967fee27bbde52d5e609137aa0d2cccaf68e1d8722e9b943e78f550` |
 | `vellum.social.telegram.v1`     | `0xe8b7f0ba94a55a5676ab205d9e1a997e1953d1e5cb6b89fd295ad5d69356467f` |
 | `vellum.community.telegram.v1`  | `0x8f8b0b59997ff96fde030314498c56008cb743006ae53b368339382640f8bd59` |
+| `vellum.social.bluesky.v1`      | `0x60bfe9263501d3d17513463b9a3163793690dcf2b614ecc17d7dd52688a083f6` |
 
 The service scans every live Claim Cell for the subject before applying the trust policy. It does
 not ask the SDK to hide other issuers or schemas, so present but rejected evidence remains visible.
@@ -175,7 +176,8 @@ not ask the SDK to hide other issuers or schemas, so present but rejected eviden
 Selection is deterministic:
 
 1. Identical claim IDs count once. Every duplicate Cell is reported as `duplicate-claim`.
-2. For one provider user ID, the greatest `issued_at` wins. Equal timestamps use the
+2. For one provider identity, the greatest `issued_at` wins. Bluesky uses its stable AT Protocol
+   DID; the other providers use their stable account IDs. Equal timestamps use the
    lexicographically smaller claim ID.
 3. Only one account per provider is accepted. Provider identity claims cannot stack tenure or
    recency.
@@ -208,18 +210,19 @@ wallet. The server selects the current Unix time and returns it as `evaluatedAt`
 the current-live-Cell endpoint to imply a historical chain snapshot.
 
 An available response returns HTTP `200` with the aggregate, all five categories, accepted
-evidence, excluded evidence, and `policyVersion: "vellum.reputation.v4"`. Discord community evidence
+evidence, excluded evidence, and `policyVersion: "vellum.reputation.v5"`. Discord community evidence
 includes the matching identity Claim reference, configured community names, join timestamps, and
 recognized roles. Telegram community evidence includes its matching identity Claim reference,
 configured community names, chat types, and current roles. GitHub contribution evidence includes
 its matching identity Claim reference, the registry version, evidence window, artifact details,
-rule IDs, and points. An incomplete chain read returns HTTP `503`, `status: "unavailable"`, and no
-score fields.
+rule IDs, and points. Bluesky evidence includes the stable AT Protocol DID and current handle. An
+incomplete chain read returns HTTP `503`, `status: "unavailable"`, and no score fields.
 
 ## Interpretation
 
 A social identity claim proves that the Vellum issuer verified control of that account at a stated
-time. Discord and Telegram community claims additionally record current membership facts returned
+time. The Bluesky claim binds a current handle to the stable AT Protocol DID returned by the
+provider. Discord and Telegram community claims additionally record current membership facts returned
 for explicitly configured CKB communities. A GitHub contribution claim records public artifacts
 accepted by maintainers of repositories named by the policy; it does not prove identity uniqueness
 or make a universal judgment about skill. Consumers should inspect the evidence and choose

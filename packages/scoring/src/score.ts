@@ -1,4 +1,5 @@
 import {
+  parseBlueskyClaimPayload,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
@@ -11,10 +12,11 @@ import {
   type GithubContributionClaimPayload,
   type TelegramClaimPayload,
   type TelegramCommunityClaimPayload,
+  type BlueskyClaimPayload,
 } from "@vellum/schemas";
 import type { Claim, ClaimReadFailure } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V4 } from "./policy.js";
+import { VELLUM_REPUTATION_POLICY_V5 } from "./policy.js";
 import type {
   AvailableReputationResult,
   ReputationAccount,
@@ -23,7 +25,7 @@ import type {
   ReputationContribution,
   ReputationEvidence,
   ReputationExcludedEvidence,
-  ReputationPolicyV4,
+  ReputationPolicyV5,
   ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
@@ -57,6 +59,11 @@ type TelegramCandidate = {
 type TelegramCommunityCandidate = {
   claim: Claim;
   payload: TelegramCommunityClaimPayload;
+};
+
+type BlueskyCandidate = {
+  claim: Claim;
+  payload: BlueskyClaimPayload;
 };
 
 type MutableEvidence = Omit<ReputationEvidence, "contributions"> & {
@@ -128,7 +135,7 @@ function validateSchema(schema: { id: string; hash: string }, name: string): voi
   }
 }
 
-function validatePolicy(policy: ReputationPolicyV4): void {
+function validatePolicy(policy: ReputationPolicyV5): void {
   if (!policy.version || !Number.isSafeInteger(policy.maximum) || policy.maximum < 0) {
     throw new TypeError("The reputation policy score range is invalid");
   }
@@ -155,12 +162,14 @@ function validatePolicy(policy: ReputationPolicyV4): void {
   validateIssuerDids(policy.github.issuerDids, "GitHub");
   validateIssuerDids(policy.discord.issuerDids, "Discord");
   validateIssuerDids(policy.telegram.issuerDids, "Telegram");
+  validateIssuerDids(policy.bluesky.issuerDids, "Bluesky");
   validateSchema(policy.github.identitySchema, "GitHub identity");
   validateSchema(policy.github.contributionSchema, "GitHub contribution");
   validateSchema(policy.discord.identitySchema, "Discord identity");
   validateSchema(policy.discord.communitySchema, "Discord community");
   validateSchema(policy.telegram.identitySchema, "Telegram identity");
   validateSchema(policy.telegram.communitySchema, "Telegram community");
+  validateSchema(policy.bluesky.identitySchema, "Bluesky identity");
   if (
     !validateAgeBands(policy.identity.tenureBands, categoryCaps.get("tenure")!) ||
     !validateRecencyBands(policy.identity.recencyBands, categoryCaps.get("recency")!) ||
@@ -331,7 +340,7 @@ function scoreRecency(ageSeconds: number, bands: readonly ReputationRecencyBand[
   return bands.find((band) => ageSeconds < band.maximumAgeSecondsExclusive)?.points ?? 0;
 }
 
-function emptyCategories(policy: ReputationPolicyV4): AvailableReputationResult["categories"] {
+function emptyCategories(policy: ReputationPolicyV5): AvailableReputationResult["categories"] {
   return policy.categories.map((category) => ({ ...category, score: 0 }));
 }
 
@@ -379,7 +388,7 @@ function unavailableResult(
 ): Extract<ReputationResult, { status: "unavailable" }> {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V4.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V5.version,
     evaluatedAt,
     error: {
       code: "issuer-state-unavailable",
@@ -422,12 +431,22 @@ function accountFromTelegram(payload: TelegramClaimPayload): ReputationAccount {
   };
 }
 
+function accountFromBluesky(payload: BlueskyClaimPayload): ReputationAccount {
+  return {
+    platform: "bluesky",
+    id: payload.did,
+    handle: payload.handle,
+    profileUrl: payload.profile_url,
+    verifiedAt: payload.verified_at,
+  };
+}
+
 function identityScoreCandidate(
   evidence: MutableEvidence,
   evaluatedAt: number,
   tenureRuleId: string | undefined,
   recencyRuleId: string,
-  policy: ReputationPolicyV4,
+  policy: ReputationPolicyV5,
 ): IdentityScoreCandidate {
   const accountAge =
     "createdAt" in evidence.account ? evaluatedAt - evidence.account.createdAt : undefined;
@@ -465,7 +484,7 @@ function compareRecency(left: IdentityScoreCandidate, right: IdentityScoreCandid
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = VELLUM_REPUTATION_POLICY_V4;
+  const policy = VELLUM_REPUTATION_POLICY_V5;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 
@@ -480,6 +499,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   const discordCommunityCandidates: DiscordCommunityCandidate[] = [];
   const telegramCandidates: TelegramCandidate[] = [];
   const telegramCommunityCandidates: TelegramCommunityCandidate[] = [];
+  const blueskyCandidates: BlueskyCandidate[] = [];
 
   for (const claim of canonicalClaims(input.claims.claims, excluded)) {
     const kind =
@@ -495,7 +515,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
                 ? "telegram-identity"
                 : claim.schemaHash === policy.telegram.communitySchema.hash
                   ? "telegram-community"
-                  : undefined;
+                  : claim.schemaHash === policy.bluesky.identitySchema.hash
+                    ? "bluesky-identity"
+                    : undefined;
     if (!kind) {
       excluded.push(
         exclusion(claim, "unsupported-schema", "The claim schema is not scored by this policy."),
@@ -507,7 +529,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       ? policy.github.issuerDids
       : kind.startsWith("discord")
         ? policy.discord.issuerDids
-        : policy.telegram.issuerDids;
+        : kind.startsWith("telegram")
+          ? policy.telegram.issuerDids
+          : policy.bluesky.issuerDids;
     if (!(trustedIssuers as readonly string[]).includes(claim.issuerDid)) {
       excluded.push(
         exclusion(claim, "untrusted-issuer", "The claim issuer is not trusted by this policy."),
@@ -531,7 +555,8 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       | DiscordClaimPayload
       | DiscordCommunityClaimPayload
       | TelegramClaimPayload
-      | TelegramCommunityClaimPayload;
+      | TelegramCommunityClaimPayload
+      | BlueskyClaimPayload;
     try {
       payload =
         kind === "github-identity"
@@ -544,7 +569,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
                 ? parseDiscordCommunityClaimPayload(claim.payload)
                 : kind === "telegram-identity"
                   ? parseTelegramClaimPayload(claim.payload)
-                  : parseTelegramCommunityClaimPayload(claim.payload);
+                  : kind === "telegram-community"
+                    ? parseTelegramCommunityClaimPayload(claim.payload)
+                    : parseBlueskyClaimPayload(claim.payload);
     } catch {
       excluded.push(exclusion(claim, "malformed-payload", "The claim payload is malformed."));
       continue;
@@ -604,11 +631,13 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       });
     } else if (kind === "telegram-identity") {
       telegramCandidates.push({ claim, payload: payload as TelegramClaimPayload });
-    } else {
+    } else if (kind === "telegram-community") {
       telegramCommunityCandidates.push({
         claim,
         payload: payload as TelegramCommunityClaimPayload,
       });
+    } else {
+      blueskyCandidates.push({ claim, payload: payload as BlueskyClaimPayload });
     }
   }
 
@@ -628,6 +657,12 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     telegramCandidates,
     (candidate) => candidate.payload.user_id,
     "Telegram",
+    excluded,
+  );
+  const bluesky = selectAccount(
+    blueskyCandidates,
+    (candidate) => candidate.payload.did,
+    "Bluesky",
     excluded,
   );
 
@@ -868,6 +903,28 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
         evaluatedAt,
         undefined,
         policy.telegram.recencyRuleId,
+        policy,
+      ),
+    );
+  }
+
+  if (bluesky) {
+    const blueskyEvidence: MutableEvidence = {
+      claim: claimReference(bluesky.claim),
+      issuerDid: bluesky.claim.issuerDid,
+      schemaId: policy.bluesky.identitySchema.id,
+      schemaHash: bluesky.claim.schemaHash,
+      issuedAt: Number(bluesky.claim.issuedAt),
+      account: accountFromBluesky(bluesky.payload),
+      contributions: [],
+    };
+    evidence.push(blueskyEvidence);
+    identityScores.push(
+      identityScoreCandidate(
+        blueskyEvidence,
+        evaluatedAt,
+        undefined,
+        policy.bluesky.recencyRuleId,
         policy,
       ),
     );

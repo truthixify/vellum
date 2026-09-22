@@ -57,14 +57,14 @@ export function Profile() {
         <div className="profile-score">
           <div className="section-heading-row">
             <h2>Reputation score</h2>
-            <StatusMark tone="positive">Policy v3</StatusMark>
+            <StatusMark tone="positive">Policy v5</StatusMark>
           </div>
           <div className="score-number">
             <span>450</span>
             <small>/ 1000</small>
           </div>
           <SignalRail value={450} max={1000} height={10} label="Example score 450 of 1000" />
-          <p>vellum.reputation.v4 - 6 accepted Claim Cells</p>
+          <p>vellum.reputation.v5 - 7 accepted Claim Cells</p>
           <a className="v-button v-button--secondary" href="/transparency">
             <Info size={14} />
             How this is calculated
@@ -137,6 +137,12 @@ export function Profile() {
               "Example checkpoint",
               "Verified",
             ],
+            [
+              "Bluesky account - @rmaddox.bsky.social",
+              "Vellum Testnet issuer",
+              "Example checkpoint",
+              "Verified",
+            ],
           ].map(([claim, issuer, date, state]) => (
             <div className="claims-table__row" key={claim}>
               <strong>{claim}</strong>
@@ -160,7 +166,7 @@ export function Profile() {
               <div>
                 <dt>Accepted evidence</dt>
                 <dd className="positive">
-                  <Check size={12} />4 Claim Cells
+                  <Check size={12} />7 Claim Cells
                 </dd>
               </div>
               <div>
@@ -180,7 +186,7 @@ export function Profile() {
                 <span className="mono">reputation.json</span>
                 <ExternalLink size={13} />
               </div>
-              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v4",\n  "overall": { "score": 450, "maximum": 1000 }\n}`}</pre>
+              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v5",\n  "overall": { "score": 450, "maximum": 1000 }\n}`}</pre>
             </div>
             <p>This record is a design fixture, not a chain response.</p>
           </div>

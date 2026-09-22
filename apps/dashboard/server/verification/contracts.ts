@@ -115,6 +115,22 @@ export const oauthStartRequestSchema = oauthChallengeRequestSchema.extend({
 
 export const githubOAuthStartRequestSchema = oauthStartRequestSchema;
 
+export const blueskySubmitRequestSchema = oauthStartRequestSchema
+  .extend({
+    handle: z
+      .string()
+      .min(3)
+      .max(253)
+      .refine((value) =>
+        [...value].every((character) => {
+          const code = character.codePointAt(0)!;
+          return code > 0x1f && code !== 0x7f;
+        }),
+      ),
+    appPassword: z.string().regex(/^[a-z0-9]{4}(?:-[a-z0-9]{4}){3}$/),
+  })
+  .strict();
+
 export const verificationRequestSchema = z
   .object({
     version: z.literal(VERIFICATION_API_VERSION),
@@ -171,6 +187,7 @@ export type OAuthStartRequest = z.infer<typeof oauthStartRequestSchema>;
 export type OAuthChallengeRequest = z.infer<typeof oauthChallengeRequestSchema>;
 export type SubjectProof = z.infer<typeof subjectProofSchema>;
 export type GithubOAuthStartRequest = z.infer<typeof githubOAuthStartRequestSchema>;
+export type BlueskySubmitRequest = z.infer<typeof blueskySubmitRequestSchema>;
 export type VerificationRequest = z.infer<typeof verificationRequestSchema>;
 export type VerifiedClaim = z.infer<typeof verifiedClaimSchema>;
 

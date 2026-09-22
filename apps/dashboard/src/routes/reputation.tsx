@@ -71,7 +71,9 @@ function platformLabel(account: ReputationAccount, hasContributions: boolean): s
     ? "GitHub"
     : account.platform === "discord"
       ? "Discord"
-      : "Telegram";
+      : account.platform === "telegram"
+        ? "Telegram"
+        : "Bluesky";
 }
 
 function CommunityMembership({ membership }: { membership: ReputationMembership }) {
@@ -330,6 +332,9 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
               </Link>
               <Link to="/verify/telegram" className="v-button v-button--secondary">
                 <BadgeCheck size={14} aria-hidden="true" /> Verify Telegram
+              </Link>
+              <Link to="/verify/bluesky" search={{}} className="v-button v-button--secondary">
+                <BadgeCheck size={14} aria-hidden="true" /> Verify Bluesky
               </Link>
             </div>
           </div>

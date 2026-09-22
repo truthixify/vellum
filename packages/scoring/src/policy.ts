@@ -1,4 +1,6 @@
 import {
+  BLUESKY_CLAIM_SCHEMA_HASH,
+  BLUESKY_CLAIM_SCHEMA_ID,
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
@@ -21,6 +23,7 @@ import type {
   ReputationPolicyV2,
   ReputationPolicyV3,
   ReputationPolicyV4,
+  ReputationPolicyV5,
 } from "./types.js";
 
 const DAY_SECONDS = 86_400;
@@ -307,3 +310,54 @@ export const VELLUM_REPUTATION_POLICY_V4 = freezePolicyV4({
     communityPoints: 40,
   },
 } as const satisfies ReputationPolicyV4);
+
+function freezePolicyV5<T extends ReputationPolicyV5>(policy: T): T {
+  freezePolicyV4(policy);
+  Object.freeze(policy.bluesky.issuerDids);
+  Object.freeze(policy.bluesky.identitySchema);
+  Object.freeze(policy.bluesky);
+  return Object.freeze(policy);
+}
+
+export const VELLUM_REPUTATION_POLICY_V5 = freezePolicyV5({
+  ...VELLUM_REPUTATION_POLICY_V4,
+  version: "vellum.reputation.v5",
+  github: {
+    ...VELLUM_REPUTATION_POLICY_V4.github,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V4.github.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V4.github.identitySchema },
+    contributionSchema: { ...VELLUM_REPUTATION_POLICY_V4.github.contributionSchema },
+    tenureRuleId: "github-account-tenure.v5",
+    recencyRuleId: "github-verification-recency.v5",
+    artifactRules: VELLUM_REPUTATION_POLICY_V4.github.artifactRules.map((rule) => ({
+      ...rule,
+      technicalRuleId:
+        "technicalRuleId" in rule && rule.technicalRuleId
+          ? rule.technicalRuleId.replace(".v4", ".v5")
+          : undefined,
+      contributionRuleId: rule.contributionRuleId.replace(".v4", ".v5"),
+    })),
+  },
+  discord: {
+    ...VELLUM_REPUTATION_POLICY_V4.discord,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V4.discord.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V4.discord.identitySchema },
+    communitySchema: { ...VELLUM_REPUTATION_POLICY_V4.discord.communitySchema },
+    tenureRuleId: "discord-account-tenure.v5",
+    recencyRuleId: "discord-verification-recency.v5",
+    communityRuleId: "discord-ckb-membership-tenure.v5",
+  },
+  telegram: {
+    ...VELLUM_REPUTATION_POLICY_V4.telegram,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V4.telegram.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V4.telegram.identitySchema },
+    communitySchema: { ...VELLUM_REPUTATION_POLICY_V4.telegram.communitySchema },
+    recencyRuleId: "telegram-verification-recency.v5",
+    communityRuleId: "telegram-ckb-membership.v5",
+  },
+  bluesky: {
+    issuerDids: ["did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no"],
+    identitySchema: { id: BLUESKY_CLAIM_SCHEMA_ID, hash: BLUESKY_CLAIM_SCHEMA_HASH },
+    recencyRuleId: "bluesky-verification-recency.v5",
+  },
+} as const satisfies ReputationPolicyV5);

@@ -15,7 +15,7 @@ function availableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v4",
+    policyVersion: "vellum.reputation.v5",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -45,8 +45,8 @@ function availableResponse() {
           verifiedAt: 1_799_500_000,
         },
         contributions: [
-          { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
-          { category: "recency", points: 100, ruleId: "github-verification-recency.v4" },
+          { category: "tenure", points: 100, ruleId: "github-account-tenure.v5" },
+          { category: "recency", points: 100, ruleId: "github-verification-recency.v5" },
         ],
       },
     ],
@@ -67,7 +67,7 @@ function discordAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v4",
+    policyVersion: "vellum.reputation.v5",
     evaluatedAt: 1_800_000_000,
     overall: { score: 360, maximum: 1_000 },
     categories: [
@@ -93,8 +93,8 @@ function discordAvailableResponse() {
           verifiedAt: 1_799_500_000,
         },
         contributions: [
-          { category: "tenure", points: 100, ruleId: "discord-account-tenure.v4" },
-          { category: "recency", points: 100, ruleId: "discord-verification-recency.v4" },
+          { category: "tenure", points: 100, ruleId: "discord-account-tenure.v5" },
+          { category: "recency", points: 100, ruleId: "discord-verification-recency.v5" },
         ],
       },
       {
@@ -127,7 +127,7 @@ function discordAvailableResponse() {
           ],
         },
         contributions: [
-          { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" },
+          { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v5" },
         ],
       },
     ],
@@ -155,7 +155,7 @@ function telegramAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v4",
+    policyVersion: "vellum.reputation.v5",
     evaluatedAt: 1_800_000_000,
     overall: { score: 140, maximum: 1_000 },
     categories: [
@@ -174,7 +174,7 @@ function telegramAvailableResponse() {
         issuedAt: account.verifiedAt,
         account,
         contributions: [
-          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v5" },
         ],
       },
       {
@@ -200,7 +200,52 @@ function telegramAvailableResponse() {
           ],
         },
         contributions: [
-          { category: "community", points: 40, ruleId: "telegram-ckb-membership.v4" },
+          { category: "community", points: 40, ruleId: "telegram-ckb-membership.v5" },
+        ],
+      },
+    ],
+    excludedEvidence: [],
+  };
+}
+
+function blueskyAvailableResponse() {
+  const accountDid = `did:plc:${"a".repeat(24)}`;
+  return {
+    ok: true,
+    version: "1",
+    network: "ckb_testnet",
+    subject: DID,
+    status: "available",
+    policyVersion: "vellum.reputation.v5",
+    evaluatedAt: 1_800_000_000,
+    overall: { score: 100, maximum: 1_000 },
+    categories: [
+      { id: "technical", score: 0, maximum: 300 },
+      { id: "contribution", score: 0, maximum: 300 },
+      { id: "community", score: 0, maximum: 200 },
+      { id: "tenure", score: 0, maximum: 100 },
+      { id: "recency", score: 100, maximum: 100 },
+    ],
+    evidence: [
+      {
+        claim: {
+          claimId: `0x${"a".repeat(64)}`,
+          transactionHash: `0x${"b".repeat(64)}`,
+          outputIndex: 0,
+        },
+        issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
+        schemaId: "vellum.social.bluesky.v1",
+        schemaHash: "0x60bfe9263501d3d17513463b9a3163793690dcf2b614ecc17d7dd52688a083f6",
+        issuedAt: 1_799_500_000,
+        account: {
+          platform: "bluesky",
+          id: accountDid,
+          handle: "builder.bsky.social",
+          profileUrl: `https://bsky.app/profile/${accountDid}`,
+          verifiedAt: 1_799_500_000,
+        },
+        contributions: [
+          { category: "recency", points: 100, ruleId: "bluesky-verification-recency.v5" },
         ],
       },
     ],
@@ -246,15 +291,15 @@ function githubContributionResponse() {
           title: "Add did:ckb support",
           url: "https://github.com/ckb-devrel/ccc/pull/376",
           contributions: [
-            { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
-            { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
+            { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v5" },
+            { category: "contribution", points: 30, ruleId: "github-merged-pr.v5" },
           ],
         },
       ],
     },
     contributions: [
-      { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
-      { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
+      { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v5" },
+      { category: "contribution", points: 30, ruleId: "github-merged-pr.v5" },
     ],
   };
   return { ...body, evidence: [...body.evidence, contributionEvidence] };
@@ -308,6 +353,40 @@ describe("reputation API client", () => {
         },
       ],
     });
+  });
+
+  test("accepts a stable Bluesky identity as recency evidence", async () => {
+    const result = await fetchReputation(
+      DID,
+      mock(async () => Response.json(blueskyAvailableResponse())),
+    );
+
+    expect(result).toMatchObject({
+      status: "available",
+      overall: { score: 100 },
+      evidence: [
+        {
+          schemaId: "vellum.social.bluesky.v1",
+          account: {
+            platform: "bluesky",
+            handle: "builder.bsky.social",
+          },
+          contributions: [{ category: "recency", points: 100 }],
+        },
+      ],
+    });
+  });
+
+  test("rejects a Bluesky identity with an unstable profile link", async () => {
+    const body = blueskyAvailableResponse();
+    body.evidence[0].account.profileUrl = "https://bsky.app/profile/builder.bsky.social";
+
+    await expect(
+      fetchReputation(
+        DID,
+        mock(async () => Response.json(body)),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_response" });
   });
 
   test("accepts traceable GitHub contribution artifacts", async () => {
@@ -413,8 +492,8 @@ describe("reputation API client", () => {
     if (!Array.isArray(artifacts)) throw new Error("Expected GitHub contribution artifacts");
     const contributions = Reflect.get(artifacts[0], "contributions");
     if (!Array.isArray(contributions)) throw new Error("Expected artifact contributions");
-    contributions[0].ruleId = "github-technical-review.v4";
-    evidence.contributions[0].ruleId = "github-technical-review.v4";
+    contributions[0].ruleId = "github-technical-review.v5";
+    evidence.contributions[0].ruleId = "github-technical-review.v5";
 
     await expect(
       fetchReputation(
@@ -445,7 +524,7 @@ describe("reputation API client", () => {
           network: "ckb_testnet",
           subject: DID,
           status: "unavailable",
-          policyVersion: "vellum.reputation.v4",
+          policyVersion: "vellum.reputation.v5",
           evaluatedAt: 1_800_000_000,
           error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
         },
@@ -505,7 +584,7 @@ describe("reputation API client", () => {
         network: "ckb_testnet",
         subject: DID,
         status: "unavailable",
-        policyVersion: "vellum.reputation.v4",
+        policyVersion: "vellum.reputation.v5",
         evaluatedAt: 1_800_000_000,
         error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
       }),

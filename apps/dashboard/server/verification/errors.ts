@@ -89,3 +89,21 @@ export class TelegramOAuthError extends VerificationServiceError {
     this.name = "TelegramOAuthError";
   }
 }
+
+export class BlueskyVerificationError extends VerificationServiceError {
+  constructor(
+    code: Extract<
+      VerificationErrorCode,
+      | "provider_rate_limited"
+      | "provider_unavailable"
+      | "credential_revocation_failed"
+      | "verification_failed"
+    >,
+    status: number,
+    message: string,
+    retryAt?: number,
+  ) {
+    super(code, status, message, retryAt);
+    this.name = "BlueskyVerificationError";
+  }
+}
