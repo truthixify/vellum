@@ -7,6 +7,19 @@ export {
   type GithubClaimPayload,
 } from "./social/github.v1.js";
 export {
+  GITHUB_CONTRIBUTION_ARTIFACT_LIMIT,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
+  GITHUB_CONTRIBUTION_WINDOW_SECONDS,
+  githubContributionClaimSchemaManifest,
+  parseGithubContributionClaimPayload,
+  type GithubContributionArtifact,
+  type GithubContributionArtifactKind,
+  type GithubContributionClaimPayload,
+  type GithubContributionClassification,
+} from "./contribution/github.v1.js";
+export {
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_ID,
   discordClaimSchemaManifest,

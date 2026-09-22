@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { GithubContributionClaimPayload } from "@vellum/schemas";
 
 import { GithubOAuthError, OAuthConfigurationError } from "./errors";
 import {
@@ -42,6 +43,14 @@ function userResponse(overrides: Record<string, unknown> = {}): Response {
   });
 }
 
+function verifierDependencies(fetch: GithubFetch, contribution?: GithubContributionClaimPayload) {
+  return {
+    collectContributions: mock(async () => contribution),
+    fetch,
+    now: () => NOW,
+  };
+}
+
 describe("GitHub OAuth verifier", () => {
   test("validates configuration and requests no profile scopes", () => {
     const config = githubOAuthConfig(ENVIRONMENT);
@@ -65,29 +74,31 @@ describe("GitHub OAuth verifier", () => {
 
   test("fetches the authenticated account, revokes the token, and returns the canonical claim", async () => {
     const fetch = sequence(tokenResponse(), userResponse(), new Response(null, { status: 204 }));
-    const claim = await verifyGithubAuthorization(
+    const verification = await verifyGithubAuthorization(
       "one-time-code",
       CODE_VERIFIER,
       githubOAuthConfig(ENVIRONMENT),
-      {
-        fetch,
-        now: () => NOW,
-      },
+      verifierDependencies(fetch),
     );
 
-    expect(claim).toEqual({
-      schema: {
-        id: "vellum.social.github.v1",
-        hash: "0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c",
-      },
-      payload: {
-        user_id: 5_830_913,
-        login: "truthixify",
-        profile_url: "https://github.com/truthixify",
-        account_created_at: 1_650_000_000,
-        verified_at: NOW,
-      },
-      issuedAt: NOW,
+    expect(verification).toEqual({
+      account: { createdAt: 1_650_000_000, id: 5_830_913, login: "truthixify" },
+      claims: [
+        {
+          schema: {
+            id: "vellum.social.github.v1",
+            hash: "0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c",
+          },
+          payload: {
+            user_id: 5_830_913,
+            login: "truthixify",
+            profile_url: "https://github.com/truthixify",
+            account_created_at: 1_650_000_000,
+            verified_at: NOW,
+          },
+          issuedAt: NOW,
+        },
+      ],
     });
     expect(fetch).toHaveBeenCalledTimes(3);
 
@@ -100,7 +111,57 @@ describe("GitHub OAuth verifier", () => {
       `Bearer ${ACCESS_TOKEN}`,
     );
     expect(String(calls[2][1]?.body)).toContain(ACCESS_TOKEN);
-    expect(JSON.stringify(claim)).not.toContain(ACCESS_TOKEN);
+    expect(JSON.stringify(verification)).not.toContain(ACCESS_TOKEN);
+  });
+
+  test("returns identity and contribution claims for atomic issuance", async () => {
+    const fetch = sequence(tokenResponse(), userResponse(), new Response(null, { status: 204 }));
+    const contribution: GithubContributionClaimPayload = {
+      user_id: 5_830_913,
+      login: "truthixify",
+      verified_at: NOW,
+      window_started_at: NOW - 365 * 86_400,
+      repository_registry: "ckb.public-contributions.v1",
+      eligible_artifact_count: 1,
+      artifacts: [
+        {
+          artifact_id: "PR_kwDOLw3gss7mJq5X",
+          changed_files: 17,
+          classification: "technical",
+          kind: "merged_pull_request",
+          merge_commit_sha: "f727991ef727991ef727991ef727991ef727991e",
+          merged_at: NOW - 100,
+          number: 376,
+          occurred_at: NOW - 100,
+          pull_request_id: "PR_kwDOLw3gss7mJq5X",
+          repository: "ckb-devrel/ccc",
+          repository_id: "R_kgDOLw3gsg",
+          title: "Add did:ckb support",
+          url: "https://github.com/ckb-devrel/ccc/pull/376",
+        },
+      ],
+    };
+    const dependencies = verifierDependencies(fetch, contribution);
+    const verification = await verifyGithubAuthorization(
+      "one-time-code",
+      CODE_VERIFIER,
+      githubOAuthConfig(ENVIRONMENT),
+      dependencies,
+    );
+
+    expect(verification.claims).toHaveLength(2);
+    expect(verification.claims[1]).toMatchObject({
+      schema: { id: "vellum.contribution.github.v1" },
+      payload: contribution,
+      issuedAt: NOW,
+      expiresAt: NOW + 30 * 86_400,
+    });
+    expect(dependencies.collectContributions).toHaveBeenCalledWith(
+      ACCESS_TOKEN,
+      { createdAt: 1_650_000_000, id: 5_830_913, login: "truthixify" },
+      NOW,
+      dependencies,
+    );
   });
 
   test("revokes a token after provider failure and exposes an actionable reset time", async () => {
@@ -118,10 +179,7 @@ describe("GitHub OAuth verifier", () => {
         "one-time-code",
         CODE_VERIFIER,
         githubOAuthConfig(ENVIRONMENT),
-        {
-          fetch,
-          now: () => NOW,
-        },
+        verifierDependencies(fetch),
       );
       throw new Error("Expected verification to fail");
     } catch (error) {
@@ -137,10 +195,12 @@ describe("GitHub OAuth verifier", () => {
     const fetch = sequence(tokenResponse(), userResponse(), new Response(null, { status: 500 }));
 
     await expect(
-      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
-        fetch,
-        now: () => NOW,
-      }),
+      verifyGithubAuthorization(
+        "one-time-code",
+        CODE_VERIFIER,
+        githubOAuthConfig(ENVIRONMENT),
+        verifierDependencies(fetch),
+      ),
     ).rejects.toMatchObject({ code: "credential_revocation_failed" });
   });
 
@@ -151,10 +211,12 @@ describe("GitHub OAuth verifier", () => {
     );
 
     await expect(
-      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
-        fetch,
-        now: () => NOW,
-      }),
+      verifyGithubAuthorization(
+        "one-time-code",
+        CODE_VERIFIER,
+        githubOAuthConfig(ENVIRONMENT),
+        verifierDependencies(fetch),
+      ),
     ).rejects.toMatchObject({ code: "provider_unavailable" });
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(String(fetch.mock.calls[1][0])).toContain("/applications/client-id-for-tests/token");
@@ -171,10 +233,7 @@ describe("GitHub OAuth verifier", () => {
       "one-time-code",
       CODE_VERIFIER,
       githubOAuthConfig(ENVIRONMENT),
-      {
-        fetch,
-        now: () => NOW,
-      },
+      verifierDependencies(fetch),
     );
 
     expect(String(fetch.mock.calls[2][0])).toContain("/grant");
@@ -187,10 +246,12 @@ describe("GitHub OAuth verifier", () => {
     );
 
     await expect(
-      verifyGithubAuthorization("one-time-code", CODE_VERIFIER, githubOAuthConfig(ENVIRONMENT), {
-        fetch,
-        now: () => NOW,
-      }),
+      verifyGithubAuthorization(
+        "one-time-code",
+        CODE_VERIFIER,
+        githubOAuthConfig(ENVIRONMENT),
+        verifierDependencies(fetch),
+      ),
     ).rejects.toMatchObject({ code: "provider_unavailable" });
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(String(fetch.mock.calls[1][0])).toContain("/applications/client-id-for-tests/grant");

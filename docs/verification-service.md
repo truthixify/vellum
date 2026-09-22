@@ -42,10 +42,12 @@ OAuth state.
 
 GitHub returns to `GET /api/verify/github/callback`. The callback validates the state, clears its
 cookie, exchanges the one-time authorization code, and reads the authenticated account without
-requesting an OAuth scope. A token carrying any non-empty scope is rejected. The callback revokes
-the OAuth credential before invoking claim issuance. A successful callback redirects to
-`/verify/github` with only the public subject DID, transaction hash, Claim ID, output index, and
-GitHub login. OAuth codes and tokens are never returned to the browser or stored in the claim.
+requesting an OAuth scope. It also checks the account's public merged pull requests and formal
+reviews against the versioned CKB repository registry. A token carrying any non-empty scope is
+rejected. The callback revokes the OAuth credential before invoking claim issuance. A successful
+callback redirects to `/verify/github` with only the public subject DID, transaction hash, Claim
+ID, output index, and GitHub login. OAuth codes and tokens are never returned to the browser or
+stored in a claim.
 
 The claim uses schema `vellum.social.github.v1` with hash
 `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` and the exact payload:
@@ -59,6 +61,15 @@ The claim uses schema `vellum.social.github.v1` with hash
   "verified_at": 1800000000
 }
 ```
+
+When qualifying work is found, the same transaction also issues
+`vellum.contribution.github.v1` with hash
+`0xa08a1f034af0f1ebc75a6847dde6a90ee0c3dde63f3ffe4eaed248ea9e7730a1`. The claim records the
+verified account's eligible merged pull requests and substantive reviews from the preceding 365
+days, using stable GitHub repository and artifact IDs. It expires after 30 days. The identity and
+contribution Claim Cells are signed and broadcast atomically; an account with no qualifying
+artifacts receives only the identity claim. The repository policy and score weights are documented
+in [`reputation-scoring.md`](./reputation-scoring.md).
 
 Discord uses the same `challenge` and signed `start` sequence under `/api/verify/discord`. The OAuth
 request uses only `identify` and `guilds.members.read`. Discord returns to

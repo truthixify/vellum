@@ -1,9 +1,23 @@
 import {
+  GITHUB_CLAIM_SCHEMA_HASH,
+  GITHUB_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
+  parseGithubClaimPayload,
+  parseGithubContributionClaimPayload,
+} from "@vellum/schemas";
+
+import {
   VERIFICATION_API_VERSION,
   claimIssuanceResultSchema,
   oauthChallengeRequestSchema,
   githubOAuthStartRequestSchema,
+  verifiedClaimSchema,
+  type ClaimIssuanceResult,
   type VerificationErrorCode,
+  type VerificationSubject,
+  type VerifiedClaim,
 } from "./contracts.js";
 import {
   GithubOAuthError,
@@ -19,7 +33,8 @@ import {
   type GithubFetch,
   type GithubOAuthEnvironment,
 } from "./github.js";
-import { issueVerifiedClaim } from "./issuer.js";
+import { collectGithubContributions } from "./github-contributions.js";
+import { issueVerifiedClaims } from "./issuer.js";
 import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
 import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
 import { coordinateIssuance } from "./issuance-control.js";
@@ -29,7 +44,6 @@ import {
   consumeGithubOAuthState,
   createGithubOAuthState,
 } from "./oauth-state.js";
-import type { ClaimIssuer } from "./service.js";
 import {
   assertSubjectController,
   createSubjectChallenge,
@@ -38,10 +52,16 @@ import {
 
 type GithubAction = "challenge" | "start" | "callback";
 
+type GithubClaimIssuer = (
+  subject: VerificationSubject,
+  claims: readonly VerifiedClaim[],
+) => Promise<ClaimIssuanceResult[]>;
+
 export type GithubOAuthHttpDependencies = {
+  collectContributions: typeof collectGithubContributions;
   environment: GithubOAuthEnvironment;
   fetch: GithubFetch;
-  issueClaim: ClaimIssuer;
+  issueClaims: GithubClaimIssuer;
   createCoordinator: (environment: GithubOAuthEnvironment) => VerificationCoordinator;
   assertSubjectController: typeof assertSubjectController;
   createSubjectChallenge: typeof createSubjectChallenge;
@@ -52,9 +72,10 @@ export type GithubOAuthHttpDependencies = {
 };
 
 const defaultDependencies: GithubOAuthHttpDependencies = {
+  collectContributions: collectGithubContributions,
   environment: process.env,
   fetch: globalThis.fetch,
-  issueClaim: issueVerifiedClaim,
+  issueClaims: (subject, claims) => issueVerifiedClaims(subject, claims),
   createCoordinator: createVerificationCoordinator,
   assertSubjectController,
   createSubjectChallenge,
@@ -62,6 +83,74 @@ const defaultDependencies: GithubOAuthHttpDependencies = {
   logFailure: logVerificationFailure,
   now: () => Math.floor(Date.now() / 1_000),
 };
+
+function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClaim[] {
+  if (claims.length < 1 || claims.length > 2) {
+    throw new GithubOAuthError(
+      "provider_unavailable",
+      502,
+      "GitHub returned account data that cannot be verified.",
+    );
+  }
+  const parsed = claims.map((claim) => verifiedClaimSchema.parse(claim));
+  const identity = parsed[0];
+  if (
+    identity.schema.id !== GITHUB_CLAIM_SCHEMA_ID ||
+    identity.schema.hash !== GITHUB_CLAIM_SCHEMA_HASH
+  ) {
+    throw new GithubOAuthError(
+      "provider_unavailable",
+      502,
+      "GitHub returned account data that cannot be verified.",
+    );
+  }
+  let identityPayload;
+  try {
+    identityPayload = parseGithubClaimPayload(identity.payload);
+  } catch {
+    throw new GithubOAuthError(
+      "provider_unavailable",
+      502,
+      "GitHub returned account data that cannot be verified.",
+    );
+  }
+  if (identity.issuedAt !== identityPayload.verified_at || identity.expiresAt !== undefined) {
+    throw new GithubOAuthError(
+      "provider_unavailable",
+      502,
+      "GitHub returned account data that cannot be verified.",
+    );
+  }
+
+  const contribution = parsed[1];
+  if (contribution) {
+    let contributionPayload;
+    try {
+      contributionPayload = parseGithubContributionClaimPayload(contribution.payload);
+    } catch {
+      throw new GithubOAuthError(
+        "provider_unavailable",
+        502,
+        "GitHub returned contribution data that cannot be verified.",
+      );
+    }
+    if (
+      contribution.schema.id !== GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID ||
+      contribution.schema.hash !== GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH ||
+      contribution.issuedAt !== contributionPayload.verified_at ||
+      contribution.expiresAt !== contribution.issuedAt + GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS ||
+      contributionPayload.user_id !== identityPayload.user_id ||
+      contributionPayload.login !== identityPayload.login
+    ) {
+      throw new GithubOAuthError(
+        "provider_unavailable",
+        502,
+        "GitHub returned contribution data that cannot be verified.",
+      );
+    }
+  }
+  return parsed;
+}
 
 function errorResponse(
   status: number,
@@ -366,30 +455,34 @@ async function handleCallback(
       dependencies.environment,
     );
 
-    const claim = await verifyGithubAuthorization(code, oauthState.codeVerifier, config, {
+    const verified = await verifyGithubAuthorization(code, oauthState.codeVerifier, config, {
+      collectContributions: dependencies.collectContributions,
       fetch: dependencies.fetch,
       now: dependencies.now,
     });
-    const accountId = claim.payload.user_id;
-    if (typeof accountId !== "number" || !Number.isSafeInteger(accountId)) {
-      throw new GithubOAuthError(
-        "provider_unavailable",
-        502,
-        "GitHub returned incomplete account data.",
-      );
-    }
-    let issued;
+    const claims = validateClaims(verified.claims);
+    let issuance: ClaimIssuanceResult[];
     try {
       const coordinator = dependencies.createCoordinator(dependencies.environment);
-      issued = await coordinateIssuance({
-        accountId: String(accountId),
+      issuance = await coordinateIssuance({
+        accountId: String(verified.account.id),
         coordinator,
         issue: async () =>
-          claimIssuanceResultSchema.parse(await dependencies.issueClaim(oauthState.subject, claim)),
+          (await dependencies.issueClaims(oauthState.subject, claims)).map((result) =>
+            claimIssuanceResultSchema.parse(result),
+          ),
         now: dependencies.now(),
         platform: "github",
         subjectDid: oauthState.subject.did,
       });
+      if (
+        issuance.length !== claims.length ||
+        issuance.some((result) => result.transactionHash !== issuance[0].transactionHash) ||
+        new Set(issuance.map((result) => result.claimId)).size !== issuance.length ||
+        new Set(issuance.map((result) => result.outputIndex)).size !== issuance.length
+      ) {
+        throw new Error("GitHub claim issuance returned inconsistent results");
+      }
     } catch (error) {
       dependencies.logFailure({ error, platform: "github", requestId, stage: "issuance" });
       if (error instanceof VerificationServiceError) {
@@ -411,14 +504,14 @@ async function handleCallback(
       });
     }
 
-    const login = claim.payload.login;
+    const identity = issuance[0];
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "submitted",
       subject: oauthState.subject.did,
-      transaction: issued.transactionHash,
-      claim: issued.claimId,
-      output: issued.outputIndex,
-      login: typeof login === "string" ? login : undefined,
+      transaction: identity.transactionHash,
+      claim: identity.claimId,
+      output: identity.outputIndex,
+      login: verified.account.login,
     });
   } catch (error) {
     if (error instanceof GithubOAuthError) {

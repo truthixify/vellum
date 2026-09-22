@@ -1,11 +1,15 @@
 import {
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
   parseGithubClaimPayload,
 } from "@vellum/schemas";
 
 import type { VerifiedClaim } from "./contracts.js";
 import { GithubOAuthError, OAuthConfigurationError } from "./errors.js";
+import { collectGithubContributions } from "./github-contributions.js";
 
 const GITHUB_API_VERSION = "2026-03-10";
 const GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize";
@@ -31,6 +35,7 @@ export type GithubOAuthConfig = {
 export type GithubFetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 export type GithubVerifierDependencies = {
+  collectContributions?: typeof collectGithubContributions;
   fetch: GithubFetch;
   now: () => number;
 };
@@ -47,10 +52,15 @@ type GithubCredentials = {
   valid: boolean;
 };
 
-type GithubAccount = {
+export type GithubAccount = {
   createdAt: number;
   id: number;
   login: string;
+};
+
+export type GithubVerification = {
+  account: GithubAccount;
+  claims: [VerifiedClaim] | [VerifiedClaim, VerifiedClaim];
 };
 
 function requiredValue(
@@ -322,11 +332,12 @@ export async function verifyGithubAuthorization(
   codeVerifier: string,
   config: GithubOAuthConfig,
   dependencies: GithubVerifierDependencies = defaultDependencies,
-): Promise<VerifiedClaim> {
+): Promise<GithubVerification> {
   let accessToken: string | undefined;
   let revokeGrant = false;
   let account: GithubAccount;
   let verifiedAt: number;
+  let contribution: Awaited<ReturnType<typeof collectGithubContributions>>;
 
   try {
     if (!/^[A-Za-z0-9_-]{43}$/.test(codeVerifier)) {
@@ -348,6 +359,12 @@ export async function verifyGithubAuthorization(
     }
     account = await fetchGithubAccount(accessToken, dependencies);
     verifiedAt = dependencies.now();
+    contribution = await (dependencies.collectContributions ?? collectGithubContributions)(
+      accessToken,
+      account,
+      verifiedAt,
+      dependencies,
+    );
   } finally {
     if (accessToken) {
       await revokeGithubCredentials(accessToken, revokeGrant, config, dependencies);
@@ -372,9 +389,25 @@ export async function verifyGithubAuthorization(
     );
   }
 
-  return {
+  const identityClaim: VerifiedClaim = {
     schema: { id: GITHUB_CLAIM_SCHEMA_ID, hash: GITHUB_CLAIM_SCHEMA_HASH },
     payload,
     issuedAt: verifiedAt,
+  };
+  const contributionClaim: VerifiedClaim | undefined = contribution
+    ? {
+        schema: {
+          id: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+          hash: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+        },
+        payload: contribution,
+        issuedAt: verifiedAt,
+        expiresAt: verifiedAt + GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
+      }
+    : undefined;
+
+  return {
+    account,
+    claims: contributionClaim ? [identityClaim, contributionClaim] : [identityClaim],
   };
 }

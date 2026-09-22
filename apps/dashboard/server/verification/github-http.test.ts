@@ -1,11 +1,11 @@
 import { describe, expect, mock, test } from "bun:test";
+import type { GithubContributionClaimPayload } from "@vellum/schemas";
 
-import type { ClaimIssuanceResult } from "./contracts";
+import type { ClaimIssuanceResult, VerificationSubject, VerifiedClaim } from "./contracts";
 import { VerificationCoordinationError, VerificationServiceError } from "./errors";
 import { handleGithubOAuthRequest, githubActionFromUrl } from "./github-http";
 import type { GithubOAuthEnvironment } from "./github";
 import type { VerificationFailureLogger } from "./logging";
-import type { ClaimIssuer } from "./service";
 import { MemoryVerificationCoordinator } from "./coordination";
 
 const SUBJECT_DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
@@ -34,6 +34,34 @@ const SUBJECT_PROOF = {
   },
 };
 
+function contributionPayload(): GithubContributionClaimPayload {
+  return {
+    user_id: 5_830_913,
+    login: "truthixify",
+    verified_at: NOW,
+    window_started_at: NOW - 365 * 86_400,
+    repository_registry: "ckb.public-contributions.v1",
+    eligible_artifact_count: 1,
+    artifacts: [
+      {
+        artifact_id: "PR_kwDOLw3gss7mJq5X",
+        changed_files: 17,
+        classification: "technical",
+        kind: "merged_pull_request",
+        merge_commit_sha: "f727991ef727991ef727991ef727991ef727991e",
+        merged_at: NOW - 100,
+        number: 376,
+        occurred_at: NOW - 100,
+        pull_request_id: "PR_kwDOLw3gss7mJq5X",
+        repository: "ckb-devrel/ccc",
+        repository_id: "R_kgDOLw3gsg",
+        title: "Add did:ckb support",
+        url: "https://github.com/ckb-devrel/ccc/pull/376",
+      },
+    ],
+  };
+}
+
 function providerFetch() {
   const responses = [
     Response.json({
@@ -59,11 +87,14 @@ function providerFetch() {
 function dependencies(fetch = providerFetch()) {
   const coordinator = new MemoryVerificationCoordinator();
   return {
+    collectContributions: mock(
+      async (): Promise<GithubContributionClaimPayload | undefined> => undefined,
+    ),
     environment: ENVIRONMENT,
     fetch,
-    issueClaim: mock(
-      async (_subject: Parameters<ClaimIssuer>[0], _claim: Parameters<ClaimIssuer>[1]) => ISSUANCE,
-    ),
+    issueClaims: mock(async (_subject: VerificationSubject, _claims: readonly VerifiedClaim[]) => [
+      ISSUANCE,
+    ]),
     createCoordinator: () => coordinator,
     assertSubjectController: mock(async () => undefined),
     createSubjectChallenge: mock(async () => ({
@@ -183,8 +214,8 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(location.searchParams.get("transaction")).toBe(ISSUANCE.transactionHash);
     expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
     expect(location.searchParams.get("login")).toBe("truthixify");
-    expect(deps.issueClaim).toHaveBeenCalledTimes(1);
-    expect(deps.issueClaim.mock.calls[0][0]).toEqual({ did: SUBJECT_DID });
+    expect(deps.issueClaims).toHaveBeenCalledTimes(1);
+    expect(deps.issueClaims.mock.calls[0][0]).toEqual({ did: SUBJECT_DID });
     expect(deps.assertSubjectController).toHaveBeenCalledWith(
       { did: SUBJECT_DID },
       CONTROLLER_LOCK_HASH,
@@ -192,10 +223,65 @@ describe("GitHub OAuth HTTP boundary", () => {
     );
   });
 
+  test("issues GitHub identity and contribution evidence in one transaction", async () => {
+    const deps = dependencies();
+    deps.collectContributions = mock(async () => contributionPayload());
+    const contributionIssuance: ClaimIssuanceResult = {
+      ...ISSUANCE,
+      claimId: `0x${"55".repeat(32)}`,
+      outputIndex: 2,
+    };
+    deps.issueClaims = mock(async () => [ISSUANCE, contributionIssuance]);
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.GITHUB_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+
+    const response = await handleGithubOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+    const location = new URL(response.headers.get("location") ?? "");
+
+    expect(location.searchParams.get("status")).toBe("submitted");
+    expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
+    expect(deps.issueClaims.mock.calls[0][1]).toHaveLength(2);
+    expect(deps.issueClaims.mock.calls[0][1][1]).toMatchObject({
+      schema: { id: "vellum.contribution.github.v1" },
+      expiresAt: NOW + 30 * 86_400,
+    });
+  });
+
+  test("rejects contribution evidence for a different GitHub account before issuance", async () => {
+    const deps = dependencies();
+    deps.collectContributions = mock(async () => ({
+      ...contributionPayload(),
+      user_id: 99,
+    }));
+    const started = await start(deps);
+    const state = new URL(started.body.authorizationUrl).searchParams.get("state");
+    const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
+    const callback = new URL(ENVIRONMENT.GITHUB_OAUTH_CALLBACK_URL);
+    callback.searchParams.set("code", "one-time-code");
+    callback.searchParams.set("state", state ?? "");
+
+    const response = await handleGithubOAuthRequest(
+      new Request(callback, { headers: { cookie: cookie ?? "" } }),
+      deps,
+    );
+
+    expect(new URL(response.headers.get("location") ?? "").searchParams.get("code")).toBe(
+      "provider_unavailable",
+    );
+    expect(deps.issueClaims).not.toHaveBeenCalled();
+  });
+
   test("logs the issuer failure and returns a safe issuance error", async () => {
     const deps = dependencies();
     const issuerFailure = new Error("CKB RPC rejected the transaction");
-    deps.issueClaim = mock(async () => Promise.reject(issuerFailure));
+    deps.issueClaims = mock(async () => Promise.reject(issuerFailure));
     const started = await start(deps);
     const state = new URL(started.body.authorizationUrl).searchParams.get("state");
     const cookie = started.response.headers.get("set-cookie")?.split(";", 1)[0];
@@ -232,7 +318,7 @@ describe("GitHub OAuth HTTP boundary", () => {
 
     expect(location.searchParams.get("code")).toBe("oauth_state_invalid");
     expect(fetch).not.toHaveBeenCalled();
-    expect(deps.issueClaim).not.toHaveBeenCalled();
+    expect(deps.issueClaims).not.toHaveBeenCalled();
   });
 
   test("rejects a controller rotation before provider access", async () => {
@@ -260,7 +346,7 @@ describe("GitHub OAuth HTTP boundary", () => {
 
     expect(location.searchParams.get("code")).toBe("subject_control_invalid");
     expect(fetch).not.toHaveBeenCalled();
-    expect(deps.issueClaim).not.toHaveBeenCalled();
+    expect(deps.issueClaims).not.toHaveBeenCalled();
   });
 
   test("does not issue twice when the same callback is replayed", async () => {
@@ -307,7 +393,7 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(new URL(replay.headers.get("location") ?? "").searchParams.get("code")).toBe(
       "provider_unavailable",
     );
-    expect(deps.issueClaim).toHaveBeenCalledTimes(1);
+    expect(deps.issueClaims).toHaveBeenCalledTimes(1);
   });
 
   test("fails closed when durable issuance coordination is unavailable", async () => {
@@ -329,7 +415,7 @@ describe("GitHub OAuth HTTP boundary", () => {
     const location = new URL(response.headers.get("location") ?? "");
 
     expect(location.searchParams.get("code")).toBe("issuer_unavailable");
-    expect(deps.issueClaim).not.toHaveBeenCalled();
+    expect(deps.issueClaims).not.toHaveBeenCalled();
     expect(deps.logFailure).toHaveBeenCalledTimes(1);
   });
 
@@ -351,7 +437,7 @@ describe("GitHub OAuth HTTP boundary", () => {
 
     expect(location.searchParams.get("code")).toBe("oauth_denied");
     expect(fetch).not.toHaveBeenCalled();
-    expect(deps.issueClaim).not.toHaveBeenCalled();
+    expect(deps.issueClaims).not.toHaveBeenCalled();
   });
 
   test("returns deterministic method, input, configuration, and route errors", async () => {
