@@ -3,6 +3,7 @@ export {
   VELLUM_REPUTATION_POLICY_V2,
   VELLUM_REPUTATION_POLICY_V3,
   VELLUM_REPUTATION_POLICY_V4,
+  VELLUM_REPUTATION_POLICY_V5,
 } from "./policy.js";
 export { scoreReputation } from "./score.js";
 export type {
@@ -21,6 +22,7 @@ export type {
   ReputationPolicyV2,
   ReputationPolicyV3,
   ReputationPolicyV4,
+  ReputationPolicyV5,
   ReputationGithubArtifact,
   GithubArtifactScoreRule,
   ReputationRecencyBand,

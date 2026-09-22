@@ -19,7 +19,7 @@ test("scores a live Testnet GitHub claim without wallet state", async () => {
   expect(response.status).toBe(200);
   expect(result.status).toBe("available");
   if (result.status !== "available") throw new Error(result.error?.message);
-  expect(result.policyVersion).toBe("vellum.reputation.v4");
+  expect(result.policyVersion).toBe("vellum.reputation.v5");
   expect(result.evidence).toContainEqual(
     expect.objectContaining({
       schemaId: "vellum.social.github.v1",

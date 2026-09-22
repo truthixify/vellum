@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  BLUESKY_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_HASH,
@@ -9,12 +10,12 @@ import {
 } from "@vellum/schemas";
 import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V4 } from "./policy";
+import { VELLUM_REPUTATION_POLICY_V5 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V4.github.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V5.github.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -55,6 +56,11 @@ type TelegramCommunityClaimOptions = Omit<TelegramClaimOptions, "displayName" | 
   communityName?: string;
   communityType?: "channel" | "group" | "supergroup";
   memberRole?: "administrator" | "member" | "owner";
+};
+
+type BlueskyClaimOptions = Omit<ClaimOptions, "accountCreatedAt" | "login" | "userId"> & {
+  accountDid?: string;
+  handle?: string;
 };
 
 type GithubContributionClaimOptions = Omit<ClaimOptions, "accountCreatedAt"> & {
@@ -320,6 +326,37 @@ function telegramCommunityClaim(options: TelegramCommunityClaimOptions = {}): Cl
   } as unknown as Claim;
 }
 
+function blueskyClaim(options: BlueskyClaimOptions = {}): Claim {
+  const id = options.id ?? 70;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - DAY;
+  const accountDid = options.accountDid ?? `did:plc:${"a".repeat(24)}`;
+  const handle = options.handle ?? "builder.bsky.social";
+  const payload = options.payload ?? {
+    did: accountDid,
+    handle,
+    profile_url: `https://bsky.app/profile/${accountDid}`,
+    verified_at: options.verifiedAt ?? issuedAt,
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? BLUESKY_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: options.expiresAt === undefined ? undefined : BigInt(options.expiresAt),
+    payload,
+    cell: cell(options.transaction ?? id),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) => cell(transaction)),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
 function readResult(claims: Claim[], invalid: ReadClaimsResult["invalid"] = []): ReadClaimsResult {
   return { claims, invalid };
 }
@@ -332,7 +369,7 @@ function categoryScore(
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v4", () => {
+describe("vellum.reputation.v5", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -341,7 +378,7 @@ describe("vellum.reputation.v4", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v4",
+      policyVersion: "vellum.reputation.v5",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -360,8 +397,8 @@ describe("vellum.reputation.v4", () => {
       schemaId: "vellum.social.github.v1",
       account: { platform: "github", id: 1, handle: "builder-1" },
       contributions: [
-        { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
-        { category: "recency", points: 100, ruleId: "github-verification-recency.v4" },
+        { category: "tenure", points: 100, ruleId: "github-account-tenure.v5" },
+        { category: "recency", points: 100, ruleId: "github-verification-recency.v5" },
       ],
     });
   });
@@ -385,7 +422,7 @@ describe("vellum.reputation.v4", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v4",
+      policyVersion: "vellum.reputation.v5",
       overall: { score: 355 },
       categories: [
         { id: "technical", score: 75 },
@@ -407,25 +444,25 @@ describe("vellum.reputation.v4", () => {
         eligibleArtifactCount: 4,
       },
       contributions: [
-        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
-        { category: "contribution", points: 60, ruleId: "github-merged-pr.v4" },
-        { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
-        { category: "contribution", points: 20, ruleId: "github-substantive-review.v4" },
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v5" },
+        { category: "contribution", points: 60, ruleId: "github-merged-pr.v5" },
+        { category: "technical", points: 15, ruleId: "github-technical-review.v5" },
+        { category: "contribution", points: 20, ruleId: "github-substantive-review.v5" },
       ],
     });
     expect(
       evidence?.githubContributions?.artifacts.map((artifact) => artifact.contributions),
     ).toEqual([
       [
-        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
-        { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v5" },
+        { category: "contribution", points: 30, ruleId: "github-merged-pr.v5" },
       ],
-      [{ category: "contribution", points: 30, ruleId: "github-merged-pr.v4" }],
+      [{ category: "contribution", points: 30, ruleId: "github-merged-pr.v5" }],
       [
-        { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
-        { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
+        { category: "technical", points: 15, ruleId: "github-technical-review.v5" },
+        { category: "contribution", points: 10, ruleId: "github-substantive-review.v5" },
       ],
-      [{ category: "contribution", points: 10, ruleId: "github-substantive-review.v4" }],
+      [{ category: "contribution", points: 10, ruleId: "github-substantive-review.v5" }],
     ]);
   });
 
@@ -608,7 +645,7 @@ describe("vellum.reputation.v4", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v4",
+      policyVersion: "vellum.reputation.v5",
       overall: { score: 360, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0, maximum: 300 },
@@ -633,7 +670,7 @@ describe("vellum.reputation.v4", () => {
       },
       supportingClaims: [{ claimId: identity.claimId }],
       contributions: [
-        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" },
+        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v5" },
       ],
     });
   });
@@ -669,8 +706,8 @@ describe("vellum.reputation.v4", () => {
     });
     if (result.status !== "available") throw new Error("Expected an available score");
     expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
-      { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
-      { category: "recency", points: 100, ruleId: "discord-verification-recency.v4" },
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v5" },
+      { category: "recency", points: 100, ruleId: "discord-verification-recency.v5" },
     ]);
   });
 
@@ -682,7 +719,7 @@ describe("vellum.reputation.v4", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v4",
+      policyVersion: "vellum.reputation.v5",
       overall: { score: 100, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0 },
@@ -705,7 +742,7 @@ describe("vellum.reputation.v4", () => {
           verifiedAt: EVALUATED_AT - DAY,
         },
         contributions: [
-          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v5" },
         ],
       }),
     ]);
@@ -723,8 +760,96 @@ describe("vellum.reputation.v4", () => {
     expect(result).toMatchObject({ status: "available", overall: { score: 200 } });
     if (result.status !== "available") throw new Error("Expected an available score");
     expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
-      { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
-      { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v5" },
+      { category: "recency", points: 100, ruleId: "telegram-verification-recency.v5" },
+    ]);
+  });
+
+  test("uses Bluesky for recency without inventing account tenure", () => {
+    const result = scoreReputation({
+      claims: readResult([blueskyClaim()]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v5",
+      overall: { score: 100, maximum: 1_000 },
+      categories: [
+        { id: "technical", score: 0 },
+        { id: "contribution", score: 0 },
+        { id: "community", score: 0 },
+        { id: "tenure", score: 0 },
+        { id: "recency", score: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toEqual([
+      expect.objectContaining({
+        schemaId: "vellum.social.bluesky.v1",
+        account: {
+          platform: "bluesky",
+          id: `did:plc:${"a".repeat(24)}`,
+          handle: "builder.bsky.social",
+          profileUrl: `https://bsky.app/profile/did:plc:${"a".repeat(24)}`,
+          verifiedAt: EVALUATED_AT - DAY,
+        },
+        contributions: [
+          { category: "recency", points: 100, ruleId: "bluesky-verification-recency.v5" },
+        ],
+      }),
+    ]);
+  });
+
+  test("does not stack Bluesky recency with other identity evidence", () => {
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim({ issuedAt: EVALUATED_AT - DAY }),
+        blueskyClaim({ issuedAt: EVALUATED_AT - 2 * DAY }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 200 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v5" },
+      { category: "recency", points: 100, ruleId: "github-verification-recency.v5" },
+    ]);
+  });
+
+  test("supersedes Bluesky handles by stable DID and rejects malformed account data", () => {
+    const stableDid = `did:plc:${"b".repeat(24)}`;
+    const result = scoreReputation({
+      claims: readResult([
+        blueskyClaim({
+          id: 71,
+          accountDid: stableDid,
+          handle: "old.bsky.social",
+          issuedAt: EVALUATED_AT - 3 * DAY,
+        }),
+        blueskyClaim({
+          id: 72,
+          accountDid: stableDid,
+          handle: "current.bsky.social",
+          issuedAt: EVALUATED_AT - DAY,
+        }),
+        blueskyClaim({ id: 73, payload: { nope: true } }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 100 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0].account).toMatchObject({
+      platform: "bluesky",
+      id: stableDid,
+      handle: "current.bsky.social",
+    });
+    expect(result.excludedEvidence.map(({ reason }) => reason).sort()).toEqual([
+      "malformed-payload",
+      "superseded",
     ]);
   });
 
@@ -760,7 +885,7 @@ describe("vellum.reputation.v4", () => {
           },
         ],
       },
-      contributions: [{ category: "community", points: 40, ruleId: "telegram-ckb-membership.v4" }],
+      contributions: [{ category: "community", points: 40, ruleId: "telegram-ckb-membership.v5" }],
     });
   });
 
@@ -783,7 +908,7 @@ describe("vellum.reputation.v4", () => {
     expect(
       result.evidence.find((item) => item.schemaId === "vellum.community.discord.v1")
         ?.contributions,
-    ).toEqual([{ category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" }]);
+    ).toEqual([{ category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v5" }]);
     expect(
       result.evidence.find((item) => item.schemaId === "vellum.community.telegram.v1")
         ?.contributions,
@@ -984,7 +1109,7 @@ describe("vellum.reputation.v4", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v4",
+      policyVersion: "vellum.reputation.v5",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -1026,12 +1151,13 @@ describe("vellum.reputation.v4", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.github.artifactRules)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.identity.tenureBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.discord.communityBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.telegram)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.github.artifactRules)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.telegram)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.bluesky)).toBe(true);
   });
 });
