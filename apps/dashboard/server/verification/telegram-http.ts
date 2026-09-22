@@ -70,6 +70,7 @@ export type TelegramOAuthHttpDependencies = {
   assertSubjectController: typeof assertSubjectController;
   createSubjectChallenge: typeof createSubjectChallenge;
   verifySubjectProof: typeof verifySubjectProof;
+  sleep?: TelegramVerifierDependencies["sleep"];
   verifyIdToken?: TelegramVerifierDependencies["verifyIdToken"];
   logFailure: VerificationFailureLogger;
   nonceBytes?: () => Uint8Array;
@@ -466,6 +467,7 @@ async function handleCallback(
     const verifierDependencies: TelegramVerifierDependencies = {
       fetch: dependencies.fetch,
       now: dependencies.now,
+      ...(dependencies.sleep ? { sleep: dependencies.sleep } : {}),
       ...(dependencies.verifyIdToken ? { verifyIdToken: dependencies.verifyIdToken } : {}),
     };
     const verified = await verifyTelegramAuthorization(
@@ -535,6 +537,9 @@ async function handleCallback(
     });
   } catch (error) {
     if (error instanceof TelegramOAuthError) {
+      if (error.code !== "oauth_denied" && error.code !== "oauth_state_invalid") {
+        dependencies.logFailure({ error, platform: "telegram", requestId, stage: "provider" });
+      }
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
         code: error.code,

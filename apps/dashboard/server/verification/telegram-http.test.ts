@@ -100,6 +100,7 @@ function dependencies() {
     logFailure: mock((_failure: Parameters<VerificationFailureLogger>[0]) => undefined),
     nonceBytes: () => Uint8Array.from({ length: 32 }, (_, index) => index),
     now: () => currentTime,
+    sleep: mock(async () => undefined),
     setNow: (value: number) => {
       currentTime = value;
     },
@@ -300,6 +301,23 @@ describe("Telegram OAuth HTTP boundary", () => {
     );
     expect(issuanceDeps.logFailure).toHaveBeenCalledWith(
       expect.objectContaining({ platform: "telegram", stage: "issuance" }),
+    );
+
+    const providerDeps = dependencies();
+    const provider = await start(providerDeps);
+    const providerCookie = provider.response.headers.get("set-cookie")?.split(";", 1)[0] ?? "";
+    providerDeps.fetch = mock(async () =>
+      Response.json({ ok: false, error: "temporarily_unavailable" }, { status: 502 }),
+    );
+    const providerResponse = await handleTelegramOAuthRequest(
+      callbackRequest(provider.body.authorizationUrl, providerCookie),
+      providerDeps,
+    );
+    expect(new URL(providerResponse.headers.get("location") ?? "").searchParams.get("code")).toBe(
+      "provider_unavailable",
+    );
+    expect(providerDeps.logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ platform: "telegram", stage: "provider" }),
     );
 
     const wrongMethod = await handleTelegramOAuthRequest(

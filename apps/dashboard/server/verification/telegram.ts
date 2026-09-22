@@ -71,6 +71,7 @@ export type TelegramIdTokenVerifier = (
 export type TelegramVerifierDependencies = {
   fetch: TelegramFetch;
   now: () => number;
+  sleep?: (delayMs: number) => Promise<void>;
   verifyIdToken?: TelegramIdTokenVerifier;
 };
 
@@ -103,8 +104,13 @@ async function verifyTelegramIdToken(
 const defaultDependencies: TelegramVerifierDependencies = {
   fetch: globalThis.fetch,
   now: () => Math.floor(Date.now() / 1_000),
+  sleep: wait,
   verifyIdToken: verifyTelegramIdToken,
 };
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 function requiredValue(value: string | undefined, name: string): string {
   if (!value || value.trim() !== value) {
@@ -320,39 +326,57 @@ async function fetchChatMember(
   config: TelegramOAuthConfig,
   dependencies: TelegramVerifierDependencies,
 ): Promise<Record<string, unknown>> {
-  const response = await providerFetch(
-    dependencies.fetch,
-    `${TELEGRAM_BOT_API_URL}/bot${config.botToken}/getChatMember`,
-    {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/x-www-form-urlencoded",
-        "user-agent": "Vellum Telegram verifier",
+  const delays = [0, 250, 1_000, 2_000] as const;
+  for (const [attempt, delayMs] of delays.entries()) {
+    if (delayMs > 0) {
+      await (dependencies.sleep ?? wait)(delayMs);
+    }
+    const response = await providerFetch(
+      dependencies.fetch,
+      `${TELEGRAM_BOT_API_URL}/bot${config.botToken}/getChatMember`,
+      {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Vellum Telegram verifier",
+        },
+        body: new URLSearchParams({ chat_id: community.chatId, user_id: userId }),
       },
-      body: new URLSearchParams({ chat_id: community.chatId, user_id: userId }),
-    },
+    );
+    const body = await jsonBody(response);
+    const description =
+      typeof body.description === "string" && body.description.length <= 256
+        ? body.description
+        : undefined;
+    const transientParticipantFailure =
+      response.status === 400 && description?.includes("PARTICIPANT_ID_INVALID") === true;
+    if (transientParticipantFailure && attempt < delays.length - 1) continue;
+    if (!response.ok || body.ok !== true) {
+      const limited = response.status === 429;
+      throw new TelegramOAuthError(
+        limited ? "provider_rate_limited" : "provider_unavailable",
+        limited ? 429 : 502,
+        limited
+          ? "Telegram is rate limiting community checks. Try again shortly."
+          : `Telegram could not verify the configured community${description ? `: ${description}` : "."}`,
+        limited ? retryTimestamp(body, dependencies.now(), response.headers) : undefined,
+      );
+    }
+    if (typeof body.result !== "object" || body.result === null || Array.isArray(body.result)) {
+      throw new TelegramOAuthError(
+        "provider_unavailable",
+        502,
+        "Telegram returned invalid community membership data.",
+      );
+    }
+    return body.result as Record<string, unknown>;
+  }
+  throw new TelegramOAuthError(
+    "provider_unavailable",
+    502,
+    "Telegram could not verify the configured community.",
   );
-  const body = await jsonBody(response);
-  if (!response.ok || body.ok !== true) {
-    const limited = response.status === 429;
-    throw new TelegramOAuthError(
-      limited ? "provider_rate_limited" : "provider_unavailable",
-      limited ? 429 : 502,
-      limited
-        ? "Telegram is rate limiting community checks. Try again shortly."
-        : "Telegram could not verify the configured community.",
-      limited ? retryTimestamp(body, dependencies.now(), response.headers) : undefined,
-    );
-  }
-  if (typeof body.result !== "object" || body.result === null || Array.isArray(body.result)) {
-    throw new TelegramOAuthError(
-      "provider_unavailable",
-      502,
-      "Telegram returned invalid community membership data.",
-    );
-  }
-  return body.result as Record<string, unknown>;
 }
 
 function memberUserId(member: Record<string, unknown>): string | undefined {
@@ -360,9 +384,7 @@ function memberUserId(member: Record<string, unknown>): string | undefined {
     typeof member.user === "object" && member.user !== null && !Array.isArray(member.user)
       ? (member.user as Record<string, unknown>)
       : undefined;
-  return typeof user?.id === "number" && Number.isSafeInteger(user.id) && user.id > 0
-    ? String(user.id)
-    : undefined;
+  return telegramUserId(user?.id);
 }
 
 function membershipRole(
@@ -447,9 +469,12 @@ function isDisplayName(value: unknown): value is string {
 }
 
 function telegramUserId(value: unknown): string | undefined {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
-    ? String(value)
-    : undefined;
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value > 0 ? String(value) : undefined;
+  }
+  if (typeof value !== "string" || !USER_ID_PATTERN.test(value)) return undefined;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 && String(parsed) === value ? value : undefined;
 }
 
 export async function verifyTelegramAuthorization(

@@ -61,6 +61,7 @@ function dependencies(
       });
     }),
     now: () => NOW,
+    sleep: mock(async () => undefined),
     verifyIdToken: mock(async () => claims),
   };
 }
@@ -204,6 +205,18 @@ describe("Telegram OAuth verifier", () => {
     });
   });
 
+  test("accepts a canonical string user ID from Telegram OIDC", async () => {
+    const verified = await verifyTelegramAuthorization(
+      "one-time-code",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      telegramOAuthConfig(ENVIRONMENT),
+      dependencies({ sub: OIDC_SUBJECT, id: ACCOUNT_ID, name: "Vellum Builder" }),
+    );
+
+    expect(verified.account.id).toBe(ACCOUNT_ID);
+    expect(verified.memberships).toHaveLength(1);
+  });
+
   test("issues only identity evidence when the user is not in a trusted community", async () => {
     const verified = await verifyTelegramAuthorization(
       "one-time-code",
@@ -253,6 +266,43 @@ describe("Telegram OAuth verifier", () => {
         deps,
       ),
     ).rejects.toMatchObject({ code: "provider_unavailable", status: 502 });
+  });
+
+  test("retries Telegram's transient participant lookup failure", async () => {
+    const deps = dependencies();
+    let memberAttempts = 0;
+    deps.fetch = mock(async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input) === "https://oauth.telegram.org/token") return tokenResponse();
+      const userId = new URLSearchParams(String(init?.body)).get("user_id");
+      if (userId === BOT_USER_ID) {
+        return Response.json({
+          ok: true,
+          result: { status: "administrator", user: { id: Number(BOT_USER_ID) } },
+        });
+      }
+      memberAttempts += 1;
+      if (memberAttempts < 3) {
+        return Response.json(
+          { ok: false, error_code: 400, description: "Bad Request: PARTICIPANT_ID_INVALID" },
+          { status: 400 },
+        );
+      }
+      return Response.json({
+        ok: true,
+        result: { status: "member", user: { id: ACCOUNT_ID } },
+      });
+    });
+
+    const verified = await verifyTelegramAuthorization(
+      "one-time-code",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      telegramOAuthConfig(ENVIRONMENT),
+      deps,
+    );
+
+    expect(verified.memberships).toHaveLength(1);
+    expect(memberAttempts).toBe(3);
+    expect(deps.sleep).toHaveBeenCalledTimes(2);
   });
 
   test("rejects malformed tokens, account data, and provider failures", async () => {
