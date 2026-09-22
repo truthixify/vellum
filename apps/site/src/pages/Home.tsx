@@ -46,6 +46,14 @@ const RECORDS: RecordNode[] = [
     time: "2026-02-11 16:44 UTC",
   },
   {
+    key: "bluesky",
+    id: "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
+    title: "Bluesky account",
+    source: "Verified through Bluesky",
+    issuer: "Vellum verifier",
+    time: "2026-02-11 16:46 UTC",
+  },
+  {
     key: "address",
     id: "ckb1qzda\u20264mns9f0",
     title: "Linked address",
@@ -176,6 +184,14 @@ function RegistryScene() {
                 <small className="positive">Verified &middot; current CKB membership</small>
               </NodeButton>
               <NodeButton
+                record={byKey("bluesky")}
+                selected={selected.key === "bluesky"}
+                onSelect={setSelected}
+              >
+                <strong>Bluesky &middot; @rmaddox.bsky.social</strong>
+                <small className="positive">Verified &middot; stable AT Protocol identity</small>
+              </NodeButton>
+              <NodeButton
                 record={byKey("address")}
                 selected={selected.key === "address"}
                 onSelect={setSelected}
@@ -264,8 +280,8 @@ function RegistryLegend() {
       {[
         ["did:ckb:0x8f2a\u2026c41d", "One resolvable identifier, owned by a person"],
         [
-          "Five linked services",
-          "GitHub, Discord, Telegram, CKB address, CKBoost \u2014 each with its own method",
+          "Six linked services",
+          "GitHub, Discord, Telegram, Bluesky, CKB address, CKBoost \u2014 each with its own method",
         ],
         ["Independently sourced claims", "Issuer, schema, and timestamp visible on every record"],
         [
@@ -324,7 +340,7 @@ function ClaimsLedger() {
     <div className="ledger">
       <div className="ledger__bar">
         <strong>Attached evidence</strong>
-        <span>6 accepted Claim Cells</span>
+        <span>7 accepted Claim Cells</span>
       </div>
       {[
         [
@@ -369,6 +385,13 @@ function ClaimsLedger() {
           "Example checkpoint",
           "Verified",
         ],
+        [
+          "Bluesky account",
+          "vellum.social.bluesky.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
       ].map(([title, schema, issuer, date, state]) => (
         <div className="ledger__row" key={schema}>
           <span>
@@ -395,7 +418,7 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">Vellum reputation v4 - evaluation</div>
+        <div className="policy-card__bar">Vellum reputation v5 - evaluation</div>
         <div className="policy-card__result">
           <StatusMark tone="positive">Available</StatusMark>
           <span>Deterministic Testnet result</span>
@@ -565,10 +588,10 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v4</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v5</strong>
             </div>
             <div>
-              <small>Scored in v4</small>
+              <small>Scored in v5</small>
               <strong>Accepted CKB work, community history, tenure, and recency</strong>
             </div>
             <div>
