@@ -3,14 +3,18 @@ import {
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
   parseGithubContributionClaimPayload,
+  parseTelegramClaimPayload,
+  parseTelegramCommunityClaimPayload,
   type DiscordClaimPayload,
   type DiscordCommunityClaimPayload,
   type GithubClaimPayload,
   type GithubContributionClaimPayload,
+  type TelegramClaimPayload,
+  type TelegramCommunityClaimPayload,
 } from "@vellum/schemas";
 import type { Claim, ClaimReadFailure } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V3 } from "./policy.js";
+import { VELLUM_REPUTATION_POLICY_V4 } from "./policy.js";
 import type {
   AvailableReputationResult,
   ReputationAccount,
@@ -19,7 +23,7 @@ import type {
   ReputationContribution,
   ReputationEvidence,
   ReputationExcludedEvidence,
-  ReputationPolicyV3,
+  ReputationPolicyV4,
   ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
@@ -45,17 +49,27 @@ type DiscordCommunityCandidate = {
   payload: DiscordCommunityClaimPayload;
 };
 
+type TelegramCandidate = {
+  claim: Claim;
+  payload: TelegramClaimPayload;
+};
+
+type TelegramCommunityCandidate = {
+  claim: Claim;
+  payload: TelegramCommunityClaimPayload;
+};
+
 type MutableEvidence = Omit<ReputationEvidence, "contributions"> & {
   contributions: ReputationContribution[];
 };
 
 type IdentityScoreCandidate = {
   evidence: MutableEvidence;
-  accountAge: number;
+  accountAge?: number;
   verificationAge: number;
-  tenurePoints: number;
+  tenurePoints?: number;
   recencyPoints: number;
-  tenureRuleId: string;
+  tenureRuleId?: string;
   recencyRuleId: string;
 };
 
@@ -114,7 +128,7 @@ function validateSchema(schema: { id: string; hash: string }, name: string): voi
   }
 }
 
-function validatePolicy(policy: ReputationPolicyV3): void {
+function validatePolicy(policy: ReputationPolicyV4): void {
   if (!policy.version || !Number.isSafeInteger(policy.maximum) || policy.maximum < 0) {
     throw new TypeError("The reputation policy score range is invalid");
   }
@@ -140,10 +154,13 @@ function validatePolicy(policy: ReputationPolicyV3): void {
 
   validateIssuerDids(policy.github.issuerDids, "GitHub");
   validateIssuerDids(policy.discord.issuerDids, "Discord");
+  validateIssuerDids(policy.telegram.issuerDids, "Telegram");
   validateSchema(policy.github.identitySchema, "GitHub identity");
   validateSchema(policy.github.contributionSchema, "GitHub contribution");
   validateSchema(policy.discord.identitySchema, "Discord identity");
   validateSchema(policy.discord.communitySchema, "Discord community");
+  validateSchema(policy.telegram.identitySchema, "Telegram identity");
+  validateSchema(policy.telegram.communitySchema, "Telegram community");
   if (
     !validateAgeBands(policy.identity.tenureBands, categoryCaps.get("tenure")!) ||
     !validateRecencyBands(policy.identity.recencyBands, categoryCaps.get("recency")!) ||
@@ -153,7 +170,12 @@ function validatePolicy(policy: ReputationPolicyV3): void {
     !Number.isSafeInteger(policy.github.contributionWindowSeconds) ||
     policy.github.contributionWindowSeconds <= 0 ||
     !Number.isSafeInteger(policy.discord.communityTtlSeconds) ||
-    policy.discord.communityTtlSeconds <= 0
+    policy.discord.communityTtlSeconds <= 0 ||
+    !Number.isSafeInteger(policy.telegram.communityTtlSeconds) ||
+    policy.telegram.communityTtlSeconds <= 0 ||
+    !Number.isSafeInteger(policy.telegram.communityPoints) ||
+    policy.telegram.communityPoints <= 0 ||
+    policy.telegram.communityPoints > categoryCaps.get("community")!
   ) {
     throw new TypeError("The reputation policy score bands are invalid");
   }
@@ -309,7 +331,7 @@ function scoreRecency(ageSeconds: number, bands: readonly ReputationRecencyBand[
   return bands.find((band) => ageSeconds < band.maximumAgeSecondsExclusive)?.points ?? 0;
 }
 
-function emptyCategories(policy: ReputationPolicyV3): AvailableReputationResult["categories"] {
+function emptyCategories(policy: ReputationPolicyV4): AvailableReputationResult["categories"] {
   return policy.categories.map((category) => ({ ...category, score: 0 }));
 }
 
@@ -357,7 +379,7 @@ function unavailableResult(
 ): Extract<ReputationResult, { status: "unavailable" }> {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V3.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V4.version,
     evaluatedAt,
     error: {
       code: "issuer-state-unavailable",
@@ -389,20 +411,35 @@ function accountFromDiscord(payload: DiscordClaimPayload): ReputationAccount {
   };
 }
 
+function accountFromTelegram(payload: TelegramClaimPayload): ReputationAccount {
+  return {
+    platform: "telegram",
+    id: payload.user_id,
+    displayName: payload.display_name,
+    handle: payload.username,
+    profileUrl: payload.profile_url,
+    verifiedAt: payload.verified_at,
+  };
+}
+
 function identityScoreCandidate(
   evidence: MutableEvidence,
   evaluatedAt: number,
-  tenureRuleId: string,
+  tenureRuleId: string | undefined,
   recencyRuleId: string,
-  policy: ReputationPolicyV3,
+  policy: ReputationPolicyV4,
 ): IdentityScoreCandidate {
-  const accountAge = evaluatedAt - evidence.account.createdAt;
+  const accountAge =
+    "createdAt" in evidence.account ? evaluatedAt - evidence.account.createdAt : undefined;
   const verificationAge = evaluatedAt - evidence.account.verifiedAt;
   return {
     evidence,
     accountAge,
     verificationAge,
-    tenurePoints: scoreAge(accountAge, policy.identity.tenureBands),
+    tenurePoints:
+      accountAge === undefined || tenureRuleId === undefined
+        ? undefined
+        : scoreAge(accountAge, policy.identity.tenureBands),
     recencyPoints: scoreRecency(verificationAge, policy.identity.recencyBands),
     tenureRuleId,
     recencyRuleId,
@@ -411,8 +448,8 @@ function identityScoreCandidate(
 
 function compareTenure(left: IdentityScoreCandidate, right: IdentityScoreCandidate): number {
   return (
-    right.tenurePoints - left.tenurePoints ||
-    right.accountAge - left.accountAge ||
+    right.tenurePoints! - left.tenurePoints! ||
+    right.accountAge! - left.accountAge! ||
     compareText(left.evidence.account.platform, right.evidence.account.platform) ||
     compareText(referenceKey(left.evidence.claim), referenceKey(right.evidence.claim))
   );
@@ -428,7 +465,7 @@ function compareRecency(left: IdentityScoreCandidate, right: IdentityScoreCandid
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = VELLUM_REPUTATION_POLICY_V3;
+  const policy = VELLUM_REPUTATION_POLICY_V4;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 
@@ -441,6 +478,8 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   const githubContributionCandidates: GithubContributionCandidate[] = [];
   const discordIdentityCandidates: DiscordIdentityCandidate[] = [];
   const discordCommunityCandidates: DiscordCommunityCandidate[] = [];
+  const telegramCandidates: TelegramCandidate[] = [];
+  const telegramCommunityCandidates: TelegramCommunityCandidate[] = [];
 
   for (const claim of canonicalClaims(input.claims.claims, excluded)) {
     const kind =
@@ -452,7 +491,11 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
             ? "discord-identity"
             : claim.schemaHash === policy.discord.communitySchema.hash
               ? "discord-community"
-              : undefined;
+              : claim.schemaHash === policy.telegram.identitySchema.hash
+                ? "telegram-identity"
+                : claim.schemaHash === policy.telegram.communitySchema.hash
+                  ? "telegram-community"
+                  : undefined;
     if (!kind) {
       excluded.push(
         exclusion(claim, "unsupported-schema", "The claim schema is not scored by this policy."),
@@ -462,7 +505,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
 
     const trustedIssuers = kind.startsWith("github")
       ? policy.github.issuerDids
-      : policy.discord.issuerDids;
+      : kind.startsWith("discord")
+        ? policy.discord.issuerDids
+        : policy.telegram.issuerDids;
     if (!(trustedIssuers as readonly string[]).includes(claim.issuerDid)) {
       excluded.push(
         exclusion(claim, "untrusted-issuer", "The claim issuer is not trusted by this policy."),
@@ -484,7 +529,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       | GithubClaimPayload
       | GithubContributionClaimPayload
       | DiscordClaimPayload
-      | DiscordCommunityClaimPayload;
+      | DiscordCommunityClaimPayload
+      | TelegramClaimPayload
+      | TelegramCommunityClaimPayload;
     try {
       payload =
         kind === "github-identity"
@@ -493,7 +540,11 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
             ? parseGithubContributionClaimPayload(claim.payload)
             : kind === "discord-identity"
               ? parseDiscordClaimPayload(claim.payload)
-              : parseDiscordCommunityClaimPayload(claim.payload);
+              : kind === "discord-community"
+                ? parseDiscordCommunityClaimPayload(claim.payload)
+                : kind === "telegram-identity"
+                  ? parseTelegramClaimPayload(claim.payload)
+                  : parseTelegramCommunityClaimPayload(claim.payload);
     } catch {
       excluded.push(exclusion(claim, "malformed-payload", "The claim payload is malformed."));
       continue;
@@ -514,13 +565,16 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
           claim.expiresAt !== claim.issuedAt + BigInt(policy.github.contributionTtlSeconds))) ||
       (kind === "discord-community" &&
         (claim.expiresAt === undefined ||
-          claim.expiresAt !== claim.issuedAt + BigInt(policy.discord.communityTtlSeconds)))
+          claim.expiresAt !== claim.issuedAt + BigInt(policy.discord.communityTtlSeconds))) ||
+      (kind === "telegram-community" &&
+        (claim.expiresAt === undefined ||
+          claim.expiresAt !== claim.issuedAt + BigInt(policy.telegram.communityTtlSeconds)))
     ) {
       excluded.push(
         exclusion(
           claim,
           "malformed-payload",
-          `${kind === "github-contribution" ? "GitHub contribution" : "Discord community"} evidence does not use the required validity period.`,
+          `${kind === "github-contribution" ? "GitHub contribution" : kind === "discord-community" ? "Discord community" : "Telegram community"} evidence does not use the required validity period.`,
         ),
       );
       continue;
@@ -543,10 +597,17 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       });
     } else if (kind === "discord-identity") {
       discordIdentityCandidates.push({ claim, payload: payload as DiscordClaimPayload });
-    } else {
+    } else if (kind === "discord-community") {
       discordCommunityCandidates.push({
         claim,
         payload: payload as DiscordCommunityClaimPayload,
+      });
+    } else if (kind === "telegram-identity") {
+      telegramCandidates.push({ claim, payload: payload as TelegramClaimPayload });
+    } else {
+      telegramCommunityCandidates.push({
+        claim,
+        payload: payload as TelegramCommunityClaimPayload,
       });
     }
   }
@@ -561,6 +622,12 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     discordIdentityCandidates,
     (candidate) => candidate.payload.user_id,
     "Discord",
+    excluded,
+  );
+  const telegram = selectAccount(
+    telegramCandidates,
+    (candidate) => candidate.payload.user_id,
+    "Telegram",
     excluded,
   );
 
@@ -637,6 +704,45 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
           candidate.claim,
           "additional-account",
           "The community claim belongs to a different Discord account.",
+        ),
+      );
+    }
+  }
+
+  telegramCommunityCandidates.sort(compareNewest);
+  const newestTelegramCommunityByUser = new Map<string, TelegramCommunityCandidate>();
+  for (const candidate of telegramCommunityCandidates) {
+    if (newestTelegramCommunityByUser.has(candidate.payload.user_id)) {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "superseded",
+          "A newer Telegram community claim for this account is available.",
+        ),
+      );
+      continue;
+    }
+    newestTelegramCommunityByUser.set(candidate.payload.user_id, candidate);
+  }
+
+  let telegramCommunity: TelegramCommunityCandidate | undefined;
+  for (const candidate of newestTelegramCommunityByUser.values()) {
+    if (!telegram) {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "identity-missing",
+          "An active Telegram identity claim is required for community evidence.",
+        ),
+      );
+    } else if (candidate.payload.user_id === telegram.payload.user_id) {
+      telegramCommunity = candidate;
+    } else {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "additional-account",
+          "The community claim belongs to a different Telegram account.",
         ),
       );
     }
@@ -744,7 +850,43 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     );
   }
 
-  const tenureWinner = [...identityScores].sort(compareTenure)[0];
+  let telegramEvidence: MutableEvidence | undefined;
+  if (telegram) {
+    telegramEvidence = {
+      claim: claimReference(telegram.claim),
+      issuerDid: telegram.claim.issuerDid,
+      schemaId: policy.telegram.identitySchema.id,
+      schemaHash: telegram.claim.schemaHash,
+      issuedAt: Number(telegram.claim.issuedAt),
+      account: accountFromTelegram(telegram.payload),
+      contributions: [],
+    };
+    evidence.push(telegramEvidence);
+    identityScores.push(
+      identityScoreCandidate(
+        telegramEvidence,
+        evaluatedAt,
+        undefined,
+        policy.telegram.recencyRuleId,
+        policy,
+      ),
+    );
+  }
+
+  const tenureWinner = identityScores
+    .filter(
+      (
+        candidate,
+      ): candidate is IdentityScoreCandidate & {
+        accountAge: number;
+        tenurePoints: number;
+        tenureRuleId: string;
+      } =>
+        candidate.accountAge !== undefined &&
+        candidate.tenurePoints !== undefined &&
+        candidate.tenureRuleId !== undefined,
+    )
+    .sort(compareTenure)[0];
   const recencyWinner = [...identityScores].sort(compareRecency)[0];
   if (tenureWinner) {
     const contribution = {
@@ -765,6 +907,12 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     categories.find((category) => category.id === "recency")!.score = contribution.points;
   }
 
+  const communityScores: Array<{
+    evidence: MutableEvidence;
+    points: number;
+    ruleId: string;
+    source: "discord" | "telegram";
+  }> = [];
   if (discord && discordEvidence && discordCommunity) {
     const oldestJoin = Math.min(
       ...discordCommunity.payload.memberships.map((membership) => membership.joined_at),
@@ -779,16 +927,51 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       issuedAt: Number(discordCommunity.claim.issuedAt),
       account: accountFromDiscord(discord.payload),
       community: { memberships: discordCommunity.payload.memberships },
-      contributions: [
-        {
-          category: "community",
-          points: communityPoints,
-          ruleId: policy.discord.communityRuleId,
-        },
-      ],
+      contributions: [],
     };
     evidence.push(communityEvidence);
-    categories.find((category) => category.id === "community")!.score = communityPoints;
+    communityScores.push({
+      evidence: communityEvidence,
+      points: communityPoints,
+      ruleId: policy.discord.communityRuleId,
+      source: "discord",
+    });
+  }
+
+  if (telegram && telegramEvidence && telegramCommunity) {
+    const communityEvidence: MutableEvidence = {
+      claim: claimReference(telegramCommunity.claim),
+      supportingClaims: [claimReference(telegram.claim)],
+      issuerDid: telegramCommunity.claim.issuerDid,
+      schemaId: policy.telegram.communitySchema.id,
+      schemaHash: telegramCommunity.claim.schemaHash,
+      issuedAt: Number(telegramCommunity.claim.issuedAt),
+      account: accountFromTelegram(telegram.payload),
+      community: { memberships: telegramCommunity.payload.memberships },
+      contributions: [],
+    };
+    evidence.push(communityEvidence);
+    communityScores.push({
+      evidence: communityEvidence,
+      points: policy.telegram.communityPoints,
+      ruleId: policy.telegram.communityRuleId,
+      source: "telegram",
+    });
+  }
+
+  const communityWinner = communityScores.sort(
+    (left, right) =>
+      right.points - left.points ||
+      right.evidence.issuedAt - left.evidence.issuedAt ||
+      compareText(left.source, right.source),
+  )[0];
+  if (communityWinner) {
+    communityWinner.evidence.contributions.push({
+      category: "community",
+      points: communityWinner.points,
+      ruleId: communityWinner.ruleId,
+    });
+    categories.find((category) => category.id === "community")!.score = communityWinner.points;
   }
 
   return {

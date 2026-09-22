@@ -70,3 +70,22 @@ export class DiscordOAuthError extends VerificationServiceError {
     this.name = "DiscordOAuthError";
   }
 }
+
+export class TelegramOAuthError extends VerificationServiceError {
+  constructor(
+    code: Extract<
+      VerificationErrorCode,
+      | "oauth_configuration_error"
+      | "oauth_denied"
+      | "oauth_state_invalid"
+      | "provider_rate_limited"
+      | "provider_unavailable"
+    >,
+    status: number,
+    message: string,
+    retryAt?: number,
+  ) {
+    super(code, status, message, retryAt);
+    this.name = "TelegramOAuthError";
+  }
+}

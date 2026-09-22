@@ -4,7 +4,12 @@ import { ccc } from "@ckb-ccc/core";
 import { resolveDidCkb } from "@ckb-ccc/did-ckb";
 import { verifyCredential, type CredentialKeyType, type SigningAlg } from "@joyid/ckb";
 
-import type { DidVerificationSubject, SubjectProof, VerificationPlatform } from "./contracts.js";
+import {
+  isVerificationPlatform,
+  type DidVerificationSubject,
+  type SubjectProof,
+  type VerificationPlatform,
+} from "./contracts.js";
 import type { VerificationCoordinator } from "./coordination.js";
 import { OAuthConfigurationError, VerificationServiceError } from "./errors.js";
 import { issuerRpcUrl } from "./issuer.js";
@@ -94,7 +99,7 @@ function decode(value: string, secretValue: string): ChallengePayload {
     Object.keys(candidate).sort().join(",") !==
       "controllerLockHash,expiresAt,issuedAt,nonce,platform,subject,version" ||
     candidate.version !== 1 ||
-    !["github", "discord"].includes(candidate.platform ?? "") ||
+    !isVerificationPlatform(candidate.platform ?? "") ||
     !candidate.subject ||
     typeof candidate.subject.did !== "string" ||
     typeof candidate.controllerLockHash !== "string" ||
@@ -292,7 +297,7 @@ export async function verifySubjectProof(
     verified = false;
   }
   if (!verified) proofError();
-  if (!(await coordinator.consumeChallenge(payload.nonce, payload.expiresAt, now))) {
+  if (!(await coordinator.consumeOnce(payload.nonce, payload.expiresAt, now))) {
     proofError("The wallet verification challenge expired or has already been used.");
   }
   return payload.controllerLockHash;

@@ -21,7 +21,7 @@ const CLAIM_FACTS = [
   { label: "Claim issuer", value: "Vellum", icon: Landmark },
   { label: "Submission", value: "Automatic", icon: Send },
   { label: "Testnet cost", value: "Paid by Vellum", icon: CircleDollarSign },
-  { label: "OAuth access", value: "Released before issuance", icon: KeyRound },
+  { label: "OAuth access", value: "Not retained", icon: KeyRound },
 ] as const;
 
 function VerificationPage() {
@@ -113,6 +113,38 @@ function VerificationPage() {
             </span>
             <span className="verification-source__action">
               View Discord status <ArrowRight size={15} aria-hidden="true" />
+            </span>
+          </Link>
+
+          <Link className="verification-source" to="/verify/telegram">
+            <span className="verification-source__icon" aria-hidden="true">
+              <Send size={22} strokeWidth={1.7} />
+            </span>
+            <span className="verification-source__body">
+              <span className="verification-source__title">
+                <strong>Telegram</strong>
+                <StatusMark tone="positive">Available</StatusMark>
+              </span>
+              <span className="verification-source__description">
+                Verify account control and current membership in recognized Nervos communities.
+              </span>
+              <span className="verification-source__meta">
+                <span>
+                  <small>Evidence</small>
+                  Current CKB membership
+                </span>
+                <span>
+                  <small>Schemas</small>
+                  <code>social + community</code>
+                </span>
+                <span>
+                  <small>Record</small>
+                  Claim Cells
+                </span>
+              </span>
+            </span>
+            <span className="verification-source__action">
+              View Telegram status <ArrowRight size={15} aria-hidden="true" />
             </span>
           </Link>
         </div>

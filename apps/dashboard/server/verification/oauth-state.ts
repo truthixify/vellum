@@ -1,14 +1,21 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { didVerificationSubjectSchema, type DidVerificationSubject } from "./contracts.js";
-import { DiscordOAuthError, GithubOAuthError, OAuthConfigurationError } from "./errors.js";
+import {
+  DiscordOAuthError,
+  GithubOAuthError,
+  OAuthConfigurationError,
+  TelegramOAuthError,
+} from "./errors.js";
 
 export const GITHUB_OAUTH_STATE_TTL_SECONDS = 5 * 60;
 export const GITHUB_OAUTH_COOKIE_NAME = "vellum_github_oauth";
 export const DISCORD_OAUTH_STATE_TTL_SECONDS = 5 * 60;
 export const DISCORD_OAUTH_COOKIE_NAME = "vellum_discord_oauth";
+export const TELEGRAM_OAUTH_STATE_TTL_SECONDS = 5 * 60;
+export const TELEGRAM_OAUTH_COOKIE_NAME = "vellum_telegram_oauth";
 
-type OAuthProvider = "github" | "discord";
+type OAuthProvider = "github" | "discord" | "telegram";
 
 type OAuthStatePayload = {
   controllerLockHash: string;
@@ -33,6 +40,8 @@ export type ConsumedOAuthState = {
 
 export type CreatedDiscordOAuthState = Omit<CreatedOAuthState, "codeChallenge">;
 export type ConsumedDiscordOAuthState = Pick<ConsumedOAuthState, "controllerLockHash" | "subject">;
+export type CreatedTelegramOAuthState = CreatedOAuthState;
+export type ConsumedTelegramOAuthState = ConsumedOAuthState & { expiresAt: number };
 
 const PROVIDER_CONFIG = {
   github: {
@@ -47,6 +56,12 @@ const PROVIDER_CONFIG = {
     displayName: "Discord",
     ttl: DISCORD_OAUTH_STATE_TTL_SECONDS,
   },
+  telegram: {
+    callbackPath: "/api/verify/telegram/callback",
+    cookieName: TELEGRAM_OAUTH_COOKIE_NAME,
+    displayName: "Telegram",
+    ttl: TELEGRAM_OAUTH_STATE_TTL_SECONDS,
+  },
 } as const;
 
 function stateSecret(value: string | undefined): string {
@@ -60,8 +75,8 @@ function signature(payload: string, secret: string): string {
   return createHmac("sha256", secret).update(payload).digest("base64url");
 }
 
-function codeVerifier(nonce: string, secret: string): string {
-  return createHmac("sha256", secret).update(`github-pkce:${nonce}`).digest("base64url");
+function codeVerifier(provider: "github" | "telegram", nonce: string, secret: string): string {
+  return createHmac("sha256", secret).update(`${provider}-pkce:${nonce}`).digest("base64url");
 }
 
 function codeChallenge(verifier: string): string {
@@ -71,10 +86,10 @@ function codeChallenge(verifier: string): string {
 function providerError(
   provider: OAuthProvider,
   message: string,
-): GithubOAuthError | DiscordOAuthError {
-  return provider === "github"
-    ? new GithubOAuthError("oauth_state_invalid", 400, message)
-    : new DiscordOAuthError("oauth_state_invalid", 400, message);
+): GithubOAuthError | DiscordOAuthError | TelegramOAuthError {
+  if (provider === "github") return new GithubOAuthError("oauth_state_invalid", 400, message);
+  if (provider === "discord") return new DiscordOAuthError("oauth_state_invalid", 400, message);
+  return new TelegramOAuthError("oauth_state_invalid", 400, message);
 }
 
 function cookieAttributes(provider: OAuthProvider, maxAge: number, secure: boolean): string {
@@ -175,7 +190,7 @@ export function createGithubOAuthState(
     secure,
     nonceBytes,
   );
-  const verifier = codeVerifier(created.nonce, created.secret);
+  const verifier = codeVerifier("github", created.nonce, created.secret);
 
   return {
     codeChallenge: codeChallenge(verifier),
@@ -209,6 +224,32 @@ export function createDiscordOAuthState(
   };
 }
 
+export function createTelegramOAuthState(
+  subject: DidVerificationSubject,
+  controllerLockHash: string,
+  secretValue: string | undefined,
+  now: number,
+  secure: boolean,
+  nonceBytes: () => Uint8Array = () => randomBytes(32),
+): CreatedTelegramOAuthState {
+  const created = createProviderOAuthState(
+    "telegram",
+    subject,
+    controllerLockHash,
+    secretValue,
+    now,
+    secure,
+    nonceBytes,
+  );
+  const verifier = codeVerifier("telegram", created.nonce, created.secret);
+  return {
+    codeChallenge: codeChallenge(verifier),
+    state: created.nonce,
+    expiresAt: created.expiresAt,
+    cookie: created.cookie,
+  };
+}
+
 function consumeProviderOAuthState(
   provider: OAuthProvider,
   cookieHeader: string | null,
@@ -217,6 +258,7 @@ function consumeProviderOAuthState(
   now: number,
 ): {
   controllerLockHash: string;
+  expiresAt: number;
   nonce: string;
   secret: string;
   subject: DidVerificationSubject;
@@ -247,7 +289,13 @@ function consumeProviderOAuthState(
   try {
     payload = JSON.parse(decodeBase64Url(provider, encodedPayload).toString("utf8"));
   } catch (error) {
-    if (error instanceof GithubOAuthError || error instanceof DiscordOAuthError) throw error;
+    if (
+      error instanceof GithubOAuthError ||
+      error instanceof DiscordOAuthError ||
+      error instanceof TelegramOAuthError
+    ) {
+      throw error;
+    }
     throw providerError(provider, `The ${displayName} verification session is invalid.`);
   }
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
@@ -276,6 +324,7 @@ function consumeProviderOAuthState(
 
   return {
     controllerLockHash: candidate.controllerLockHash,
+    expiresAt: candidate.issuedAt + ttl,
     nonce: candidate.nonce,
     secret,
     subject: subject.data,
@@ -291,7 +340,7 @@ export function consumeGithubOAuthState(
   const consumed = consumeProviderOAuthState("github", cookieHeader, queryState, secretValue, now);
 
   return {
-    codeVerifier: codeVerifier(consumed.nonce, consumed.secret),
+    codeVerifier: codeVerifier("github", consumed.nonce, consumed.secret),
     controllerLockHash: consumed.controllerLockHash,
     subject: consumed.subject,
   };
@@ -307,10 +356,35 @@ export function consumeDiscordOAuthState(
   return { controllerLockHash: consumed.controllerLockHash, subject: consumed.subject };
 }
 
+export function consumeTelegramOAuthState(
+  cookieHeader: string | null,
+  queryState: string,
+  secretValue: string | undefined,
+  now: number,
+): ConsumedTelegramOAuthState {
+  const consumed = consumeProviderOAuthState(
+    "telegram",
+    cookieHeader,
+    queryState,
+    secretValue,
+    now,
+  );
+  return {
+    codeVerifier: codeVerifier("telegram", consumed.nonce, consumed.secret),
+    controllerLockHash: consumed.controllerLockHash,
+    expiresAt: consumed.expiresAt,
+    subject: consumed.subject,
+  };
+}
+
 export function clearGithubOAuthCookie(secure: boolean): string {
   return `${GITHUB_OAUTH_COOKIE_NAME}=; ${cookieAttributes("github", 0, secure)}`;
 }
 
 export function clearDiscordOAuthCookie(secure: boolean): string {
   return `${DISCORD_OAUTH_COOKIE_NAME}=; ${cookieAttributes("discord", 0, secure)}`;
+}
+
+export function clearTelegramOAuthCookie(secure: boolean): string {
+  return `${TELEGRAM_OAUTH_COOKIE_NAME}=; ${cookieAttributes("telegram", 0, secure)}`;
 }

@@ -38,6 +38,14 @@ const RECORDS: RecordNode[] = [
     time: "2026-02-11 16:42 UTC",
   },
   {
+    key: "telegram",
+    id: "t.me/rmaddox",
+    title: "Telegram community membership",
+    source: "OIDC-backed Claim Cells",
+    issuer: "Vellum verifier",
+    time: "2026-02-11 16:44 UTC",
+  },
+  {
     key: "address",
     id: "ckb1qzda\u20264mns9f0",
     title: "Linked address",
@@ -160,6 +168,14 @@ function RegistryScene() {
                 <small className="positive">Verified &middot; CKB community member</small>
               </NodeButton>
               <NodeButton
+                record={byKey("telegram")}
+                selected={selected.key === "telegram"}
+                onSelect={setSelected}
+              >
+                <strong>Telegram &middot; @rmaddox</strong>
+                <small className="positive">Verified &middot; current CKB membership</small>
+              </NodeButton>
+              <NodeButton
                 record={byKey("address")}
                 selected={selected.key === "address"}
                 onSelect={setSelected}
@@ -248,8 +264,8 @@ function RegistryLegend() {
       {[
         ["did:ckb:0x8f2a\u2026c41d", "One resolvable identifier, owned by a person"],
         [
-          "Four linked services",
-          "GitHub, Discord, CKB address, CKBoost \u2014 each with its own method",
+          "Five linked services",
+          "GitHub, Discord, Telegram, CKB address, CKBoost \u2014 each with its own method",
         ],
         ["Independently sourced claims", "Issuer, schema, and timestamp visible on every record"],
         [
@@ -308,7 +324,7 @@ function ClaimsLedger() {
     <div className="ledger">
       <div className="ledger__bar">
         <strong>Attached evidence</strong>
-        <span>4 accepted Claim Cells</span>
+        <span>6 accepted Claim Cells</span>
       </div>
       {[
         [
@@ -339,6 +355,20 @@ function ClaimsLedger() {
           "Example checkpoint",
           "Verified",
         ],
+        [
+          "Telegram account",
+          "vellum.social.telegram.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
+        [
+          "Nervos Network membership",
+          "vellum.community.telegram.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
       ].map(([title, schema, issuer, date, state]) => (
         <div className="ledger__row" key={schema}>
           <span>
@@ -365,7 +395,7 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">Vellum reputation v3 - evaluation</div>
+        <div className="policy-card__bar">Vellum reputation v4 - evaluation</div>
         <div className="policy-card__result">
           <StatusMark tone="positive">Available</StatusMark>
           <span>Deterministic Testnet result</span>
@@ -535,10 +565,10 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v3</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v4</strong>
             </div>
             <div>
-              <small>Scored in v3</small>
+              <small>Scored in v4</small>
               <strong>Accepted CKB work, community history, tenure, and recency</strong>
             </div>
             <div>

@@ -36,7 +36,12 @@ import {
 import { collectGithubContributions } from "./github-contributions.js";
 import { issueVerifiedClaims } from "./issuer.js";
 import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
-import { jsonResponse, parseJsonBody, RequestBodyError } from "./http.js";
+import {
+  jsonResponse,
+  parseJsonBody,
+  RequestBodyError,
+  setRouterSearchParameters,
+} from "./http.js";
 import { coordinateIssuance } from "./issuance-control.js";
 import { logVerificationFailure, type VerificationFailureLogger } from "./logging.js";
 import {
@@ -196,9 +201,7 @@ function callbackRedirect(
   parameters: Record<string, string | number | undefined>,
 ): Response {
   const url = new URL("/verify/github", callbackUrl ?? new URL(request.url));
-  for (const [name, value] of Object.entries(parameters)) {
-    if (value !== undefined) url.searchParams.set(name, String(value));
-  }
+  setRouterSearchParameters(url, parameters);
   return new Response(null, {
     status: 303,
     headers: {

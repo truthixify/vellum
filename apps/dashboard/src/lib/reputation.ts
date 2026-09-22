@@ -10,6 +10,10 @@ import {
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   GITHUB_CONTRIBUTION_WINDOW_SECONDS,
+  TELEGRAM_CLAIM_SCHEMA_HASH,
+  TELEGRAM_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   discordSnowflakeTimestamp,
 } from "@vellum/schemas";
 
@@ -102,6 +106,27 @@ const discordAccountSchema = z
     }
   });
 
+const telegramAccountSchema = z
+  .object({
+    platform: z.literal("telegram"),
+    id: z.string().regex(/^[1-9][0-9]{0,19}$/),
+    displayName: z.string().min(1).max(128).refine(hasOnlyLabelCharacters),
+    handle: z
+      .string()
+      .regex(/^[A-Za-z0-9_]{1,32}$/)
+      .optional(),
+    profileUrl: z.string().url().optional(),
+    verifiedAt: z.number().int().positive(),
+  })
+  .strict()
+  .refine(
+    (account) =>
+      account.displayName.trim() === account.displayName &&
+      (account.handle === undefined
+        ? account.profileUrl === undefined
+        : account.profileUrl === `https://t.me/${account.handle}`),
+  );
+
 const discordRoleSchema = z
   .object({
     role_id: discordSnowflakeSchema,
@@ -152,6 +177,35 @@ const discordCommunitySchema = z
     }
   });
 
+const telegramMembershipSchema = z
+  .object({
+    chat_id: z.string().regex(/^-[1-9][0-9]{0,19}$/),
+    community_name: discordLabelSchema,
+    community_type: z.enum(["channel", "group", "supergroup"]),
+    member_role: z.enum(["administrator", "member", "owner"]),
+  })
+  .strict();
+
+const telegramCommunitySchema = z
+  .object({
+    memberships: z.array(telegramMembershipSchema).min(1).max(16),
+  })
+  .strict()
+  .superRefine((community, context) => {
+    if (
+      community.memberships.some(
+        (membership, index) =>
+          index > 0 &&
+          BigInt(community.memberships[index - 1].chat_id) >= BigInt(membership.chat_id),
+      )
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Telegram communities must be unique and sorted.",
+      });
+    }
+  });
+
 const githubNodeIdSchema = z.string().regex(/^[A-Za-z0-9_=-]{4,128}$/);
 const githubRepositorySchema = z
   .string()
@@ -182,19 +236,19 @@ const githubArtifactRules = {
     {
       category: "technical",
       points: 60,
-      ruleId: "github-merged-technical-pr.v3",
+      ruleId: "github-merged-technical-pr.v4",
     },
-    { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
   ],
   "merged_pull_request:ecosystem": [
-    { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+    { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
   ],
   "pull_request_review:technical": [
-    { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
-    { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+    { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
   ],
   "pull_request_review:ecosystem": [
-    { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+    { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
   ],
 } as const;
 
@@ -281,6 +335,24 @@ const evidenceSchema = z.discriminatedUnion("schemaId", [
       community: discordCommunitySchema,
     })
     .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(TELEGRAM_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(TELEGRAM_CLAIM_SCHEMA_HASH),
+      account: telegramAccountSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH),
+      account: telegramAccountSchema,
+      supportingClaims: z.array(acceptedClaimReferenceSchema).length(1),
+      community: telegramCommunitySchema,
+    })
+    .strict(),
 ]);
 
 const availableReputationSchema = z
@@ -290,7 +362,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v3"),
+    policyVersion: z.literal("vellum.reputation.v4"),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -352,11 +424,29 @@ const availableReputationSchema = z
       ]),
     );
     const communityEvidenceIsConsistent = value.evidence.every((evidence) => {
-      if (evidence.schemaId !== DISCORD_COMMUNITY_CLAIM_SCHEMA_ID) return true;
+      if (
+        evidence.schemaId !== DISCORD_COMMUNITY_CLAIM_SCHEMA_ID &&
+        evidence.schemaId !== TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID
+      ) {
+        return true;
+      }
       const supporting = evidence.supportingClaims[0];
       const identity = evidenceByReference.get(
         `${supporting.transactionHash}:${supporting.outputIndex}`,
       );
+      if (evidence.schemaId === TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID) {
+        const contribution = evidence.contributions[0];
+        return (
+          identity?.schemaId === TELEGRAM_CLAIM_SCHEMA_ID &&
+          identity.claim.claimId === supporting.claimId &&
+          identity.account.id === evidence.account.id &&
+          (evidence.contributions.length === 0 ||
+            (evidence.contributions.length === 1 &&
+              contribution.category === "community" &&
+              contribution.points === 40 &&
+              contribution.ruleId === "telegram-ckb-membership.v4"))
+        );
+      }
       return (
         identity?.schemaId === DISCORD_CLAIM_SCHEMA_ID &&
         identity.claim.claimId === supporting.claimId &&
@@ -461,7 +551,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v3"),
+  policyVersion: z.literal("vellum.reputation.v4"),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),

@@ -19,11 +19,12 @@ test("scores a live Testnet GitHub claim without wallet state", async () => {
   expect(response.status).toBe(200);
   expect(result.status).toBe("available");
   if (result.status !== "available") throw new Error(result.error?.message);
-  expect(result.policyVersion).toBe("vellum.reputation.v3");
-  expect(result.evidence).toHaveLength(1);
-  expect(result.evidence?.[0]).toMatchObject({
-    schemaId: "vellum.social.github.v1",
-    account: { platform: "github", handle: "truthixify" },
-  });
+  expect(result.policyVersion).toBe("vellum.reputation.v4");
+  expect(result.evidence).toContainEqual(
+    expect.objectContaining({
+      schemaId: "vellum.social.github.v1",
+      account: expect.objectContaining({ platform: "github", handle: "truthixify" }),
+    }),
+  );
   expect(result.overall?.score).toBeGreaterThan(0);
 }, 60_000);

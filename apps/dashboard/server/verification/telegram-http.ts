@@ -1,8 +1,11 @@
 import {
-  DISCORD_CLAIM_SCHEMA_HASH,
-  DISCORD_CLAIM_SCHEMA_ID,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  TELEGRAM_CLAIM_SCHEMA_HASH,
+  TELEGRAM_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
+  parseTelegramClaimPayload,
+  parseTelegramCommunityClaimPayload,
 } from "@vellum/schemas";
 
 import {
@@ -16,22 +19,14 @@ import {
   type VerificationSubject,
   type VerifiedClaim,
 } from "./contracts.js";
+import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
 import {
-  discordAuthorizationUrl,
-  discordOAuthConfig,
-  verifyDiscordAuthorization,
-  type DiscordFetch,
-  type DiscordOAuthEnvironment,
-} from "./discord.js";
-import {
-  DiscordOAuthError,
   IssuerConfigurationError,
   OAuthConfigurationError,
+  TelegramOAuthError,
   VerificationCoordinationError,
   VerificationServiceError,
 } from "./errors.js";
-import { createVerificationCoordinator, type VerificationCoordinator } from "./coordination.js";
-import { issueVerifiedClaims } from "./issuer.js";
 import {
   jsonResponse,
   parseJsonBody,
@@ -39,39 +34,50 @@ import {
   setRouterSearchParameters,
 } from "./http.js";
 import { coordinateIssuance } from "./issuance-control.js";
+import { issueVerifiedClaims } from "./issuer.js";
 import { logVerificationFailure, type VerificationFailureLogger } from "./logging.js";
 import {
-  clearDiscordOAuthCookie,
-  consumeDiscordOAuthState,
-  createDiscordOAuthState,
+  clearTelegramOAuthCookie,
+  consumeTelegramOAuthState,
+  createTelegramOAuthState,
 } from "./oauth-state.js";
 import {
   assertSubjectController,
   createSubjectChallenge,
   verifySubjectProof,
 } from "./subject-proof.js";
+import {
+  telegramAuthorizationUrl,
+  telegramOAuthConfig,
+  verifyTelegramAuthorization,
+  type TelegramFetch,
+  type TelegramOAuthEnvironment,
+  type TelegramVerifierDependencies,
+} from "./telegram.js";
 
-type DiscordAction = "challenge" | "start" | "callback";
+type TelegramAction = "challenge" | "start" | "callback";
 
-export type DiscordClaimIssuer = (
+export type TelegramClaimIssuer = (
   subject: VerificationSubject,
   claims: readonly VerifiedClaim[],
 ) => Promise<ClaimIssuanceResult[]>;
 
-export type DiscordOAuthHttpDependencies = {
-  environment: DiscordOAuthEnvironment;
-  fetch: DiscordFetch;
-  issueClaims: DiscordClaimIssuer;
-  createCoordinator: (environment: DiscordOAuthEnvironment) => VerificationCoordinator;
+export type TelegramOAuthHttpDependencies = {
+  environment: TelegramOAuthEnvironment;
+  fetch: TelegramFetch;
+  issueClaims: TelegramClaimIssuer;
+  createCoordinator: (environment: TelegramOAuthEnvironment) => VerificationCoordinator;
   assertSubjectController: typeof assertSubjectController;
   createSubjectChallenge: typeof createSubjectChallenge;
   verifySubjectProof: typeof verifySubjectProof;
+  sleep?: TelegramVerifierDependencies["sleep"];
+  verifyIdToken?: TelegramVerifierDependencies["verifyIdToken"];
   logFailure: VerificationFailureLogger;
   nonceBytes?: () => Uint8Array;
   now: () => number;
 };
 
-const defaultDependencies: DiscordOAuthHttpDependencies = {
+const defaultDependencies: TelegramOAuthHttpDependencies = {
   environment: process.env,
   fetch: globalThis.fetch,
   issueClaims: (subject, claims) => issueVerifiedClaims(subject, claims),
@@ -105,16 +111,16 @@ function exactlyOneParameter(url: URL, name: string): string | undefined {
   return values.length === 1 ? values[0] : undefined;
 }
 
-export function discordActionFromUrl(request: Request): DiscordAction | undefined {
+export function telegramActionFromUrl(request: Request): TelegramAction | undefined {
   const url = new URL(request.url);
   const segments = url.pathname.split("/").filter(Boolean);
   const value =
     segments.length === 4 &&
     segments[0] === "api" &&
     segments[1] === "verify" &&
-    segments[2] === "discord"
+    segments[2] === "telegram"
       ? segments[3]
-      : segments.length === 2 && segments[0] === "api" && segments[1] === "discord"
+      : segments.length === 2 && segments[0] === "api" && segments[1] === "telegram"
         ? exactlyOneParameter(url, "action")
         : undefined;
   return value === "challenge" || value === "start" || value === "callback" ? value : undefined;
@@ -126,7 +132,7 @@ function callbackRedirect(
   secure: boolean,
   parameters: Record<string, string | number | undefined>,
 ): Response {
-  const url = new URL("/verify/discord", callbackUrl ?? new URL(request.url));
+  const url = new URL("/verify/telegram", callbackUrl ?? new URL(request.url));
   setRouterSearchParameters(url, parameters);
   return new Response(null, {
     status: 303,
@@ -134,119 +140,14 @@ function callbackRedirect(
       "cache-control": "no-store",
       location: url.toString(),
       "referrer-policy": "no-referrer",
-      "set-cookie": clearDiscordOAuthCookie(secure),
+      "set-cookie": clearTelegramOAuthCookie(secure),
     },
   });
 }
 
-async function handleStart(
-  request: Request,
-  dependencies: DiscordOAuthHttpDependencies,
-): Promise<Response> {
-  if (request.method !== "POST") {
-    return errorResponse(405, "method_not_allowed", "Use POST to start Discord verification.", {
-      allow: "POST",
-    });
-  }
-
-  let config;
-  try {
-    config = discordOAuthConfig(dependencies.environment);
-  } catch (error) {
-    if (error instanceof OAuthConfigurationError) {
-      return errorResponse(
-        503,
-        "oauth_configuration_error",
-        "Discord verification is not configured. Try again later.",
-      );
-    }
-    throw error;
-  }
-
-  let body: unknown;
-  try {
-    body = await parseJsonBody(request);
-  } catch (error) {
-    if (error instanceof RequestBodyError) {
-      return errorResponse(error.status, "invalid_request", error.message);
-    }
-    return errorResponse(400, "invalid_request", "The request body must contain valid JSON.");
-  }
-
-  const parsed = oauthStartRequestSchema.safeParse(body);
-  if (!parsed.success) {
-    return errorResponse(
-      400,
-      "invalid_request",
-      "Choose a valid did:ckb identity before connecting Discord.",
-    );
-  }
-
-  const now = dependencies.now();
-  try {
-    const coordinator = dependencies.createCoordinator(dependencies.environment);
-    const controllerLockHash = await dependencies.verifySubjectProof(
-      "discord",
-      parsed.data.subject,
-      parsed.data.proof,
-      config.stateSecret,
-      now,
-      coordinator,
-      dependencies.environment,
-    );
-    const state = createDiscordOAuthState(
-      parsed.data.subject,
-      controllerLockHash,
-      config.stateSecret,
-      now,
-      config.callbackUrl.protocol === "https:",
-      dependencies.nonceBytes,
-    );
-    return jsonResponse(
-      {
-        ok: true,
-        version: VERIFICATION_API_VERSION,
-        platform: "discord",
-        authorizationUrl: discordAuthorizationUrl(config, state.state),
-        expiresAt: state.expiresAt,
-      },
-      200,
-      {
-        "referrer-policy": "no-referrer",
-        "set-cookie": state.cookie,
-      },
-    );
-  } catch (error) {
-    if (
-      error instanceof OAuthConfigurationError ||
-      error instanceof VerificationCoordinationError
-    ) {
-      return errorResponse(
-        503,
-        "oauth_configuration_error",
-        "Discord verification is temporarily unavailable.",
-      );
-    }
-    if (error instanceof VerificationServiceError) {
-      return errorResponse(error.status, error.code, error.message);
-    }
-    dependencies.logFailure({
-      error,
-      platform: "discord",
-      requestId: crypto.randomUUID(),
-      stage: "start",
-    });
-    return errorResponse(
-      400,
-      "subject_control_invalid",
-      "The wallet could not be verified for this identity.",
-    );
-  }
-}
-
 async function handleChallenge(
   request: Request,
-  dependencies: DiscordOAuthHttpDependencies,
+  dependencies: TelegramOAuthHttpDependencies,
 ): Promise<Response> {
   if (request.method !== "POST") {
     return errorResponse(405, "method_not_allowed", "Use POST to request a wallet challenge.", {
@@ -256,14 +157,14 @@ async function handleChallenge(
 
   let config;
   try {
-    config = discordOAuthConfig(dependencies.environment);
+    config = telegramOAuthConfig(dependencies.environment);
     dependencies.createCoordinator(dependencies.environment);
   } catch (error) {
     if (error instanceof OAuthConfigurationError) {
       return errorResponse(
         503,
         "oauth_configuration_error",
-        "Discord verification is not configured. Try again later.",
+        "Telegram verification is not configured. Try again later.",
       );
     }
     throw error;
@@ -286,13 +187,13 @@ async function handleChallenge(
     return errorResponse(
       400,
       "invalid_request",
-      "Choose a valid did:ckb identity before connecting Discord.",
+      "Choose a valid did:ckb identity before connecting Telegram.",
     );
   }
 
   try {
     const challenge = await dependencies.createSubjectChallenge(
-      "discord",
+      "telegram",
       parsed.data.subject,
       config.stateSecret,
       dependencies.now(),
@@ -301,7 +202,7 @@ async function handleChallenge(
     return jsonResponse({
       ok: true,
       version: VERIFICATION_API_VERSION,
-      platform: "discord",
+      platform: "telegram",
       ...challenge,
     });
   } catch (error) {
@@ -310,7 +211,7 @@ async function handleChallenge(
     }
     dependencies.logFailure({
       error,
-      platform: "discord",
+      platform: "telegram",
       requestId: crypto.randomUUID(),
       stage: "challenge",
     });
@@ -318,54 +219,187 @@ async function handleChallenge(
   }
 }
 
+async function handleStart(
+  request: Request,
+  dependencies: TelegramOAuthHttpDependencies,
+): Promise<Response> {
+  if (request.method !== "POST") {
+    return errorResponse(405, "method_not_allowed", "Use POST to start Telegram verification.", {
+      allow: "POST",
+    });
+  }
+
+  let config;
+  try {
+    config = telegramOAuthConfig(dependencies.environment);
+  } catch (error) {
+    if (error instanceof OAuthConfigurationError) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "Telegram verification is not configured. Try again later.",
+      );
+    }
+    throw error;
+  }
+
+  let body: unknown;
+  try {
+    body = await parseJsonBody(request);
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      return errorResponse(error.status, "invalid_request", error.message);
+    }
+    return errorResponse(400, "invalid_request", "The request body must contain valid JSON.");
+  }
+
+  const parsed = oauthStartRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return errorResponse(
+      400,
+      "invalid_request",
+      "Choose a valid did:ckb identity before connecting Telegram.",
+    );
+  }
+
+  const now = dependencies.now();
+  try {
+    const coordinator = dependencies.createCoordinator(dependencies.environment);
+    const controllerLockHash = await dependencies.verifySubjectProof(
+      "telegram",
+      parsed.data.subject,
+      parsed.data.proof,
+      config.stateSecret,
+      now,
+      coordinator,
+      dependencies.environment,
+    );
+    const state = createTelegramOAuthState(
+      parsed.data.subject,
+      controllerLockHash,
+      config.stateSecret,
+      now,
+      config.callbackUrl.protocol === "https:",
+      dependencies.nonceBytes,
+    );
+    return jsonResponse(
+      {
+        ok: true,
+        version: VERIFICATION_API_VERSION,
+        platform: "telegram",
+        authorizationUrl: telegramAuthorizationUrl(config, state.state, state.codeChallenge),
+        expiresAt: state.expiresAt,
+      },
+      200,
+      {
+        "referrer-policy": "no-referrer",
+        "set-cookie": state.cookie,
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof OAuthConfigurationError ||
+      error instanceof VerificationCoordinationError
+    ) {
+      return errorResponse(
+        503,
+        "oauth_configuration_error",
+        "Telegram verification is temporarily unavailable.",
+      );
+    }
+    if (error instanceof VerificationServiceError) {
+      return errorResponse(error.status, error.code, error.message);
+    }
+    dependencies.logFailure({
+      error,
+      platform: "telegram",
+      requestId: crypto.randomUUID(),
+      stage: "start",
+    });
+    return errorResponse(
+      400,
+      "subject_control_invalid",
+      "The wallet could not be verified for this identity.",
+    );
+  }
+}
+
 function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClaim[] {
   if (claims.length < 1 || claims.length > 2) {
-    throw new DiscordOAuthError(
+    throw new TelegramOAuthError(
       "provider_unavailable",
       502,
-      "Discord returned account data that cannot be verified.",
+      "Telegram returned account data that cannot be verified.",
     );
   }
   const parsed = claims.map((claim) => verifiedClaimSchema.parse(claim));
   const identity = parsed[0];
-  if (
-    identity.schema.id !== DISCORD_CLAIM_SCHEMA_ID ||
-    identity.schema.hash !== DISCORD_CLAIM_SCHEMA_HASH
-  ) {
-    throw new DiscordOAuthError(
+  let identityPayload;
+  try {
+    identityPayload = parseTelegramClaimPayload(identity.payload);
+  } catch {
+    throw new TelegramOAuthError(
       "provider_unavailable",
       502,
-      "Discord returned account data that cannot be verified.",
+      "Telegram returned account data that cannot be verified.",
     );
   }
-  const community = parsed[1];
   if (
-    community &&
-    (community.schema.id !== DISCORD_COMMUNITY_CLAIM_SCHEMA_ID ||
-      community.schema.hash !== DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH)
+    identity.schema.id !== TELEGRAM_CLAIM_SCHEMA_ID ||
+    identity.schema.hash !== TELEGRAM_CLAIM_SCHEMA_HASH ||
+    identity.issuedAt !== identityPayload.verified_at ||
+    identity.expiresAt !== undefined
   ) {
-    throw new DiscordOAuthError(
+    throw new TelegramOAuthError(
       "provider_unavailable",
       502,
-      "Discord returned community data that cannot be verified.",
+      "Telegram returned account data that cannot be verified.",
     );
+  }
+
+  const community = parsed[1];
+  if (community) {
+    let communityPayload;
+    try {
+      communityPayload = parseTelegramCommunityClaimPayload(community.payload);
+    } catch {
+      throw new TelegramOAuthError(
+        "provider_unavailable",
+        502,
+        "Telegram returned community data that cannot be verified.",
+      );
+    }
+    if (
+      community.schema.id !== TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID ||
+      community.schema.hash !== TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH ||
+      communityPayload.user_id !== identityPayload.user_id ||
+      community.issuedAt !== communityPayload.verified_at ||
+      community.issuedAt !== identity.issuedAt ||
+      community.expiresAt !== community.issuedAt + TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS
+    ) {
+      throw new TelegramOAuthError(
+        "provider_unavailable",
+        502,
+        "Telegram returned community data that cannot be verified.",
+      );
+    }
   }
   return parsed;
 }
 
 async function handleCallback(
   request: Request,
-  dependencies: DiscordOAuthHttpDependencies,
+  dependencies: TelegramOAuthHttpDependencies,
 ): Promise<Response> {
   if (request.method !== "GET") {
-    return errorResponse(405, "method_not_allowed", "Use GET for the Discord OAuth callback.", {
+    return errorResponse(405, "method_not_allowed", "Use GET for the Telegram OAuth callback.", {
       allow: "GET",
     });
   }
 
   let config;
   try {
-    config = discordOAuthConfig(dependencies.environment);
+    config = telegramOAuthConfig(dependencies.environment);
   } catch (error) {
     if (!(error instanceof OAuthConfigurationError)) throw error;
     return callbackRedirect(request, undefined, new URL(request.url).protocol === "https:", {
@@ -380,36 +414,47 @@ async function handleCallback(
     const url = new URL(request.url);
     const queryState = exactlyOneParameter(url, "state");
     if (!queryState || !/^[A-Za-z0-9_-]{43}$/.test(queryState)) {
-      throw new DiscordOAuthError(
+      throw new TelegramOAuthError(
         "oauth_state_invalid",
         400,
-        "The Discord verification session is invalid.",
+        "The Telegram verification session is invalid.",
       );
     }
-    const oauthState = consumeDiscordOAuthState(
+    const now = dependencies.now();
+    const oauthState = consumeTelegramOAuthState(
       request.headers.get("cookie"),
       queryState,
       config.stateSecret,
-      dependencies.now(),
+      now,
     );
+    const coordinator = dependencies.createCoordinator(dependencies.environment);
+    if (
+      !(await coordinator.consumeOnce(`telegram-oauth:${queryState}`, oauthState.expiresAt, now))
+    ) {
+      throw new TelegramOAuthError(
+        "oauth_state_invalid",
+        400,
+        "The Telegram verification session has already been used.",
+      );
+    }
 
     const providerError = exactlyOneParameter(url, "error");
     if (providerError) {
-      throw new DiscordOAuthError(
+      throw new TelegramOAuthError(
         providerError === "access_denied" ? "oauth_denied" : "provider_unavailable",
         providerError === "access_denied" ? 400 : 502,
         providerError === "access_denied"
-          ? "Discord access was not approved."
-          : "Discord could not complete authorization.",
+          ? "Telegram access was not approved."
+          : "Telegram could not complete authorization.",
       );
     }
 
     const code = exactlyOneParameter(url, "code");
-    if (!code || !/^[A-Za-z0-9._~-]{1,1024}$/.test(code)) {
-      throw new DiscordOAuthError(
+    if (!code || !/^[A-Za-z0-9._~-]{1,2048}$/.test(code)) {
+      throw new TelegramOAuthError(
         "provider_unavailable",
         502,
-        "Discord did not return a usable authorization code.",
+        "Telegram did not return a usable authorization code.",
       );
     }
 
@@ -419,15 +464,22 @@ async function handleCallback(
       dependencies.environment,
     );
 
-    const verified = await verifyDiscordAuthorization(code, config, {
+    const verifierDependencies: TelegramVerifierDependencies = {
       fetch: dependencies.fetch,
       now: dependencies.now,
-    });
+      ...(dependencies.sleep ? { sleep: dependencies.sleep } : {}),
+      ...(dependencies.verifyIdToken ? { verifyIdToken: dependencies.verifyIdToken } : {}),
+    };
+    const verified = await verifyTelegramAuthorization(
+      code,
+      oauthState.codeVerifier,
+      config,
+      verifierDependencies,
+    );
     const claims = validateClaims(verified.claims);
 
     let issuance: ClaimIssuanceResult[];
     try {
-      const coordinator = dependencies.createCoordinator(dependencies.environment);
       issuance = await coordinateIssuance({
         accountId: verified.account.id,
         coordinator,
@@ -435,8 +487,8 @@ async function handleCallback(
           (await dependencies.issueClaims(oauthState.subject, claims)).map((result) =>
             claimIssuanceResultSchema.parse(result),
           ),
-        now: dependencies.now(),
-        platform: "discord",
+        now,
+        platform: "telegram",
         subjectDid: oauthState.subject.did,
       });
       if (
@@ -445,10 +497,10 @@ async function handleCallback(
         new Set(issuance.map((result) => result.claimId)).size !== issuance.length ||
         new Set(issuance.map((result) => result.outputIndex)).size !== issuance.length
       ) {
-        throw new Error("Discord claim issuance returned inconsistent results");
+        throw new Error("Telegram claim issuance returned inconsistent results");
       }
     } catch (error) {
-      dependencies.logFailure({ error, platform: "discord", requestId, stage: "issuance" });
+      dependencies.logFailure({ error, platform: "telegram", requestId, stage: "issuance" });
       if (error instanceof VerificationServiceError) {
         return callbackRedirect(request, config.callbackUrl, secure, {
           status: "error",
@@ -478,11 +530,16 @@ async function handleCallback(
       output: identity.outputIndex,
       communityClaim: community?.claimId,
       communityOutput: community?.outputIndex,
-      username: verified.account.username,
       communities: verified.memberships.length,
+      account: verified.account.id,
+      name: verified.account.displayName,
+      username: verified.account.username,
     });
   } catch (error) {
-    if (error instanceof DiscordOAuthError) {
+    if (error instanceof TelegramOAuthError) {
+      if (error.code !== "oauth_denied" && error.code !== "oauth_state_invalid") {
+        dependencies.logFailure({ error, platform: "telegram", requestId, stage: "provider" });
+      }
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
         code: error.code,
@@ -490,14 +547,14 @@ async function handleCallback(
       });
     }
     if (error instanceof VerificationServiceError) {
-      dependencies.logFailure({ error, platform: "discord", requestId, stage: "callback" });
+      dependencies.logFailure({ error, platform: "telegram", requestId, stage: "callback" });
       return callbackRedirect(request, config.callbackUrl, secure, {
         status: "error",
         code: error.code,
         retryAt: error.retryAt,
       });
     }
-    dependencies.logFailure({ error, platform: "discord", requestId, stage: "callback" });
+    dependencies.logFailure({ error, platform: "telegram", requestId, stage: "callback" });
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "error",
       code: "verification_failed",
@@ -505,13 +562,13 @@ async function handleCallback(
   }
 }
 
-export async function handleDiscordOAuthRequest(
+export async function handleTelegramOAuthRequest(
   request: Request,
-  dependencies: DiscordOAuthHttpDependencies = defaultDependencies,
+  dependencies: TelegramOAuthHttpDependencies = defaultDependencies,
 ): Promise<Response> {
-  const action = discordActionFromUrl(request);
+  const action = telegramActionFromUrl(request);
   if (action === "challenge") return handleChallenge(request, dependencies);
   if (action === "start") return handleStart(request, dependencies);
   if (action === "callback") return handleCallback(request, dependencies);
-  return errorResponse(404, "invalid_request", "The Discord verification endpoint was not found.");
+  return errorResponse(404, "invalid_request", "The Telegram verification endpoint was not found.");
 }

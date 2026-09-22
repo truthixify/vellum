@@ -16,7 +16,7 @@ function safeMessage(error: unknown): string {
 
 export type VerificationFailure = {
   error: unknown;
-  platform: "github" | "discord";
+  platform: "github" | "discord" | "telegram";
   requestId: string;
   stage: "challenge" | "start" | "provider" | "issuance" | "callback";
 };

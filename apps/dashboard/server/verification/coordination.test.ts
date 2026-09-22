@@ -8,8 +8,8 @@ describe("verification coordination", () => {
   test("consumes challenges once and releases failed issuance reservations", async () => {
     const coordinator = new MemoryVerificationCoordinator();
 
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).resolves.toBe(true);
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).resolves.toBe(false);
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).resolves.toBe(true);
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).resolves.toBe(false);
 
     const first = await coordinator.reserveIssuance("github", "account", "did:ckb:subject", NOW);
     expect(first.ok).toBe(true);
@@ -58,6 +58,13 @@ describe("verification coordination", () => {
       authorization: "Bearer secret-token",
       "content-type": "application/json",
     });
+
+    await coordinator.reserveIssuance("telegram", "telegram-account", "did:ckb:telegram", NOW);
+    const telegramRequest = fetch.mock.calls[1];
+    const telegramCommand = String(telegramRequest[1]?.body);
+    expect(telegramCommand).toContain("telegram-user-id");
+    expect(telegramCommand).not.toContain("telegram-account");
+    expect(telegramCommand).not.toContain("did:ckb:telegram");
   });
 
   test("fails closed on malformed Redis responses", async () => {
@@ -69,7 +76,7 @@ describe("verification coordination", () => {
       async () => Response.json({ error: { message: "unexpected" }, result: "OK" }),
     );
 
-    await expect(coordinator.consumeChallenge("challenge", NOW + 300, NOW)).rejects.toMatchObject({
+    await expect(coordinator.consumeOnce("challenge", NOW + 300, NOW)).rejects.toMatchObject({
       code: "issuer_unavailable",
     });
   });

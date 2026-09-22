@@ -64,7 +64,7 @@ export function Profile() {
             <small>/ 1000</small>
           </div>
           <SignalRail value={450} max={1000} height={10} label="Example score 450 of 1000" />
-          <p>vellum.reputation.v3 - 4 accepted Claim Cells</p>
+          <p>vellum.reputation.v4 - 6 accepted Claim Cells</p>
           <a className="v-button v-button--secondary" href="/transparency">
             <Info size={14} />
             How this is calculated
@@ -125,6 +125,18 @@ export function Profile() {
               "Verified",
             ],
             ["Nervos Nation membership", "Vellum Testnet issuer", "Example checkpoint", "Verified"],
+            [
+              "Telegram account - @rmaddox",
+              "Vellum Testnet issuer",
+              "Example checkpoint",
+              "Verified",
+            ],
+            [
+              "Nervos Network membership",
+              "Vellum Testnet issuer",
+              "Example checkpoint",
+              "Verified",
+            ],
           ].map(([claim, issuer, date, state]) => (
             <div className="claims-table__row" key={claim}>
               <strong>{claim}</strong>
@@ -168,7 +180,7 @@ export function Profile() {
                 <span className="mono">reputation.json</span>
                 <ExternalLink size={13} />
               </div>
-              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v3",\n  "overall": { "score": 450, "maximum": 1000 }\n}`}</pre>
+              <pre>{`{\n  "subject": "${DID}",\n  "network": "ckb_testnet",\n  "status": "available",\n  "policyVersion": "vellum.reputation.v4",\n  "overall": { "score": 450, "maximum": 1000 }\n}`}</pre>
             </div>
             <p>This record is a design fixture, not a chain response.</p>
           </div>

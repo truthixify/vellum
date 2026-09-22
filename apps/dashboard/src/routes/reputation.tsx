@@ -22,6 +22,12 @@ type GithubContributionEvidence = Extract<
   { schemaId: "vellum.contribution.github.v1" }
 >;
 
+type ReputationAccount = AvailableReputation["evidence"][number]["account"];
+type ReputationMembership = Extract<
+  AvailableReputation["evidence"][number],
+  { community: unknown }
+>["community"]["memberships"][number];
+
 type ReputationSearch = { did?: string };
 
 export const Route = createFileRoute("/reputation")({
@@ -50,6 +56,53 @@ function formatDate(timestamp: number): string {
 function shorten(value: string, head = 14, tail = 8): string {
   if (value.length <= head + tail + 1) return value;
   return `${value.slice(0, head)}…${value.slice(-tail)}`;
+}
+
+function accountLabel(account: ReputationAccount): string {
+  if (account.platform === "telegram") {
+    return account.handle ? `@${account.handle}` : account.displayName;
+  }
+  return `@${account.handle}`;
+}
+
+function platformLabel(account: ReputationAccount, hasContributions: boolean): string {
+  if (hasContributions) return "GitHub contributions";
+  return account.platform === "github"
+    ? "GitHub"
+    : account.platform === "discord"
+      ? "Discord"
+      : "Telegram";
+}
+
+function CommunityMembership({ membership }: { membership: ReputationMembership }) {
+  if ("guild_id" in membership) {
+    return (
+      <span className="reputation-evidence__community">
+        <strong>{membership.community_name}</strong>
+        <small>Joined {formatDate(membership.joined_at)} UTC</small>
+        <small>
+          {membership.recognized_roles.length > 0
+            ? `Roles: ${membership.recognized_roles.map((role) => role.role_name).join(", ")}`
+            : "No recognized roles"}
+        </small>
+      </span>
+    );
+  }
+
+  const role =
+    membership.member_role === "owner"
+      ? "Owner"
+      : membership.member_role === "administrator"
+        ? "Administrator"
+        : "Member";
+  return (
+    <span className="reputation-evidence__community">
+      <strong>{membership.community_name}</strong>
+      <small>
+        Current {role.toLowerCase()} · {membership.community_type}
+      </small>
+    </span>
+  );
 }
 
 function ReputationPage() {
@@ -275,6 +328,9 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
               <Link to="/verify/discord" className="v-button v-button--secondary">
                 <BadgeCheck size={14} aria-hidden="true" /> Verify Discord
               </Link>
+              <Link to="/verify/telegram" className="v-button v-button--secondary">
+                <BadgeCheck size={14} aria-hidden="true" /> Verify Telegram
+              </Link>
             </div>
           </div>
         ) : (
@@ -285,15 +341,17 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
                 key={`${evidence.claim.transactionHash}:${evidence.claim.outputIndex}`}
               >
                 <div className="reputation-evidence__source">
-                  <span>
-                    {"githubContributions" in evidence
-                      ? "GitHub contributions"
-                      : evidence.account.platform}
-                  </span>
-                  <a href={evidence.account.profileUrl} target="_blank" rel="noreferrer">
-                    @{evidence.account.handle}
-                    <ArrowUpRight size={13} aria-hidden="true" />
-                  </a>
+                  <span>{platformLabel(evidence.account, "githubContributions" in evidence)}</span>
+                  {evidence.account.profileUrl ? (
+                    <a href={evidence.account.profileUrl} target="_blank" rel="noreferrer">
+                      {accountLabel(evidence.account)}
+                      <ArrowUpRight size={13} aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <strong className="reputation-evidence__account">
+                      {accountLabel(evidence.account)}
+                    </strong>
+                  )}
                 </div>
                 <div className="reputation-evidence__facts">
                   <span>
@@ -314,17 +372,10 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
                   </span>
                   {"community" in evidence
                     ? evidence.community.memberships.map((membership) => (
-                        <span className="reputation-evidence__community" key={membership.guild_id}>
-                          <strong>{membership.community_name}</strong>
-                          <small>Joined {formatDate(membership.joined_at)} UTC</small>
-                          <small>
-                            {membership.recognized_roles.length > 0
-                              ? `Roles: ${membership.recognized_roles
-                                  .map((role) => role.role_name)
-                                  .join(", ")}`
-                              : "No recognized roles"}
-                          </small>
-                        </span>
+                        <CommunityMembership
+                          membership={membership}
+                          key={"guild_id" in membership ? membership.guild_id : membership.chat_id}
+                        />
                       ))
                     : null}
                 </div>

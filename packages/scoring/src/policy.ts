@@ -9,9 +9,19 @@ import {
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
   GITHUB_CONTRIBUTION_WINDOW_SECONDS,
+  TELEGRAM_CLAIM_SCHEMA_HASH,
+  TELEGRAM_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
 } from "@vellum/schemas";
 
-import type { ReputationPolicy, ReputationPolicyV2, ReputationPolicyV3 } from "./types.js";
+import type {
+  ReputationPolicy,
+  ReputationPolicyV2,
+  ReputationPolicyV3,
+  ReputationPolicyV4,
+} from "./types.js";
 
 const DAY_SECONDS = 86_400;
 
@@ -246,3 +256,54 @@ export const VELLUM_REPUTATION_POLICY_V3 = freezePolicyV3({
     ],
   },
 } as const satisfies ReputationPolicyV3);
+
+function freezePolicyV4<T extends ReputationPolicyV4>(policy: T): T {
+  freezePolicyV3(policy);
+  Object.freeze(policy.telegram.issuerDids);
+  Object.freeze(policy.telegram.identitySchema);
+  Object.freeze(policy.telegram.communitySchema);
+  Object.freeze(policy.telegram);
+  return Object.freeze(policy);
+}
+
+export const VELLUM_REPUTATION_POLICY_V4 = freezePolicyV4({
+  ...VELLUM_REPUTATION_POLICY_V3,
+  version: "vellum.reputation.v4",
+  github: {
+    ...VELLUM_REPUTATION_POLICY_V3.github,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V3.github.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V3.github.identitySchema },
+    contributionSchema: { ...VELLUM_REPUTATION_POLICY_V3.github.contributionSchema },
+    tenureRuleId: "github-account-tenure.v4",
+    recencyRuleId: "github-verification-recency.v4",
+    artifactRules: VELLUM_REPUTATION_POLICY_V3.github.artifactRules.map((rule) => ({
+      ...rule,
+      technicalRuleId:
+        "technicalRuleId" in rule && rule.technicalRuleId
+          ? rule.technicalRuleId.replace(".v3", ".v4")
+          : undefined,
+      contributionRuleId: rule.contributionRuleId.replace(".v3", ".v4"),
+    })),
+  },
+  discord: {
+    ...VELLUM_REPUTATION_POLICY_V3.discord,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V3.discord.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V3.discord.identitySchema },
+    communitySchema: { ...VELLUM_REPUTATION_POLICY_V3.discord.communitySchema },
+    tenureRuleId: "discord-account-tenure.v4",
+    recencyRuleId: "discord-verification-recency.v4",
+    communityRuleId: "discord-ckb-membership-tenure.v4",
+  },
+  telegram: {
+    issuerDids: ["did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no"],
+    identitySchema: { id: TELEGRAM_CLAIM_SCHEMA_ID, hash: TELEGRAM_CLAIM_SCHEMA_HASH },
+    communitySchema: {
+      id: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+      hash: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+    },
+    recencyRuleId: "telegram-verification-recency.v4",
+    communityRuleId: "telegram-ckb-membership.v4",
+    communityTtlSeconds: TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
+    communityPoints: 40,
+  },
+} as const satisfies ReputationPolicyV4);

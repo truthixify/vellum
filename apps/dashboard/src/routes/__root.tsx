@@ -150,6 +150,8 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/migrate")) return "Identity - Migrate";
   if (pathname.startsWith("/deactivate")) return "Identity - Deactivate";
   if (pathname.startsWith("/verify/github")) return "GitHub verification";
+  if (pathname.startsWith("/verify/discord")) return "Discord verification";
+  if (pathname.startsWith("/verify/telegram")) return "Telegram verification";
   if (pathname.startsWith("/verify")) return "Verification";
   if (pathname.startsWith("/reputation")) return "Reputation";
   if (pathname.startsWith("/resolve")) return "Resolve";

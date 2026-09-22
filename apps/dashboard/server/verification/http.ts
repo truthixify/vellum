@@ -31,6 +31,25 @@ export function jsonResponse(body: unknown, status = 200, headers?: HeadersInit)
   });
 }
 
+export function setRouterSearchParameters(
+  url: URL,
+  parameters: Record<string, string | number | undefined>,
+): void {
+  for (const [name, value] of Object.entries(parameters)) {
+    if (value === undefined) continue;
+    if (typeof value === "number") {
+      url.searchParams.set(name, String(value));
+      continue;
+    }
+    try {
+      JSON.parse(value);
+      url.searchParams.set(name, JSON.stringify(value));
+    } catch {
+      url.searchParams.set(name, value);
+    }
+  }
+}
+
 function requestError(
   status: number,
   code: Extract<VerificationErrorCode, "invalid_request" | "method_not_allowed">,

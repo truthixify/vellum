@@ -36,3 +36,21 @@ export {
   type DiscordCommunityMembership,
   type DiscordRecognizedRole,
 } from "./community/discord.v1.js";
+export {
+  TELEGRAM_CLAIM_SCHEMA_HASH,
+  TELEGRAM_CLAIM_SCHEMA_ID,
+  parseTelegramClaimPayload,
+  telegramClaimSchemaManifest,
+  type TelegramClaimPayload,
+} from "./social/telegram.v1.js";
+export {
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
+  parseTelegramCommunityClaimPayload,
+  telegramCommunityClaimSchemaManifest,
+  type TelegramCommunityClaimPayload,
+  type TelegramCommunityMembership,
+  type TelegramCommunityType,
+  type TelegramMemberRole,
+} from "./community/telegram.v1.js";

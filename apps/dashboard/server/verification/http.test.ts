@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { defaultParseSearch } from "@tanstack/react-router";
 
 import type { ClaimIssuanceResult, VerifiedClaim } from "./contracts";
-import { handleIssuerRequest, handleVerificationRequest, platformFromUrl } from "./http";
+import {
+  handleIssuerRequest,
+  handleVerificationRequest,
+  platformFromUrl,
+  setRouterSearchParameters,
+} from "./http";
 import type { PlatformVerifierRegistry } from "./platforms";
 
 const SUBJECT_DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
@@ -144,5 +150,23 @@ describe("verification HTTP boundary", () => {
     expect(
       platformFromUrl(new Request("https://dashboard.usevellum.xyz/api/verify?platform=github")),
     ).toBe("github");
+  });
+
+  test("preserves JSON-like callback strings through the router parser", () => {
+    const url = new URL("https://dashboard.usevellum.xyz/verify/telegram");
+    setRouterSearchParameters(url, {
+      account: "2468101214",
+      name: "true",
+      output: 0,
+      status: "submitted",
+      unused: undefined,
+    });
+
+    expect(defaultParseSearch(url.search)).toEqual({
+      account: "2468101214",
+      name: "true",
+      output: 0,
+      status: "submitted",
+    });
   });
 });
