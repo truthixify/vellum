@@ -1,5 +1,14 @@
 export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash.js";
 export {
+  AT_PROTOCOL_DID_PATTERN,
+  BLUESKY_CLAIM_SCHEMA_HASH,
+  BLUESKY_CLAIM_SCHEMA_ID,
+  BLUESKY_HANDLE_PATTERN,
+  blueskyClaimSchemaManifest,
+  parseBlueskyClaimPayload,
+  type BlueskyClaimPayload,
+} from "./social/bluesky.v1.js";
+export {
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
   githubClaimSchemaManifest,

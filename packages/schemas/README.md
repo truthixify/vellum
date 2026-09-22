@@ -3,9 +3,10 @@
 Canonical claim payload schemas for Vellum, plus TypeScript types and schema-hash helpers.
 
 The package currently includes GitHub identity and contribution, Discord identity and CKB
-community, and Telegram identity and community schemas. Each manifest is serialized with RFC 8785 JSON
-Canonicalization Scheme and identified by `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown
-fields and keep provider credentials out of payloads.
+community, Telegram identity and community, and Bluesky identity schemas. Each manifest is
+serialized with RFC 8785 JSON Canonicalization Scheme and identified by
+`CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider credentials out
+of payloads.
 
 ## What lives here
 
@@ -52,6 +53,12 @@ phone numbers, and permission for the bot to message the account are not part of
 and channels. It includes stable chat IDs, configured display names, chat types, and the membership
 role returned by Telegram. It does not claim when a user joined because the Bot API does not expose
 that timestamp. Community claims expire after 30 days and must be refreshed to remain current.
+
+## Bluesky account claim
+
+`vellum.social.bluesky.v1` records the account's stable AT Protocol DID, normalized current handle,
+stable-DID profile URL, and verification time. It does not infer account age or community activity.
+The app password and temporary Bluesky session credentials are never part of the claim.
 
 ## Consumers
 
