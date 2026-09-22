@@ -1,5 +1,10 @@
 import { useCcc } from "@ckb-ccc/connector-react";
-import { DISCORD_CLAIM_SCHEMA_ID, DISCORD_COMMUNITY_CLAIM_SCHEMA_ID } from "@vellum/schemas";
+import {
+  DISCORD_CLAIM_SCHEMA_ID,
+  DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  TELEGRAM_CLAIM_SCHEMA_ID,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+} from "@vellum/schemas";
 import { ArrowUpRight, BadgeCheck, Copy, RefreshCw } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
@@ -31,6 +36,19 @@ function formatDate(timestamp: number): string {
 function shorten(value: string, head = 18, tail = 8): string {
   if (value.length <= head + tail + 1) return value;
   return `${value.slice(0, head)}…${value.slice(-tail)}`;
+}
+
+function accountLabel(account: AvailableReputation["evidence"][number]["account"]): string {
+  if (account.platform === "telegram") {
+    return account.handle ? `@${account.handle}` : account.displayName;
+  }
+  return `@${account.handle}`;
+}
+
+function platformLabel(
+  platform: AvailableReputation["evidence"][number]["account"]["platform"],
+): string {
+  return platform === "github" ? "GitHub" : platform === "discord" ? "Discord" : "Telegram";
 }
 
 function Overview() {
@@ -314,6 +332,10 @@ function EvidenceCoverage({
   const discordCommunity = available?.evidence.find(
     (item) => item.schemaId === DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   );
+  const telegram = available?.evidence.find((item) => item.schemaId === TELEGRAM_CLAIM_SCHEMA_ID);
+  const telegramCommunity = available?.evidence.find(
+    (item) => item.schemaId === TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+  );
   const scoredCategories =
     available?.categories.filter((category) => category.score > 0).length ?? 0;
   const checking = loading && !mainnet;
@@ -401,6 +423,37 @@ function EvidenceCoverage({
       </div>
       <div className="coverage-action">
         <span>
+          <strong>
+            {checking
+              ? "Checking Telegram evidence"
+              : telegram
+                ? `Telegram · ${accountLabel(telegram.account)}`
+                : unavailable
+                  ? "Telegram evidence unavailable"
+                  : "Telegram is not verified"}
+          </strong>
+          <small>
+            {checking
+              ? "Reading account and current community claims"
+              : telegramCommunity?.community
+                ? `${telegramCommunity.community.memberships.length} recognized CKB ${
+                    telegramCommunity.community.memberships.length === 1
+                      ? "community"
+                      : "communities"
+                  }`
+                : telegram
+                  ? "Account verified; no recognized CKB community claim"
+                  : unavailable
+                    ? "No conclusion was drawn from unavailable evidence"
+                    : "Add account and current CKB community evidence"}
+          </small>
+        </span>
+        <Link className="v-button v-button--quiet" to="/verify/telegram">
+          <BadgeCheck size={13} aria-hidden="true" /> {telegram ? "View" : "Verify"}
+        </Link>
+      </div>
+      <div className="coverage-action">
+        <span>
           <strong>Deterministic policy output</strong>
           <small>Review the policy version, category scores, and excluded evidence together.</small>
         </span>
@@ -456,8 +509,7 @@ function EvidenceLedger({ result }: { result: ReputationResponse | undefined }) 
             >
               <span>
                 <strong>
-                  {evidence.account.platform === "github" ? "GitHub" : "Discord"} · @
-                  {evidence.account.handle}
+                  {platformLabel(evidence.account.platform)} · {accountLabel(evidence.account)}
                 </strong>
                 <small>
                   {"community" in evidence

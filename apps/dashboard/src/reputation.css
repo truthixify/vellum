@@ -523,6 +523,14 @@
   font-weight: 500;
 }
 
+.reputation-evidence__account {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .reputation-evidence__facts {
   display: grid;
   gap: 5px;

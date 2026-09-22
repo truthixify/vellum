@@ -30,6 +30,7 @@ import { Route as DocsResolutionRouteImport } from './routes/docs/resolution'
 import { Route as VerifyIndexRouteImport } from './routes/verify/index'
 import { Route as VerifyDiscordRouteImport } from './routes/verify/discord'
 import { Route as VerifyGithubRouteImport } from './routes/verify/github'
+import { Route as VerifyTelegramRouteImport } from './routes/verify/telegram'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -136,6 +137,11 @@ const VerifyGithubRoute = VerifyGithubRouteImport.update({
   path: '/verify/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyTelegramRoute = VerifyTelegramRouteImport.update({
+  id: '/verify/telegram',
+  path: '/verify/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -157,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/docs/resolution': typeof DocsResolutionRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
+  '/verify/telegram': typeof VerifyTelegramRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
 }
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/docs/resolution': typeof DocsResolutionRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
+  '/verify/telegram': typeof VerifyTelegramRoute
   '/docs': typeof DocsIndexRoute
   '/verify': typeof VerifyIndexRoute
 }
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/docs/resolution': typeof DocsResolutionRoute
   '/verify/discord': typeof VerifyDiscordRoute
   '/verify/github': typeof VerifyGithubRoute
+  '/verify/telegram': typeof VerifyTelegramRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
 }
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/docs/resolution'
     | '/verify/discord'
     | '/verify/github'
+    | '/verify/telegram'
     | '/docs/'
     | '/verify/'
   fileRoutesByTo: FileRoutesByTo
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/docs/resolution'
     | '/verify/discord'
     | '/verify/github'
+    | '/verify/telegram'
     | '/docs'
     | '/verify'
   id:
@@ -273,6 +284,7 @@ export interface FileRouteTypes {
     | '/docs/resolution'
     | '/verify/discord'
     | '/verify/github'
+    | '/verify/telegram'
     | '/docs/'
     | '/verify/'
   fileRoutesById: FileRoutesById
@@ -293,6 +305,7 @@ export interface RootRouteChildren {
   RotateRoute: typeof RotateRoute
   VerifyDiscordRoute: typeof VerifyDiscordRoute
   VerifyGithubRoute: typeof VerifyGithubRoute
+  VerifyTelegramRoute: typeof VerifyTelegramRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
 }
 
@@ -445,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/telegram': {
+      id: '/verify/telegram'
+      path: '/verify/telegram'
+      fullPath: '/verify/telegram'
+      preLoaderRoute: typeof VerifyTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -482,6 +502,7 @@ const rootRouteChildren: RootRouteChildren = {
   RotateRoute: RotateRoute,
   VerifyDiscordRoute: VerifyDiscordRoute,
   VerifyGithubRoute: VerifyGithubRoute,
+  VerifyTelegramRoute: VerifyTelegramRoute,
   VerifyIndexRoute: VerifyIndexRoute,
 }
 export const routeTree = rootRouteImport
