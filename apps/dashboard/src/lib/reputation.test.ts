@@ -15,7 +15,7 @@ function availableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v3",
+    policyVersion: "vellum.reputation.v4",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -45,8 +45,8 @@ function availableResponse() {
           verifiedAt: 1_799_500_000,
         },
         contributions: [
-          { category: "tenure", points: 100, ruleId: "github-account-tenure.v3" },
-          { category: "recency", points: 100, ruleId: "github-verification-recency.v3" },
+          { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
+          { category: "recency", points: 100, ruleId: "github-verification-recency.v4" },
         ],
       },
     ],
@@ -67,7 +67,7 @@ function discordAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v3",
+    policyVersion: "vellum.reputation.v4",
     evaluatedAt: 1_800_000_000,
     overall: { score: 360, maximum: 1_000 },
     categories: [
@@ -93,8 +93,8 @@ function discordAvailableResponse() {
           verifiedAt: 1_799_500_000,
         },
         contributions: [
-          { category: "tenure", points: 100, ruleId: "discord-account-tenure.v3" },
-          { category: "recency", points: 100, ruleId: "discord-verification-recency.v3" },
+          { category: "tenure", points: 100, ruleId: "discord-account-tenure.v4" },
+          { category: "recency", points: 100, ruleId: "discord-verification-recency.v4" },
         ],
       },
       {
@@ -127,7 +127,80 @@ function discordAvailableResponse() {
           ],
         },
         contributions: [
-          { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v3" },
+          { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" },
+        ],
+      },
+    ],
+    excludedEvidence: [],
+  };
+}
+
+function telegramAvailableResponse() {
+  const identityClaim = {
+    claimId: `0x${"7".repeat(64)}`,
+    transactionHash: `0x${"8".repeat(64)}`,
+    outputIndex: 0,
+  };
+  const account = {
+    platform: "telegram" as const,
+    id: "1234123412341234123",
+    displayName: "Vellum Builder",
+    handle: "vellum_builder",
+    profileUrl: "https://t.me/vellum_builder",
+    verifiedAt: 1_799_500_000,
+  };
+  return {
+    ok: true,
+    version: "1",
+    network: "ckb_testnet",
+    subject: DID,
+    status: "available",
+    policyVersion: "vellum.reputation.v4",
+    evaluatedAt: 1_800_000_000,
+    overall: { score: 140, maximum: 1_000 },
+    categories: [
+      { id: "technical", score: 0, maximum: 300 },
+      { id: "contribution", score: 0, maximum: 300 },
+      { id: "community", score: 40, maximum: 200 },
+      { id: "tenure", score: 0, maximum: 100 },
+      { id: "recency", score: 100, maximum: 100 },
+    ],
+    evidence: [
+      {
+        claim: identityClaim,
+        issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
+        schemaId: "vellum.social.telegram.v1",
+        schemaHash: "0xe8b7f0ba94a55a5676ab205d9e1a997e1953d1e5cb6b89fd295ad5d69356467f",
+        issuedAt: account.verifiedAt,
+        account,
+        contributions: [
+          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+        ],
+      },
+      {
+        claim: {
+          claimId: `0x${"9".repeat(64)}`,
+          transactionHash: identityClaim.transactionHash,
+          outputIndex: 1,
+        },
+        supportingClaims: [{ ...identityClaim }],
+        issuerDid: "did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no",
+        schemaId: "vellum.community.telegram.v1",
+        schemaHash: "0x8f8b0b59997ff96fde030314498c56008cb743006ae53b368339382640f8bd59",
+        issuedAt: account.verifiedAt,
+        account: { ...account },
+        community: {
+          memberships: [
+            {
+              chat_id: "-1006577996900705",
+              community_name: "Nervos Network",
+              community_type: "supergroup",
+              member_role: "member",
+            },
+          ],
+        },
+        contributions: [
+          { category: "community", points: 40, ruleId: "telegram-ckb-membership.v4" },
         ],
       },
     ],
@@ -173,15 +246,15 @@ function githubContributionResponse() {
           title: "Add did:ckb support",
           url: "https://github.com/ckb-devrel/ccc/pull/376",
           contributions: [
-            { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
-            { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+            { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
+            { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
           ],
         },
       ],
     },
     contributions: [
-      { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
-      { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+      { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
+      { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
     ],
   };
   return { ...body, evidence: [...body.evidence, contributionEvidence] };
@@ -212,6 +285,26 @@ describe("reputation API client", () => {
         {
           schemaId: "vellum.community.discord.v1",
           community: { memberships: [{ community_name: "Nervos Nation" }] },
+        },
+      ],
+    });
+  });
+
+  test("accepts linked Telegram identity and current Nervos community evidence", async () => {
+    const result = await fetchReputation(
+      DID,
+      mock(async () => Response.json(telegramAvailableResponse())),
+    );
+
+    expect(result).toMatchObject({
+      status: "available",
+      overall: { score: 140 },
+      evidence: [
+        { schemaId: "vellum.social.telegram.v1" },
+        {
+          schemaId: "vellum.community.telegram.v1",
+          community: { memberships: [{ community_name: "Nervos Network" }] },
+          contributions: [{ category: "community", points: 40 }],
         },
       ],
     });
@@ -320,8 +413,8 @@ describe("reputation API client", () => {
     if (!Array.isArray(artifacts)) throw new Error("Expected GitHub contribution artifacts");
     const contributions = Reflect.get(artifacts[0], "contributions");
     if (!Array.isArray(contributions)) throw new Error("Expected artifact contributions");
-    contributions[0].ruleId = "github-technical-review.v3";
-    evidence.contributions[0].ruleId = "github-technical-review.v3";
+    contributions[0].ruleId = "github-technical-review.v4";
+    evidence.contributions[0].ruleId = "github-technical-review.v4";
 
     await expect(
       fetchReputation(
@@ -352,7 +445,7 @@ describe("reputation API client", () => {
           network: "ckb_testnet",
           subject: DID,
           status: "unavailable",
-          policyVersion: "vellum.reputation.v3",
+          policyVersion: "vellum.reputation.v4",
           evaluatedAt: 1_800_000_000,
           error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
         },
@@ -412,7 +505,7 @@ describe("reputation API client", () => {
         network: "ckb_testnet",
         subject: DID,
         status: "unavailable",
-        policyVersion: "vellum.reputation.v3",
+        policyVersion: "vellum.reputation.v4",
         evaluatedAt: 1_800_000_000,
         error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
       }),

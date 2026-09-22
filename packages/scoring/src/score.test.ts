@@ -4,15 +4,17 @@ import {
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+  TELEGRAM_CLAIM_SCHEMA_HASH,
+  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
 } from "@vellum/schemas";
 import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V3 } from "./policy";
+import { VELLUM_REPUTATION_POLICY_V4 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V3.github.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V4.github.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -40,6 +42,19 @@ type DiscordCommunityClaimOptions = Omit<DiscordClaimOptions, "accountCreatedAt"
   communityName?: string;
   joinedAt?: number;
   recognizedRoles?: { role_id: string; role_name: string }[];
+};
+
+type TelegramClaimOptions = Omit<ClaimOptions, "accountCreatedAt" | "login" | "userId"> & {
+  userId?: string;
+  displayName?: string;
+  username?: string;
+};
+
+type TelegramCommunityClaimOptions = Omit<TelegramClaimOptions, "displayName" | "username"> & {
+  chatId?: string;
+  communityName?: string;
+  communityType?: "channel" | "group" | "supergroup";
+  memberRole?: "administrator" | "member" | "owner";
 };
 
 type GithubContributionClaimOptions = Omit<ClaimOptions, "accountCreatedAt"> & {
@@ -234,6 +249,77 @@ function discordCommunityClaim(options: DiscordCommunityClaimOptions = {}): Clai
   } as unknown as Claim;
 }
 
+function telegramClaim(options: TelegramClaimOptions = {}): Claim {
+  const id = options.id ?? 50;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - DAY;
+  const userId = options.userId ?? `1234123412341234${id}`;
+  const displayName = options.displayName ?? `Builder ${id}`;
+  const username = options.username ?? `builder_${id}`;
+  const payload = options.payload ?? {
+    user_id: userId,
+    display_name: displayName,
+    username,
+    profile_url: `https://t.me/${username}`,
+    verified_at: options.verifiedAt ?? issuedAt,
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? TELEGRAM_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: options.expiresAt === undefined ? undefined : BigInt(options.expiresAt),
+    payload,
+    cell: cell(options.transaction ?? id),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) => cell(transaction)),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
+function telegramCommunityClaim(options: TelegramCommunityClaimOptions = {}): Claim {
+  const id = options.id ?? 60;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - DAY;
+  const userId = options.userId ?? "123412341234123450";
+  const payload = options.payload ?? {
+    user_id: userId,
+    verified_at: options.verifiedAt ?? issuedAt,
+    memberships: [
+      {
+        chat_id: options.chatId ?? "-1006577996900705",
+        community_name: options.communityName ?? "Nervos Network",
+        community_type: options.communityType ?? "supergroup",
+        member_role: options.memberRole ?? "member",
+      },
+    ],
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: BigInt(options.expiresAt ?? issuedAt + 30 * DAY),
+    payload,
+    cell: cell(options.transaction ?? id, 1n),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) =>
+      cell(transaction, 1n),
+    ),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
 function readResult(claims: Claim[], invalid: ReadClaimsResult["invalid"] = []): ReadClaimsResult {
   return { claims, invalid };
 }
@@ -246,7 +332,7 @@ function categoryScore(
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v3", () => {
+describe("vellum.reputation.v4", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -255,7 +341,7 @@ describe("vellum.reputation.v3", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v3",
+      policyVersion: "vellum.reputation.v4",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -274,8 +360,8 @@ describe("vellum.reputation.v3", () => {
       schemaId: "vellum.social.github.v1",
       account: { platform: "github", id: 1, handle: "builder-1" },
       contributions: [
-        { category: "tenure", points: 100, ruleId: "github-account-tenure.v3" },
-        { category: "recency", points: 100, ruleId: "github-verification-recency.v3" },
+        { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
+        { category: "recency", points: 100, ruleId: "github-verification-recency.v4" },
       ],
     });
   });
@@ -299,7 +385,7 @@ describe("vellum.reputation.v3", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v3",
+      policyVersion: "vellum.reputation.v4",
       overall: { score: 355 },
       categories: [
         { id: "technical", score: 75 },
@@ -321,25 +407,25 @@ describe("vellum.reputation.v3", () => {
         eligibleArtifactCount: 4,
       },
       contributions: [
-        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
-        { category: "contribution", points: 60, ruleId: "github-merged-pr.v3" },
-        { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
-        { category: "contribution", points: 20, ruleId: "github-substantive-review.v3" },
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
+        { category: "contribution", points: 60, ruleId: "github-merged-pr.v4" },
+        { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
+        { category: "contribution", points: 20, ruleId: "github-substantive-review.v4" },
       ],
     });
     expect(
       evidence?.githubContributions?.artifacts.map((artifact) => artifact.contributions),
     ).toEqual([
       [
-        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
-        { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v4" },
+        { category: "contribution", points: 30, ruleId: "github-merged-pr.v4" },
       ],
-      [{ category: "contribution", points: 30, ruleId: "github-merged-pr.v3" }],
+      [{ category: "contribution", points: 30, ruleId: "github-merged-pr.v4" }],
       [
-        { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
-        { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+        { category: "technical", points: 15, ruleId: "github-technical-review.v4" },
+        { category: "contribution", points: 10, ruleId: "github-substantive-review.v4" },
       ],
-      [{ category: "contribution", points: 10, ruleId: "github-substantive-review.v3" }],
+      [{ category: "contribution", points: 10, ruleId: "github-substantive-review.v4" }],
     ]);
   });
 
@@ -522,7 +608,7 @@ describe("vellum.reputation.v3", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v3",
+      policyVersion: "vellum.reputation.v4",
       overall: { score: 360, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0, maximum: 300 },
@@ -547,7 +633,7 @@ describe("vellum.reputation.v3", () => {
       },
       supportingClaims: [{ claimId: identity.claimId }],
       contributions: [
-        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v3" },
+        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" },
       ],
     });
   });
@@ -583,8 +669,147 @@ describe("vellum.reputation.v3", () => {
     });
     if (result.status !== "available") throw new Error("Expected an available score");
     expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
-      { category: "tenure", points: 100, ruleId: "github-account-tenure.v3" },
-      { category: "recency", points: 100, ruleId: "discord-verification-recency.v3" },
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
+      { category: "recency", points: 100, ruleId: "discord-verification-recency.v4" },
+    ]);
+  });
+
+  test("uses Telegram for recency without inventing account tenure", () => {
+    const result = scoreReputation({
+      claims: readResult([telegramClaim()]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v4",
+      overall: { score: 100, maximum: 1_000 },
+      categories: [
+        { id: "technical", score: 0 },
+        { id: "contribution", score: 0 },
+        { id: "community", score: 0 },
+        { id: "tenure", score: 0 },
+        { id: "recency", score: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toEqual([
+      expect.objectContaining({
+        schemaId: "vellum.social.telegram.v1",
+        account: {
+          platform: "telegram",
+          id: "123412341234123450",
+          displayName: "Builder 50",
+          handle: "builder_50",
+          profileUrl: "https://t.me/builder_50",
+          verifiedAt: EVALUATED_AT - DAY,
+        },
+        contributions: [
+          { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+        ],
+      }),
+    ]);
+  });
+
+  test("does not stack Telegram recency with other identity evidence", () => {
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim({ issuedAt: EVALUATED_AT - 40 * DAY }),
+        telegramClaim({ issuedAt: EVALUATED_AT - DAY }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 200 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v4" },
+      { category: "recency", points: 100, ruleId: "telegram-verification-recency.v4" },
+    ]);
+  });
+
+  test("scores current Telegram community membership without claiming tenure", () => {
+    const result = scoreReputation({
+      claims: readResult([telegramClaim(), telegramCommunityClaim()]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      overall: { score: 140 },
+      categories: [
+        { id: "technical", score: 0 },
+        { id: "contribution", score: 0 },
+        { id: "community", score: 40 },
+        { id: "tenure", score: 0 },
+        { id: "recency", score: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(
+      result.evidence.find((item) => item.schemaId === "vellum.community.telegram.v1"),
+    ).toMatchObject({
+      account: { platform: "telegram", id: "123412341234123450" },
+      community: {
+        memberships: [
+          {
+            chat_id: "-1006577996900705",
+            community_name: "Nervos Network",
+            community_type: "supergroup",
+            member_role: "member",
+          },
+        ],
+      },
+      contributions: [{ category: "community", points: 40, ruleId: "telegram-ckb-membership.v4" }],
+    });
+  });
+
+  test("uses the stronger community source instead of stacking Discord and Telegram", () => {
+    const accountCreatedAt = EVALUATED_AT - 1_460 * DAY;
+    const discordUserId = discordSnowflake(accountCreatedAt, 35n);
+    const result = scoreReputation({
+      claims: readResult([
+        discordClaim({ userId: discordUserId, accountCreatedAt }),
+        discordCommunityClaim({ userId: discordUserId, joinedAt: EVALUATED_AT - 730 * DAY }),
+        telegramClaim(),
+        telegramCommunityClaim(),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 360 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.categories.find((entry) => entry.id === "community")?.score).toBe(160);
+    expect(
+      result.evidence.find((item) => item.schemaId === "vellum.community.discord.v1")
+        ?.contributions,
+    ).toEqual([{ category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v4" }]);
+    expect(
+      result.evidence.find((item) => item.schemaId === "vellum.community.telegram.v1")
+        ?.contributions,
+    ).toEqual([]);
+  });
+
+  test("requires matching Telegram identity and the exact community lifetime", () => {
+    const result = scoreReputation({
+      claims: readResult([
+        telegramClaim({ userId: "123412341234123450" }),
+        telegramCommunityClaim({ id: 60, userId: "123412341234123451" }),
+        telegramCommunityClaim({
+          id: 61,
+          userId: "123412341234123450",
+          issuedAt: EVALUATED_AT - 2 * DAY,
+          expiresAt: EVALUATED_AT + 27 * DAY,
+        }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({ status: "available", overall: { score: 100 } });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence.map((item) => item.reason).sort()).toEqual([
+      "additional-account",
+      "malformed-payload",
     ]);
   });
 
@@ -759,7 +984,7 @@ describe("vellum.reputation.v3", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v3",
+      policyVersion: "vellum.reputation.v4",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -801,11 +1026,12 @@ describe("vellum.reputation.v3", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.github.artifactRules)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.identity.tenureBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.github.artifactRules)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V4.telegram)).toBe(true);
   });
 });

@@ -3,6 +3,7 @@ import type {
   GithubContributionArtifact,
   GithubContributionArtifactKind,
   GithubContributionClassification,
+  TelegramCommunityMembership,
 } from "@vellum/schemas";
 import type { ReadClaimsResult } from "@vellum/sdk";
 
@@ -104,6 +105,18 @@ export type ReputationPolicyV3 = {
   discord: ReputationPolicyV2["discord"];
 };
 
+export type ReputationPolicyV4 = ReputationPolicyV3 & {
+  telegram: {
+    issuerDids: readonly string[];
+    identitySchema: { id: string; hash: string };
+    communitySchema: { id: string; hash: string };
+    recencyRuleId: string;
+    communityRuleId: string;
+    communityTtlSeconds: number;
+    communityPoints: number;
+  };
+};
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
@@ -136,6 +149,14 @@ export type ReputationAccount =
       profileUrl: string;
       createdAt: number;
       verifiedAt: number;
+    }
+  | {
+      platform: "telegram";
+      id: string;
+      displayName: string;
+      handle?: string;
+      profileUrl?: string;
+      verifiedAt: number;
     };
 
 export type ReputationEvidence = {
@@ -147,7 +168,7 @@ export type ReputationEvidence = {
   issuedAt: number;
   account: ReputationAccount;
   community?: {
-    memberships: readonly DiscordCommunityMembership[];
+    memberships: readonly (DiscordCommunityMembership | TelegramCommunityMembership)[];
   };
   githubContributions?: {
     registryVersion: string;

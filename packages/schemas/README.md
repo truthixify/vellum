@@ -2,10 +2,10 @@
 
 Canonical claim payload schemas for Vellum, plus TypeScript types and schema-hash helpers.
 
-The package currently includes GitHub identity and contribution, Discord identity, and Discord CKB
-community schemas. Each manifest is serialized with RFC 8785 JSON Canonicalization Scheme and
-identified by `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider
-credentials out of payloads.
+The package currently includes GitHub identity and contribution, Discord identity and CKB
+community, and Telegram identity and community schemas. Each manifest is serialized with RFC 8785 JSON
+Canonicalization Scheme and identified by `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown
+fields and keep provider credentials out of payloads.
 
 ## What lives here
 
@@ -40,6 +40,18 @@ references. The payload covers a 365-day window and holds up to the 20 most rece
 artifacts, reduced further when needed to keep the encoded Claim data within 16 KiB. It discloses
 the full eligible count when artifacts are omitted. OAuth credentials and activity outside the
 approved repository registry are not included.
+
+## Telegram account claim
+
+`vellum.social.telegram.v1` records Telegram's stable OpenID subject, display name, optional public
+username and profile URL, and the time Vellum verified the account. Telegram does not expose an
+account creation date, so the claim makes no account-tenure assertion. ID tokens, access tokens,
+phone numbers, and permission for the bot to message the account are not part of the claim.
+
+`vellum.community.telegram.v1` records current membership in explicitly configured Nervos groups
+and channels. It includes stable chat IDs, configured display names, chat types, and the membership
+role returned by Telegram. It does not claim when a user joined because the Bot API does not expose
+that timestamp. Community claims expire after 30 days and must be refreshed to remain current.
 
 ## Consumers
 
