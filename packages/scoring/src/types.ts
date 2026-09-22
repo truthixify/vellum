@@ -1,4 +1,9 @@
-import type { DiscordCommunityMembership } from "@vellum/schemas";
+import type {
+  DiscordCommunityMembership,
+  GithubContributionArtifact,
+  GithubContributionArtifactKind,
+  GithubContributionClassification,
+} from "@vellum/schemas";
 import type { ReadClaimsResult } from "@vellum/sdk";
 
 export type ReputationCategoryId =
@@ -68,6 +73,37 @@ export type ReputationPolicyV2 = {
   };
 };
 
+export type GithubArtifactScoreRule = {
+  kind: GithubContributionArtifactKind;
+  classification: GithubContributionClassification;
+  technicalPoints: number;
+  contributionPoints: number;
+  technicalRuleId?: string;
+  contributionRuleId: string;
+};
+
+export type ReputationPolicyV3 = {
+  version: string;
+  minimum: 0;
+  maximum: number;
+  categories: readonly ReputationCategoryPolicy[];
+  identity: {
+    tenureBands: readonly ReputationAgeBand[];
+    recencyBands: readonly ReputationRecencyBand[];
+  };
+  github: {
+    issuerDids: readonly string[];
+    identitySchema: { id: string; hash: string };
+    contributionSchema: { id: string; hash: string };
+    tenureRuleId: string;
+    recencyRuleId: string;
+    contributionTtlSeconds: number;
+    contributionWindowSeconds: number;
+    artifactRules: readonly GithubArtifactScoreRule[];
+  };
+  discord: ReputationPolicyV2["discord"];
+};
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
@@ -78,6 +114,10 @@ export type ReputationContribution = {
   category: ReputationCategoryId;
   points: number;
   ruleId: string;
+};
+
+export type ReputationGithubArtifact = GithubContributionArtifact & {
+  contributions: readonly ReputationContribution[];
 };
 
 export type ReputationAccount =
@@ -108,6 +148,12 @@ export type ReputationEvidence = {
   account: ReputationAccount;
   community?: {
     memberships: readonly DiscordCommunityMembership[];
+  };
+  githubContributions?: {
+    registryVersion: string;
+    windowStartedAt: number;
+    eligibleArtifactCount: number;
+    artifacts: readonly ReputationGithubArtifact[];
   };
   contributions: readonly ReputationContribution[];
 };

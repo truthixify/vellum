@@ -308,12 +308,19 @@ function ClaimsLedger() {
     <div className="ledger">
       <div className="ledger__bar">
         <strong>Attached evidence</strong>
-        <span>3 accepted Claim Cells</span>
+        <span>4 accepted Claim Cells</span>
       </div>
       {[
         [
           "GitHub account",
           "vellum.social.github.v1",
+          "Vellum Testnet issuer",
+          "Example checkpoint",
+          "Verified",
+        ],
+        [
+          "GitHub CKB contribution",
+          "vellum.contribution.github.v1",
           "Vellum Testnet issuer",
           "Example checkpoint",
           "Verified",
@@ -358,7 +365,7 @@ function PolicyExamples() {
   return (
     <div className="policy-examples">
       <div className="policy-card">
-        <div className="policy-card__bar">Vellum reputation v2 - evaluation</div>
+        <div className="policy-card__bar">Vellum reputation v3 - evaluation</div>
         <div className="policy-card__result">
           <StatusMark tone="positive">Available</StatusMark>
           <span>Deterministic Testnet result</span>
@@ -366,7 +373,15 @@ function PolicyExamples() {
         <dl>
           <div>
             <dt>Aggregate score</dt>
-            <dd>360 of 1000</dd>
+            <dd>450 of 1000</dd>
+          </div>
+          <div>
+            <dt>Technical work</dt>
+            <dd>60 of 300</dd>
+          </div>
+          <div>
+            <dt>Ecosystem contribution</dt>
+            <dd>30 of 300</dd>
           </div>
           <div>
             <dt>Identity tenure</dt>
@@ -394,10 +409,18 @@ function PolicyExamples() {
             <small className="mono">did:ckb:0x8f2a\u2026c41d</small>
           </span>
           <strong className="embed-score">
-            360<small>/1000</small>
+            450<small>/1000</small>
           </strong>
         </div>
         <div className="embed-rails">
+          <span>
+            Technical <b className="mono">60/300</b>
+          </span>
+          <SignalRail value={60} max={300} label="Technical 60 of 300" />
+          <span>
+            Contribution <b className="mono">30/300</b>
+          </span>
+          <SignalRail value={30} max={300} label="Contribution 30 of 300" />
           <span>
             Community <b className="mono">160/200</b>
           </span>
@@ -410,7 +433,7 @@ function PolicyExamples() {
             Recency <b className="mono">100/100</b>
           </span>
           <SignalRail value={100} max={100} label="Recency 100 of 100" />
-          <small>3 accepted Claim Cells {"\u00b7"} evaluated on request</small>
+          <small>4 accepted Claim Cells {"\u00b7"} evaluated on request</small>
         </div>
       </div>
     </div>
@@ -512,11 +535,11 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v2</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v3</strong>
             </div>
             <div>
-              <small>Scored in v2</small>
-              <strong>Community history, identity tenure, and verification recency</strong>
+              <small>Scored in v3</small>
+              <strong>Accepted CKB work, community history, tenure, and recency</strong>
             </div>
             <div>
               <small>Issuer visibility</small>

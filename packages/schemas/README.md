@@ -2,10 +2,10 @@
 
 Canonical claim payload schemas for Vellum, plus TypeScript types and schema-hash helpers.
 
-The package currently includes GitHub identity, Discord identity, and Discord CKB community
-schemas. Each manifest is serialized with RFC 8785 JSON Canonicalization Scheme and identified by
-`CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider credentials out
-of payloads.
+The package currently includes GitHub identity and contribution, Discord identity, and Discord CKB
+community schemas. Each manifest is serialized with RFC 8785 JSON Canonicalization Scheme and
+identified by `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider
+credentials out of payloads.
 
 ## What lives here
 
@@ -30,6 +30,16 @@ servers, including join timestamps and configured roles. Memberships and roles u
 IDs and canonical ordering. A membership join time cannot predate the account timestamp encoded in
 the user's Discord snowflake. Provider credentials, unrelated servers, messages, and channel
 history are not part of either claim.
+
+## GitHub contribution claim
+
+`vellum.contribution.github.v1` records a bounded, canonical list of merged pull requests and formal
+reviews accepted in repositories from a versioned CKB registry. It links to the stable GitHub user
+ID from the identity claim and records stable repository, pull request, review, and merge-commit
+references. The payload covers a 365-day window and holds up to the 20 most recent eligible
+artifacts, reduced further when needed to keep the encoded Claim data within 16 KiB. It discloses
+the full eligible count when artifacts are omitted. OAuth credentials and activity outside the
+approved repository registry are not included.
 
 ## Consumers
 

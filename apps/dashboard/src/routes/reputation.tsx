@@ -1,5 +1,11 @@
 import { SignalRail, StatusMark } from "@vellum/ui";
-import { ArrowUpRight, BadgeCheck, RefreshCw } from "lucide-react";
+import {
+  ArrowUpRight,
+  BadgeCheck,
+  GitPullRequest,
+  MessageSquareText,
+  RefreshCw,
+} from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -10,6 +16,11 @@ import { useReputation } from "@/hooks/use-reputation";
 import { useActiveIdentity } from "@/lib/active-identity-context";
 import { isDidCkb } from "@/lib/did-ckb";
 import type { AvailableReputation, ReputationCategory, ReputationResponse } from "@/lib/reputation";
+
+type GithubContributionEvidence = Extract<
+  AvailableReputation["evidence"][number],
+  { schemaId: "vellum.contribution.github.v1" }
+>;
 
 type ReputationSearch = { did?: string };
 
@@ -270,11 +281,15 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
           <div className="reputation-evidence-list">
             {result.evidence.map((evidence) => (
               <article
-                className="reputation-evidence"
+                className={`reputation-evidence${"githubContributions" in evidence ? " reputation-evidence--contributions" : ""}`}
                 key={`${evidence.claim.transactionHash}:${evidence.claim.outputIndex}`}
               >
                 <div className="reputation-evidence__source">
-                  <span>{evidence.account.platform}</span>
+                  <span>
+                    {"githubContributions" in evidence
+                      ? "GitHub contributions"
+                      : evidence.account.platform}
+                  </span>
                   <a href={evidence.account.profileUrl} target="_blank" rel="noreferrer">
                     @{evidence.account.handle}
                     <ArrowUpRight size={13} aria-hidden="true" />
@@ -330,6 +345,9 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
                     </div>
                   </dl>
                 </details>
+                {"githubContributions" in evidence ? (
+                  <GithubContributionArtifacts evidence={evidence} />
+                ) : null}
               </article>
             ))}
           </div>
@@ -371,17 +389,79 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
   );
 }
 
+export function GithubContributionArtifacts({
+  evidence,
+}: {
+  evidence: GithubContributionEvidence;
+}) {
+  const { githubContributions } = evidence;
+  const hiddenCount =
+    githubContributions.eligibleArtifactCount - githubContributions.artifacts.length;
+
+  return (
+    <section className="reputation-github-artifacts" aria-label="GitHub contribution artifacts">
+      <header>
+        <div>
+          <span>Accepted activity</span>
+          <strong>
+            {githubContributions.artifacts.length} artifact
+            {githubContributions.artifacts.length === 1 ? "" : "s"}
+          </strong>
+        </div>
+        <p>
+          Since {formatDate(githubContributions.windowStartedAt)} UTC
+          {hiddenCount > 0 ? ` · ${hiddenCount} older eligible` : ""}
+        </p>
+      </header>
+      <ol>
+        {githubContributions.artifacts.map((artifact) => {
+          const isReview = artifact.kind === "pull_request_review";
+          return (
+            <li key={artifact.artifact_id}>
+              <span className="reputation-github-artifact__icon" aria-hidden="true">
+                {isReview ? <MessageSquareText size={16} /> : <GitPullRequest size={16} />}
+              </span>
+              <div className="reputation-github-artifact__body">
+                <div className="reputation-github-artifact__meta">
+                  <strong>{artifact.repository}</strong>
+                  <span>PR #{artifact.number}</span>
+                  <span>{artifact.classification}</span>
+                </div>
+                <a href={artifact.url} target="_blank" rel="noreferrer">
+                  {artifact.title}
+                  <ArrowUpRight size={13} aria-hidden="true" />
+                </a>
+                <small>
+                  {isReview ? "Reviewed" : "Merged"} {formatDate(artifact.occurred_at)} UTC ·{" "}
+                  {artifact.changed_files} changed file{artifact.changed_files === 1 ? "" : "s"}
+                </small>
+              </div>
+              <div className="reputation-github-artifact__points">
+                {artifact.contributions.length > 0 ? (
+                  artifact.contributions.map((contribution) => (
+                    <span key={`${contribution.category}:${contribution.ruleId}`}>
+                      +{contribution.points} {contribution.category}
+                    </span>
+                  ))
+                ) : (
+                  <span>Category cap reached</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
 function CategoryRow({ category }: { category: ReputationCategory }) {
   const inactive = category.score === 0 && ["technical", "contribution"].includes(category.id);
   return (
     <div className={`reputation-category${inactive ? " reputation-category--inactive" : ""}`}>
       <div className="reputation-category__label">
         <strong>{CATEGORY_LABELS[category.id]}</strong>
-        {inactive ? (
-          <span>Not scored by this policy version</span>
-        ) : (
-          <span>Active policy rule</span>
-        )}
+        {inactive ? <span>No qualifying evidence</span> : <span>Active policy rule</span>}
       </div>
       <SignalRail
         value={category.score}

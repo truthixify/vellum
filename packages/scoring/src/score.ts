@@ -2,13 +2,15 @@ import {
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
+  parseGithubContributionClaimPayload,
   type DiscordClaimPayload,
   type DiscordCommunityClaimPayload,
   type GithubClaimPayload,
+  type GithubContributionClaimPayload,
 } from "@vellum/schemas";
 import type { Claim, ClaimReadFailure } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V2 } from "./policy.js";
+import { VELLUM_REPUTATION_POLICY_V3 } from "./policy.js";
 import type {
   AvailableReputationResult,
   ReputationAccount,
@@ -17,7 +19,7 @@ import type {
   ReputationContribution,
   ReputationEvidence,
   ReputationExcludedEvidence,
-  ReputationPolicyV2,
+  ReputationPolicyV3,
   ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
@@ -26,6 +28,11 @@ import type {
 type GithubCandidate = {
   claim: Claim;
   payload: GithubClaimPayload;
+};
+
+type GithubContributionCandidate = {
+  claim: Claim;
+  payload: GithubContributionClaimPayload;
 };
 
 type DiscordIdentityCandidate = {
@@ -107,7 +114,7 @@ function validateSchema(schema: { id: string; hash: string }, name: string): voi
   }
 }
 
-function validatePolicy(policy: ReputationPolicyV2): void {
+function validatePolicy(policy: ReputationPolicyV3): void {
   if (!policy.version || !Number.isSafeInteger(policy.maximum) || policy.maximum < 0) {
     throw new TypeError("The reputation policy score range is invalid");
   }
@@ -133,17 +140,43 @@ function validatePolicy(policy: ReputationPolicyV2): void {
 
   validateIssuerDids(policy.github.issuerDids, "GitHub");
   validateIssuerDids(policy.discord.issuerDids, "Discord");
-  validateSchema(policy.github.schema, "GitHub");
+  validateSchema(policy.github.identitySchema, "GitHub identity");
+  validateSchema(policy.github.contributionSchema, "GitHub contribution");
   validateSchema(policy.discord.identitySchema, "Discord identity");
   validateSchema(policy.discord.communitySchema, "Discord community");
   if (
     !validateAgeBands(policy.identity.tenureBands, categoryCaps.get("tenure")!) ||
     !validateRecencyBands(policy.identity.recencyBands, categoryCaps.get("recency")!) ||
     !validateAgeBands(policy.discord.communityBands, categoryCaps.get("community")!) ||
+    !Number.isSafeInteger(policy.github.contributionTtlSeconds) ||
+    policy.github.contributionTtlSeconds <= 0 ||
+    !Number.isSafeInteger(policy.github.contributionWindowSeconds) ||
+    policy.github.contributionWindowSeconds <= 0 ||
     !Number.isSafeInteger(policy.discord.communityTtlSeconds) ||
     policy.discord.communityTtlSeconds <= 0
   ) {
     throw new TypeError("The reputation policy score bands are invalid");
+  }
+  const githubRules = new Set<string>();
+  for (const rule of policy.github.artifactRules) {
+    const key = `${rule.kind}:${rule.classification}`;
+    if (
+      githubRules.has(key) ||
+      !Number.isSafeInteger(rule.technicalPoints) ||
+      rule.technicalPoints < 0 ||
+      rule.technicalPoints > categoryCaps.get("technical")! ||
+      !Number.isSafeInteger(rule.contributionPoints) ||
+      rule.contributionPoints < 0 ||
+      rule.contributionPoints > categoryCaps.get("contribution")! ||
+      (rule.technicalPoints > 0 && !rule.technicalRuleId) ||
+      !rule.contributionRuleId
+    ) {
+      throw new TypeError("The reputation policy GitHub artifact rules are invalid");
+    }
+    githubRules.add(key);
+  }
+  if (githubRules.size !== 4) {
+    throw new TypeError("The reputation policy GitHub artifact rules are incomplete");
   }
 }
 
@@ -276,7 +309,7 @@ function scoreRecency(ageSeconds: number, bands: readonly ReputationRecencyBand[
   return bands.find((band) => ageSeconds < band.maximumAgeSecondsExclusive)?.points ?? 0;
 }
 
-function emptyCategories(policy: ReputationPolicyV2): AvailableReputationResult["categories"] {
+function emptyCategories(policy: ReputationPolicyV3): AvailableReputationResult["categories"] {
   return policy.categories.map((category) => ({ ...category, score: 0 }));
 }
 
@@ -324,7 +357,7 @@ function unavailableResult(
 ): Extract<ReputationResult, { status: "unavailable" }> {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V2.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V3.version,
     evaluatedAt,
     error: {
       code: "issuer-state-unavailable",
@@ -361,7 +394,7 @@ function identityScoreCandidate(
   evaluatedAt: number,
   tenureRuleId: string,
   recencyRuleId: string,
-  policy: ReputationPolicyV2,
+  policy: ReputationPolicyV3,
 ): IdentityScoreCandidate {
   const accountAge = evaluatedAt - evidence.account.createdAt;
   const verificationAge = evaluatedAt - evidence.account.verifiedAt;
@@ -395,7 +428,7 @@ function compareRecency(left: IdentityScoreCandidate, right: IdentityScoreCandid
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = VELLUM_REPUTATION_POLICY_V2;
+  const policy = VELLUM_REPUTATION_POLICY_V3;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 
@@ -405,18 +438,21 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     message: failure.message,
   }));
   const githubCandidates: GithubCandidate[] = [];
+  const githubContributionCandidates: GithubContributionCandidate[] = [];
   const discordIdentityCandidates: DiscordIdentityCandidate[] = [];
   const discordCommunityCandidates: DiscordCommunityCandidate[] = [];
 
   for (const claim of canonicalClaims(input.claims.claims, excluded)) {
     const kind =
-      claim.schemaHash === policy.github.schema.hash
-        ? "github"
-        : claim.schemaHash === policy.discord.identitySchema.hash
-          ? "discord-identity"
-          : claim.schemaHash === policy.discord.communitySchema.hash
-            ? "discord-community"
-            : undefined;
+      claim.schemaHash === policy.github.identitySchema.hash
+        ? "github-identity"
+        : claim.schemaHash === policy.github.contributionSchema.hash
+          ? "github-contribution"
+          : claim.schemaHash === policy.discord.identitySchema.hash
+            ? "discord-identity"
+            : claim.schemaHash === policy.discord.communitySchema.hash
+              ? "discord-community"
+              : undefined;
     if (!kind) {
       excluded.push(
         exclusion(claim, "unsupported-schema", "The claim schema is not scored by this policy."),
@@ -424,7 +460,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       continue;
     }
 
-    const trustedIssuers = kind === "github" ? policy.github.issuerDids : policy.discord.issuerDids;
+    const trustedIssuers = kind.startsWith("github")
+      ? policy.github.issuerDids
+      : policy.discord.issuerDids;
     if (!(trustedIssuers as readonly string[]).includes(claim.issuerDid)) {
       excluded.push(
         exclusion(claim, "untrusted-issuer", "The claim issuer is not trusted by this policy."),
@@ -442,14 +480,20 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       continue;
     }
 
-    let payload: GithubClaimPayload | DiscordClaimPayload | DiscordCommunityClaimPayload;
+    let payload:
+      | GithubClaimPayload
+      | GithubContributionClaimPayload
+      | DiscordClaimPayload
+      | DiscordCommunityClaimPayload;
     try {
       payload =
-        kind === "github"
+        kind === "github-identity"
           ? parseGithubClaimPayload(claim.payload)
-          : kind === "discord-identity"
-            ? parseDiscordClaimPayload(claim.payload)
-            : parseDiscordCommunityClaimPayload(claim.payload);
+          : kind === "github-contribution"
+            ? parseGithubContributionClaimPayload(claim.payload)
+            : kind === "discord-identity"
+              ? parseDiscordClaimPayload(claim.payload)
+              : parseDiscordCommunityClaimPayload(claim.payload);
     } catch {
       excluded.push(exclusion(claim, "malformed-payload", "The claim payload is malformed."));
       continue;
@@ -465,15 +509,18 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       continue;
     }
     if (
-      kind === "discord-community" &&
-      (claim.expiresAt === undefined ||
-        claim.expiresAt !== claim.issuedAt + BigInt(policy.discord.communityTtlSeconds))
+      (kind === "github-contribution" &&
+        (claim.expiresAt === undefined ||
+          claim.expiresAt !== claim.issuedAt + BigInt(policy.github.contributionTtlSeconds))) ||
+      (kind === "discord-community" &&
+        (claim.expiresAt === undefined ||
+          claim.expiresAt !== claim.issuedAt + BigInt(policy.discord.communityTtlSeconds)))
     ) {
       excluded.push(
         exclusion(
           claim,
           "malformed-payload",
-          "Discord community evidence does not use the required validity period.",
+          `${kind === "github-contribution" ? "GitHub contribution" : "Discord community"} evidence does not use the required validity period.`,
         ),
       );
       continue;
@@ -487,8 +534,13 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       continue;
     }
 
-    if (kind === "github") {
+    if (kind === "github-identity") {
       githubCandidates.push({ claim, payload: payload as GithubClaimPayload });
+    } else if (kind === "github-contribution") {
+      githubContributionCandidates.push({
+        claim,
+        payload: payload as GithubContributionClaimPayload,
+      });
     } else if (kind === "discord-identity") {
       discordIdentityCandidates.push({ claim, payload: payload as DiscordClaimPayload });
     } else {
@@ -511,6 +563,45 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     "Discord",
     excluded,
   );
+
+  githubContributionCandidates.sort(compareNewest);
+  const newestGithubContributionByUser = new Map<number, GithubContributionCandidate>();
+  for (const candidate of githubContributionCandidates) {
+    if (newestGithubContributionByUser.has(candidate.payload.user_id)) {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "superseded",
+          "A newer GitHub contribution claim for this account is available.",
+        ),
+      );
+      continue;
+    }
+    newestGithubContributionByUser.set(candidate.payload.user_id, candidate);
+  }
+
+  let githubContribution: GithubContributionCandidate | undefined;
+  for (const candidate of newestGithubContributionByUser.values()) {
+    if (!github) {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "identity-missing",
+          "An active GitHub identity claim is required for contribution evidence.",
+        ),
+      );
+    } else if (candidate.payload.user_id === github.payload.user_id) {
+      githubContribution = candidate;
+    } else {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "additional-account",
+          "The contribution claim belongs to a different GitHub account.",
+        ),
+      );
+    }
+  }
 
   discordCommunityCandidates.sort(compareNewest);
   const newestCommunityByUser = new Map<string, DiscordCommunityCandidate>();
@@ -555,11 +646,12 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   const evidence: MutableEvidence[] = [];
   const identityScores: IdentityScoreCandidate[] = [];
 
+  let githubEvidence: MutableEvidence | undefined;
   if (github) {
-    const githubEvidence: MutableEvidence = {
+    githubEvidence = {
       claim: claimReference(github.claim),
       issuerDid: github.claim.issuerDid,
-      schemaId: policy.github.schema.id,
+      schemaId: policy.github.identitySchema.id,
       schemaHash: github.claim.schemaHash,
       issuedAt: Number(github.claim.issuedAt),
       account: accountFromGithub(github.payload),
@@ -575,6 +667,58 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
         policy,
       ),
     );
+  }
+
+  if (github && githubEvidence && githubContribution) {
+    const aggregateContributions = new Map<string, ReputationContribution>();
+    const scoredArtifacts = githubContribution.payload.artifacts.map((artifact) => {
+      const rule = policy.github.artifactRules.find(
+        (candidate) =>
+          candidate.kind === artifact.kind && candidate.classification === artifact.classification,
+      )!;
+      const artifactContributions: ReputationContribution[] = [];
+      for (const entry of [
+        {
+          category: "technical" as const,
+          requested: rule.technicalPoints,
+          ruleId: "technicalRuleId" in rule ? rule.technicalRuleId : undefined,
+        },
+        {
+          category: "contribution" as const,
+          requested: rule.contributionPoints,
+          ruleId: rule.contributionRuleId,
+        },
+      ]) {
+        if (!entry.ruleId || entry.requested === 0) continue;
+        const category = categories.find((candidate) => candidate.id === entry.category)!;
+        const points = Math.min(entry.requested, category.maximum - category.score);
+        if (points === 0) continue;
+        category.score += points;
+        const contribution = { category: entry.category, points, ruleId: entry.ruleId };
+        artifactContributions.push(contribution);
+        const key = `${entry.category}:${entry.ruleId}`;
+        const aggregate = aggregateContributions.get(key);
+        if (aggregate) aggregate.points += points;
+        else aggregateContributions.set(key, { ...contribution });
+      }
+      return { ...artifact, contributions: artifactContributions };
+    });
+    evidence.push({
+      claim: claimReference(githubContribution.claim),
+      supportingClaims: [claimReference(github.claim)],
+      issuerDid: githubContribution.claim.issuerDid,
+      schemaId: policy.github.contributionSchema.id,
+      schemaHash: githubContribution.claim.schemaHash,
+      issuedAt: Number(githubContribution.claim.issuedAt),
+      account: accountFromGithub(github.payload),
+      githubContributions: {
+        registryVersion: githubContribution.payload.repository_registry,
+        windowStartedAt: githubContribution.payload.window_started_at,
+        eligibleArtifactCount: githubContribution.payload.eligible_artifact_count,
+        artifacts: scoredArtifacts,
+      },
+      contributions: [...aggregateContributions.values()],
+    });
   }
 
   let discordEvidence: MutableEvidence | undefined;

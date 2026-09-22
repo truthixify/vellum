@@ -3,15 +3,16 @@ import {
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_HASH,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
 } from "@vellum/schemas";
 import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V2 } from "./policy";
+import { VELLUM_REPUTATION_POLICY_V3 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V2.github.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V3.github.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -39,6 +40,15 @@ type DiscordCommunityClaimOptions = Omit<DiscordClaimOptions, "accountCreatedAt"
   communityName?: string;
   joinedAt?: number;
   recognizedRoles?: { role_id: string; role_name: string }[];
+};
+
+type GithubContributionClaimOptions = Omit<ClaimOptions, "accountCreatedAt"> & {
+  artifacts?: Array<{
+    classification?: "ecosystem" | "technical";
+    kind?: "merged_pull_request" | "pull_request_review";
+    mergedAt?: number;
+    occurredAt?: number;
+  }>;
 };
 
 function hash(byte: number): `0x${string}` {
@@ -74,6 +84,71 @@ function githubClaim(options: ClaimOptions = {}): Claim {
     payload,
     cell: cell(options.transaction ?? id),
     duplicateCells: (options.duplicateTransactions ?? []).map((transaction) => cell(transaction)),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
+function githubContributionClaim(options: GithubContributionClaimOptions = {}): Claim {
+  const id = options.id ?? 20;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - 10 * DAY;
+  const userId = options.userId ?? 1;
+  const login = options.login ?? `builder-${userId}`;
+  const artifactOptions = options.artifacts ?? [{ classification: "technical" }];
+  const artifacts = artifactOptions
+    .map((artifact, index) => {
+      const number = 400 + index;
+      const kind = artifact.kind ?? "merged_pull_request";
+      const mergedAt = artifact.mergedAt ?? issuedAt - (index + 1) * DAY;
+      const occurredAt =
+        artifact.occurredAt ?? (kind === "merged_pull_request" ? mergedAt : mergedAt - 1);
+      const pullRequestId = `PR_fixture_${id}_${index}`;
+      return {
+        artifact_id: kind === "merged_pull_request" ? pullRequestId : `PRR_fixture_${id}_${index}`,
+        changed_files: 3,
+        classification: artifact.classification ?? "technical",
+        kind,
+        merge_commit_sha: (id + index).toString(16).padStart(40, "0"),
+        merged_at: mergedAt,
+        number,
+        occurred_at: occurredAt,
+        pull_request_id: pullRequestId,
+        repository: "ckb-devrel/ccc",
+        repository_id: "R_kgDOLw3gsg",
+        title: `Contribution ${number}`,
+        url: `https://github.com/ckb-devrel/ccc/pull/${number}`,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.occurred_at - left.occurred_at || left.artifact_id.localeCompare(right.artifact_id),
+    );
+  const payload = options.payload ?? {
+    user_id: userId,
+    login,
+    verified_at: options.verifiedAt ?? issuedAt,
+    window_started_at: (options.verifiedAt ?? issuedAt) - 365 * DAY,
+    repository_registry: "ckb.public-contributions.v1",
+    eligible_artifact_count: artifacts.length,
+    artifacts,
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? TRUSTED_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: BigInt(options.expiresAt ?? issuedAt + 30 * DAY),
+    payload,
+    cell: cell(options.transaction ?? id, 1n),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) =>
+      cell(transaction, 1n),
+    ),
     verification: {
       inclusion: "live",
       issuerAuthorization: "accepted-by-configured-claim-type",
@@ -165,13 +240,13 @@ function readResult(claims: Claim[], invalid: ReadClaimsResult["invalid"] = []):
 
 function categoryScore(
   result: ReturnType<typeof scoreReputation>,
-  category: "tenure" | "recency",
+  category: "technical" | "contribution" | "community" | "tenure" | "recency",
 ): number {
   if (result.status !== "available") throw new Error("Expected an available score");
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v2", () => {
+describe("vellum.reputation.v3", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -180,7 +255,7 @@ describe("vellum.reputation.v2", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v2",
+      policyVersion: "vellum.reputation.v3",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -199,10 +274,187 @@ describe("vellum.reputation.v2", () => {
       schemaId: "vellum.social.github.v1",
       account: { platform: "github", id: 1, handle: "builder-1" },
       contributions: [
-        { category: "tenure", points: 100, ruleId: "github-account-tenure.v2" },
-        { category: "recency", points: 100, ruleId: "github-verification-recency.v2" },
+        { category: "tenure", points: 100, ruleId: "github-account-tenure.v3" },
+        { category: "recency", points: 100, ruleId: "github-verification-recency.v3" },
       ],
     });
+  });
+
+  test("scores each accepted GitHub artifact and exposes its audit trail", () => {
+    const identity = githubClaim({ userId: 7, login: "ckb-builder" });
+    const contribution = githubContributionClaim({
+      userId: 7,
+      login: "ckb-builder",
+      artifacts: [
+        { classification: "technical", kind: "merged_pull_request" },
+        { classification: "ecosystem", kind: "merged_pull_request" },
+        { classification: "technical", kind: "pull_request_review" },
+        { classification: "ecosystem", kind: "pull_request_review" },
+      ],
+    });
+    const result = scoreReputation({
+      claims: readResult([contribution, identity]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v3",
+      overall: { score: 355 },
+      categories: [
+        { id: "technical", score: 75 },
+        { id: "contribution", score: 80 },
+        { id: "community", score: 0 },
+        { id: "tenure", score: 100 },
+        { id: "recency", score: 100 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    const evidence = result.evidence.find(
+      (entry) => entry.schemaId === "vellum.contribution.github.v1",
+    );
+    expect(evidence).toMatchObject({
+      supportingClaims: [{ claimId: identity.claimId }],
+      account: { platform: "github", id: 7, handle: "ckb-builder" },
+      githubContributions: {
+        registryVersion: "ckb.public-contributions.v1",
+        eligibleArtifactCount: 4,
+      },
+      contributions: [
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
+        { category: "contribution", points: 60, ruleId: "github-merged-pr.v3" },
+        { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
+        { category: "contribution", points: 20, ruleId: "github-substantive-review.v3" },
+      ],
+    });
+    expect(
+      evidence?.githubContributions?.artifacts.map((artifact) => artifact.contributions),
+    ).toEqual([
+      [
+        { category: "technical", points: 60, ruleId: "github-merged-technical-pr.v3" },
+        { category: "contribution", points: 30, ruleId: "github-merged-pr.v3" },
+      ],
+      [{ category: "contribution", points: 30, ruleId: "github-merged-pr.v3" }],
+      [
+        { category: "technical", points: 15, ruleId: "github-technical-review.v3" },
+        { category: "contribution", points: 10, ruleId: "github-substantive-review.v3" },
+      ],
+      [{ category: "contribution", points: 10, ruleId: "github-substantive-review.v3" }],
+    ]);
+  });
+
+  test("requires current matching GitHub identity evidence and exact contribution lifetime", () => {
+    const missingIdentity = scoreReputation({
+      claims: readResult([githubContributionClaim({ userId: 8 })]),
+      evaluatedAt: EVALUATED_AT,
+    });
+    const otherIdentity = scoreReputation({
+      claims: readResult([githubClaim({ userId: 9 }), githubContributionClaim({ userId: 8 })]),
+      evaluatedAt: EVALUATED_AT,
+    });
+    const wrongLifetime = scoreReputation({
+      claims: readResult([
+        githubClaim({ userId: 8 }),
+        githubContributionClaim({ userId: 8, expiresAt: EVALUATED_AT + 19 * DAY }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    if (
+      missingIdentity.status !== "available" ||
+      otherIdentity.status !== "available" ||
+      wrongLifetime.status !== "available"
+    ) {
+      throw new Error("Expected available scores");
+    }
+    expect(missingIdentity.excludedEvidence).toContainEqual(
+      expect.objectContaining({ reason: "identity-missing" }),
+    );
+    expect(otherIdentity.excludedEvidence).toContainEqual(
+      expect.objectContaining({ reason: "additional-account" }),
+    );
+    expect(wrongLifetime.excludedEvidence).toContainEqual(
+      expect.objectContaining({ reason: "malformed-payload" }),
+    );
+    expect(categoryScore(wrongLifetime, "technical")).toBe(0);
+  });
+
+  test("links active contribution evidence to a newer matching identity claim", () => {
+    const identity = githubClaim({
+      id: 8,
+      userId: 8,
+      issuedAt: EVALUATED_AT - DAY,
+    });
+    const contribution = githubContributionClaim({
+      id: 28,
+      userId: 8,
+      issuedAt: EVALUATED_AT - 10 * DAY,
+    });
+    const result = scoreReputation({
+      claims: readResult([contribution, identity]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(categoryScore(result, "technical")).toBe(60);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(
+      result.evidence.find((entry) => entry.schemaId === "vellum.contribution.github.v1"),
+    ).toMatchObject({
+      issuedAt: EVALUATED_AT - 10 * DAY,
+      supportingClaims: [{ claimId: identity.claimId }],
+      account: { id: 8, verifiedAt: EVALUATED_AT - DAY },
+    });
+  });
+
+  test("treats GitHub contribution evidence as inactive at its expiry boundary", () => {
+    const issuedAt = EVALUATED_AT - 30 * DAY;
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim({ userId: 8 }),
+        githubContributionClaim({ userId: 8, issuedAt }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(categoryScore(result, "technical")).toBe(0);
+    expect(categoryScore(result, "contribution")).toBe(0);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence).toContainEqual(expect.objectContaining({ reason: "expired" }));
+  });
+
+  test("caps GitHub artifact scores and supersedes overlapping contribution claims", () => {
+    const artifacts = Array.from({ length: 8 }, () => ({ classification: "technical" as const }));
+    const identity = githubClaim({ userId: 10 });
+    const older = githubContributionClaim({ id: 20, userId: 10, artifacts });
+    const newer = githubContributionClaim({
+      id: 21,
+      userId: 10,
+      issuedAt: EVALUATED_AT - DAY,
+      artifacts,
+    });
+    const result = scoreReputation({
+      claims: readResult([older, newer, identity]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(categoryScore(result, "technical")).toBe(300);
+    expect(categoryScore(result, "contribution")).toBe(240);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.excludedEvidence).toContainEqual(
+      expect.objectContaining({
+        claim: expect.objectContaining({ claimId: older.claimId }),
+        reason: "superseded",
+      }),
+    );
+    const contributionEvidence = result.evidence.find(
+      (entry) => entry.schemaId === "vellum.contribution.github.v1",
+    );
+    expect(
+      contributionEvidence?.githubContributions?.artifacts
+        .flatMap((artifact) => artifact.contributions)
+        .filter((entry) => entry.category === "technical")
+        .reduce((sum, entry) => sum + entry.points, 0),
+    ).toBe(300);
   });
 
   test("applies exact tenure boundaries", () => {
@@ -270,7 +522,7 @@ describe("vellum.reputation.v2", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v2",
+      policyVersion: "vellum.reputation.v3",
       overall: { score: 360, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0, maximum: 300 },
@@ -295,7 +547,7 @@ describe("vellum.reputation.v2", () => {
       },
       supportingClaims: [{ claimId: identity.claimId }],
       contributions: [
-        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v2" },
+        { category: "community", points: 160, ruleId: "discord-ckb-membership-tenure.v3" },
       ],
     });
   });
@@ -331,8 +583,8 @@ describe("vellum.reputation.v2", () => {
     });
     if (result.status !== "available") throw new Error("Expected an available score");
     expect(result.evidence.flatMap((item) => item.contributions)).toEqual([
-      { category: "tenure", points: 100, ruleId: "github-account-tenure.v2" },
-      { category: "recency", points: 100, ruleId: "discord-verification-recency.v2" },
+      { category: "tenure", points: 100, ruleId: "github-account-tenure.v3" },
+      { category: "recency", points: 100, ruleId: "discord-verification-recency.v3" },
     ]);
   });
 
@@ -507,7 +759,7 @@ describe("vellum.reputation.v2", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v2",
+      policyVersion: "vellum.reputation.v3",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -549,10 +801,11 @@ describe("vellum.reputation.v2", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.identity.tenureBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V2.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.github.artifactRules)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V3.discord.communityBands)).toBe(true);
   });
 });
