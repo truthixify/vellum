@@ -1,0 +1,46 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.social.telegram.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "username and profile_url are either both present or both absent",
+      "profile_url == 'https://t.me/' + username when username is present"
+    ],
+    "properties": {
+      "display_name": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[^\\u0000-\\u001f\\u007f]{1,128}$",
+        "type": "string"
+      },
+      "profile_url": {
+        "maxLength": 64,
+        "pattern": "^https://t\\.me/[A-Za-z0-9_]{1,32}$",
+        "template": "https://t.me/{username}",
+        "type": "string"
+      },
+      "user_id": {
+        "maxLength": 20,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,19}$",
+        "type": "string"
+      },
+      "username": {
+        "maxLength": 32,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_]{1,32}$",
+        "type": "string"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["display_name", "user_id", "verified_at"],
+    "type": "object"
+  },
+  "version": 1
+}

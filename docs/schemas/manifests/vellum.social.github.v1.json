@@ -1,0 +1,45 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.social.github.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "profile_url == 'https://github.com/' + login",
+      "account_created_at <= verified_at"
+    ],
+    "properties": {
+      "account_created_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "login": {
+        "maxLength": 100,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?$",
+        "type": "string"
+      },
+      "profile_url": {
+        "maxLength": 256,
+        "pattern": "^https://github\\.com/[A-Za-z0-9-]+$",
+        "template": "https://github.com/{login}",
+        "type": "string"
+      },
+      "user_id": {
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["user_id", "login", "profile_url", "account_created_at", "verified_at"],
+    "type": "object"
+  },
+  "version": 1
+}

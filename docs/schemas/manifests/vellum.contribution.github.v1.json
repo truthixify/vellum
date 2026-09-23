@@ -1,0 +1,151 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.contribution.github.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "window_started_at == verified_at - 31536000",
+      "artifacts sorted by occurred_at descending, then artifact_id ascending",
+      "artifact_id and pull_request_id are unique",
+      "window_started_at <= artifact.occurred_at <= artifact.merged_at <= verified_at",
+      "merged_pull_request uses artifact_id == pull_request_id and occurred_at == merged_at",
+      "pull_request_review uses artifact_id != pull_request_id",
+      "artifact url == 'https://github.com/' + repository + '/pull/' + number",
+      "eligible_artifact_count >= artifacts.length"
+    ],
+    "properties": {
+      "artifacts": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "artifact_id": {
+              "maxLength": 128,
+              "minLength": 4,
+              "type": "string"
+            },
+            "changed_files": {
+              "maximum": 3000,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "classification": {
+              "enum": ["ecosystem", "technical"]
+            },
+            "kind": {
+              "enum": ["merged_pull_request", "pull_request_review"]
+            },
+            "merge_commit_sha": {
+              "maxLength": 40,
+              "minLength": 40,
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "merged_at": {
+              "format": "unix-time-seconds",
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "number": {
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "occurred_at": {
+              "format": "unix-time-seconds",
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "pull_request_id": {
+              "maxLength": 128,
+              "minLength": 4,
+              "type": "string"
+            },
+            "repository": {
+              "maxLength": 140,
+              "minLength": 3,
+              "type": "string"
+            },
+            "repository_id": {
+              "maxLength": 128,
+              "minLength": 4,
+              "type": "string"
+            },
+            "title": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "url": {
+              "format": "uri",
+              "maxLength": 300,
+              "type": "string"
+            }
+          },
+          "required": [
+            "artifact_id",
+            "changed_files",
+            "classification",
+            "kind",
+            "merge_commit_sha",
+            "merged_at",
+            "number",
+            "occurred_at",
+            "pull_request_id",
+            "repository",
+            "repository_id",
+            "title",
+            "url"
+          ],
+          "type": "object"
+        },
+        "maxItems": 20,
+        "minItems": 1,
+        "type": "array"
+      },
+      "eligible_artifact_count": {
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "login": {
+        "maxLength": 100,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,98}[A-Za-z0-9])?$",
+        "type": "string"
+      },
+      "repository_registry": {
+        "const": "ckb.public-contributions.v1"
+      },
+      "user_id": {
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "window_started_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "user_id",
+      "login",
+      "verified_at",
+      "window_started_at",
+      "repository_registry",
+      "eligible_artifact_count",
+      "artifacts"
+    ],
+    "type": "object"
+  },
+  "version": 1
+}

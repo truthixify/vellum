@@ -1,0 +1,81 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.community.discord.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "memberships sorted by guild_id with no duplicates",
+      "recognized_roles sorted by role_id with no duplicates",
+      "discord_snowflake_time(user_id) <= joined_at",
+      "joined_at <= verified_at"
+    ],
+    "properties": {
+      "memberships": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "community_name": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            "guild_id": {
+              "maxLength": 20,
+              "minLength": 17,
+              "pattern": "^[1-9][0-9]{16,19}$",
+              "type": "string"
+            },
+            "joined_at": {
+              "format": "unix-time-seconds",
+              "maximum": 9007199254740991,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "recognized_roles": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "role_id": {
+                    "maxLength": 20,
+                    "minLength": 17,
+                    "pattern": "^[1-9][0-9]{16,19}$",
+                    "type": "string"
+                  },
+                  "role_name": {
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["role_id", "role_name"],
+                "type": "object"
+              },
+              "maxItems": 32,
+              "type": "array"
+            }
+          },
+          "required": ["guild_id", "community_name", "joined_at", "recognized_roles"],
+          "type": "object"
+        },
+        "maxItems": 16,
+        "minItems": 1,
+        "type": "array"
+      },
+      "user_id": {
+        "maxLength": 20,
+        "minLength": 17,
+        "pattern": "^[1-9][0-9]{16,19}$",
+        "type": "string"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["user_id", "verified_at", "memberships"],
+    "type": "object"
+  },
+  "version": 1
+}

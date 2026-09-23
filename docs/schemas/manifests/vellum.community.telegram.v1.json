@@ -1,0 +1,56 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.community.telegram.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": ["memberships sorted by chat_id with no duplicates"],
+    "properties": {
+      "memberships": {
+        "items": {
+          "additionalProperties": false,
+          "properties": {
+            "chat_id": {
+              "maxLength": 21,
+              "minLength": 2,
+              "pattern": "^-[1-9][0-9]{0,19}$",
+              "type": "string"
+            },
+            "community_name": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            "community_type": {
+              "enum": ["channel", "group", "supergroup"],
+              "type": "string"
+            },
+            "member_role": {
+              "enum": ["administrator", "member", "owner"],
+              "type": "string"
+            }
+          },
+          "required": ["chat_id", "community_name", "community_type", "member_role"],
+          "type": "object"
+        },
+        "maxItems": 16,
+        "minItems": 1,
+        "type": "array"
+      },
+      "user_id": {
+        "maxLength": 20,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,19}$",
+        "type": "string"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["user_id", "verified_at", "memberships"],
+    "type": "object"
+  },
+  "version": 1
+}

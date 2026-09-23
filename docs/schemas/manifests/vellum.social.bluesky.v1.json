@@ -1,0 +1,40 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.social.bluesky.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "handle is normalized to lowercase",
+      "profile_url == 'https://bsky.app/profile/' + did"
+    ],
+    "properties": {
+      "did": {
+        "maxLength": 2048,
+        "minLength": 13,
+        "pattern": "^did:(?:plc:[a-z2-7]{24}|web:[A-Za-z0-9._:%-]+)$",
+        "type": "string"
+      },
+      "handle": {
+        "maxLength": 253,
+        "minLength": 3,
+        "pattern": "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$",
+        "type": "string"
+      },
+      "profile_url": {
+        "maxLength": 2080,
+        "pattern": "^https://bsky\\.app/profile/did:(?:plc:[a-z2-7]{24}|web:[A-Za-z0-9._:%-]+)$",
+        "template": "https://bsky.app/profile/{did}",
+        "type": "string"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["did", "handle", "profile_url", "verified_at"],
+    "type": "object"
+  },
+  "version": 1
+}

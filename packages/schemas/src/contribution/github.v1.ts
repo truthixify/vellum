@@ -234,6 +234,7 @@ function parseArtifact(
     typeof artifact.pull_request_id !== "string" ||
     !NODE_ID_PATTERN.test(artifact.pull_request_id) ||
     typeof artifact.repository !== "string" ||
+    artifact.repository.length > 140 ||
     !REPOSITORY_PATTERN.test(artifact.repository) ||
     typeof artifact.repository_id !== "string" ||
     !NODE_ID_PATTERN.test(artifact.repository_id) ||
