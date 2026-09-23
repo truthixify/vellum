@@ -1,5 +1,6 @@
 import { useCcc } from "@ckb-ccc/connector-react";
 import { createFileRoute } from "@tanstack/react-router";
+import { StatusMark } from "@vellum/ui";
 import { useState } from "react";
 
 import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
@@ -56,8 +57,16 @@ function ResolvePage() {
 
   return (
     <div className="dashboard-verify-page">
-      <h1>Resolve an identity</h1>
-      <p>Look up any did:ckb identifier and inspect its current document on CKB Testnet.</p>
+      <header className="dashboard-page-header">
+        <div>
+          <span className="dashboard-page-kicker">Public registry</span>
+          <h1>Resolve an identity</h1>
+          <p>Look up any did:ckb identifier and inspect its current document on CKB Testnet.</p>
+        </div>
+        <StatusMark tone="info" icon={false}>
+          CKB Testnet
+        </StatusMark>
+      </header>
 
       <form onSubmit={handleResolve} className="dashboard-verify-form">
         <label htmlFor="dashboard-did-input">Identifier</label>

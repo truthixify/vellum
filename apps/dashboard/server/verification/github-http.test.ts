@@ -217,6 +217,8 @@ describe("GitHub OAuth HTTP boundary", () => {
     expect(location.searchParams.get("subject")).toBe(SUBJECT_DID);
     expect(location.searchParams.get("transaction")).toBe(ISSUANCE.transactionHash);
     expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
+    expect(location.searchParams.has("contributionClaim")).toBe(false);
+    expect(location.searchParams.has("contributionOutput")).toBe(false);
     expect(location.searchParams.get("login")).toBe("truthixify");
     expect(deps.issueClaims).toHaveBeenCalledTimes(1);
     expect(deps.issueClaims.mock.calls[0][0]).toEqual({ did: SUBJECT_DID });
@@ -251,6 +253,10 @@ describe("GitHub OAuth HTTP boundary", () => {
 
     expect(location.searchParams.get("status")).toBe("submitted");
     expect(location.searchParams.get("claim")).toBe(ISSUANCE.claimId);
+    expect(location.searchParams.get("contributionClaim")).toBe(contributionIssuance.claimId);
+    expect(location.searchParams.get("contributionOutput")).toBe(
+      String(contributionIssuance.outputIndex),
+    );
     expect(deps.issueClaims.mock.calls[0][1]).toHaveLength(2);
     expect(deps.issueClaims.mock.calls[0][1][1]).toMatchObject({
       schema: { id: "vellum.contribution.github.v1" },

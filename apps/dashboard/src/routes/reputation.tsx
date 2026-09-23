@@ -1,15 +1,10 @@
 import { SignalRail, StatusMark } from "@vellum/ui";
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  GitPullRequest,
-  MessageSquareText,
-  RefreshCw,
-} from "lucide-react";
+import { ArrowUpRight, GitPullRequest, MessageSquareText, RefreshCw } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 
 import { VButton } from "@/components/vellum/VButton";
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { ReputationShareDialog } from "@/components/reputation/ReputationShareDialog";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useReputation } from "@/hooks/use-reputation";
@@ -325,16 +320,16 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
             <p>This identity has no active claims recognized by the current policy.</p>
             <div className="reputation-evidence-empty__actions">
               <Link to="/verify/github" className="v-button v-button--secondary">
-                <BadgeCheck size={14} aria-hidden="true" /> Verify GitHub
+                <ProviderMark provider="github" size={14} /> Verify GitHub
               </Link>
               <Link to="/verify/discord" className="v-button v-button--secondary">
-                <BadgeCheck size={14} aria-hidden="true" /> Verify Discord
+                <ProviderMark provider="discord" size={14} /> Verify Discord
               </Link>
               <Link to="/verify/telegram" className="v-button v-button--secondary">
-                <BadgeCheck size={14} aria-hidden="true" /> Verify Telegram
+                <ProviderMark provider="telegram" size={14} /> Verify Telegram
               </Link>
               <Link to="/verify/bluesky" search={{}} className="v-button v-button--secondary">
-                <BadgeCheck size={14} aria-hidden="true" /> Verify Bluesky
+                <ProviderMark provider="bluesky" size={14} /> Verify Bluesky
               </Link>
             </div>
           </div>

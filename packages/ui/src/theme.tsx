@@ -9,7 +9,16 @@ import {
   type ReactNode,
 } from "react";
 
-export type VellumTheme = "light" | "dark";
+import {
+  DARK_THEME_MEDIA_QUERY,
+  THEME_COLORS,
+  THEME_STORAGE_KEY,
+  resolveThemePreference,
+  type ThemePreference,
+  type VellumTheme,
+} from "./theme-preference";
+
+export type { VellumTheme } from "./theme-preference";
 
 type ThemeContextValue = {
   theme: VellumTheme;
@@ -17,26 +26,66 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
-const STORAGE_KEY = "vellum-theme";
 
-function initialTheme(): VellumTheme {
-  if (typeof window === "undefined") return "light";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return "light";
+function readStoredTheme(): string | null {
+  try {
+    return window.localStorage.getItem(THEME_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function systemPrefersDark(): boolean {
+  return (
+    typeof window.matchMedia === "function" && window.matchMedia(DARK_THEME_MEDIA_QUERY).matches
+  );
+}
+
+function initialThemePreference(): ThemePreference {
+  if (typeof window === "undefined") return { theme: "light", source: "system" };
+  return resolveThemePreference(readStoredTheme(), systemPrefersDark());
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<VellumTheme>(initialTheme);
+  const [preference, setPreference] = useState<ThemePreference>(initialThemePreference);
+  const { theme } = preference;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute("content", THEME_COLORS[theme]);
+
+    if (preference.source === "user") {
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+      } catch {
+        // The selected theme still applies when storage is unavailable.
+      }
+    }
+  }, [preference.source, theme]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia(DARK_THEME_MEDIA_QUERY);
+    const handleSystemTheme = (event: MediaQueryListEvent) => {
+      setPreference((current) =>
+        current.source === "system"
+          ? { theme: event.matches ? "dark" : "light", source: "system" }
+          : current,
+      );
+    };
+
+    media.addEventListener("change", handleSystemTheme);
+    return () => media.removeEventListener("change", handleSystemTheme);
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme((current) => (current === "dark" ? "light" : "dark"));
+    setPreference((current) => ({
+      theme: current.theme === "dark" ? "light" : "dark",
+      source: "user",
+    }));
   }, []);
 
   const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);

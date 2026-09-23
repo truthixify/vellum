@@ -8,13 +8,14 @@ import {
   Check,
   Clock3,
   ExternalLink,
-  Github,
   RefreshCw,
   ShieldCheck,
   WalletCards,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { GithubIssuedClaims } from "@/components/verification/GithubIssuedClaims";
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { reputationQueryKey } from "@/hooks/use-reputation";
 import { listDidsByLock, type DidRecord } from "@/lib/did-ckb";
@@ -78,10 +79,13 @@ function GithubVerificationPage() {
       <header className="account-verification-header">
         <div>
           <span className="account-verification-kicker">
-            <Github size={15} aria-hidden="true" /> GitHub verification
+            <ProviderMark provider="github" size={15} /> GitHub verification
           </span>
           <h1>GitHub verification</h1>
-          <p>Review or add GitHub account claims for a did:ckb identity you control.</p>
+          <p>
+            Verify a GitHub account and eligible public CKB contributions for a did:ckb identity you
+            control.
+          </p>
         </div>
         <StatusMark tone="info" icon={false}>
           CKB Testnet
@@ -140,9 +144,9 @@ function VerificationSteps({
           ? -1
           : 1;
   const steps = [
-    ["Authorize", "GitHub account"],
-    ["Submit", "Claim transaction"],
-    ["Confirm", "Live Claim Cell"],
+    ["Verify", "GitHub account"],
+    ["Issue", "Vellum claim transaction"],
+    ["Confirm", "Live claims"],
   ] as const;
 
   return (
@@ -280,7 +284,10 @@ function ConnectionPanel({
       <div className="account-verification-section-heading">
         <span>Account source</span>
         <h2 id="github-connect-title">GitHub account</h2>
-        <p>Vellum reads your account identity, then releases the OAuth access before issuance.</p>
+        <p>
+          Vellum checks your public profile and eligible activity in approved CKB repositories, then
+          revokes temporary access before issuance.
+        </p>
       </div>
 
       {(callbackError || startError) && (
@@ -405,8 +412,9 @@ function ConnectionPanel({
           ) : existingClaims.data.length > 0 ? (
             <ExistingGithubClaims
               claims={existingClaims.data}
+              subject={selectedDid}
               starting={starting}
-              onVerifyAgain={() => void startVerification()}
+              onRefreshEvidence={() => void startVerification()}
             />
           ) : (
             <div className="account-verification-action">
@@ -417,8 +425,8 @@ function ConnectionPanel({
                 aria-busy={starting}
                 onClick={() => void startVerification()}
               >
-                <Github size={15} aria-hidden="true" />
-                {starting ? "Opening GitHub..." : "Continue with GitHub"}
+                <ProviderMark provider="github" size={15} />
+                {starting ? "Opening GitHub..." : "Verify with GitHub"}
               </button>
               <span>Authorization expires after five minutes.</span>
             </div>
@@ -431,12 +439,14 @@ function ConnectionPanel({
 
 function ExistingGithubClaims({
   claims,
+  subject,
   starting,
-  onVerifyAgain,
+  onRefreshEvidence,
 }: {
   claims: GithubAccountClaim[];
+  subject: string;
   starting: boolean;
-  onVerifyAgain: () => void;
+  onRefreshEvidence: () => void;
 }) {
   return (
     <div className="account-verification-existing">
@@ -458,10 +468,19 @@ function ExistingGithubClaims({
         {claims.map((claim) => (
           <li key={claim.claimId}>
             <div className="account-verification-account-list__identity">
-              <Github size={18} strokeWidth={1.7} aria-hidden="true" />
+              <ProviderMark provider="github" size={18} />
               <span>
                 <strong>@{claim.account.login}</strong>
                 <small>Verified {formatGithubClaimDate(claim.account.verified_at)}</small>
+                <small>
+                  {claim.contribution
+                    ? `${claim.contribution.contribution.eligible_artifact_count} eligible public ${
+                        claim.contribution.contribution.eligible_artifact_count === 1
+                          ? "contribution"
+                          : "contributions"
+                      }`
+                    : "Identity verified; no qualifying CKB contribution claim"}
+                </small>
               </span>
             </div>
             <div className="account-verification-account-list__actions">
@@ -488,16 +507,21 @@ function ExistingGithubClaims({
 
       <div className="account-verification-existing__footer">
         <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found on CKB Testnet.</span>
-        <button
-          className="v-button v-button--secondary"
-          type="button"
-          disabled={starting}
-          aria-busy={starting}
-          onClick={onVerifyAgain}
-        >
-          <Github size={14} aria-hidden="true" />
-          {starting ? "Opening GitHub..." : "Verify again"}
-        </button>
+        <div className="account-verification-existing__actions">
+          <Link className="v-button v-button--quiet" to="/reputation" search={{ did: subject }}>
+            View evidence
+          </Link>
+          <button
+            className="v-button v-button--secondary"
+            type="button"
+            disabled={starting}
+            aria-busy={starting}
+            onClick={onRefreshEvidence}
+          >
+            <RefreshCw size={14} aria-hidden="true" />
+            {starting ? "Opening GitHub..." : "Refresh evidence"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -529,6 +553,8 @@ function SubmittedVerification({
       submission.transactionHash,
       submission.claimId,
       submission.outputIndex,
+      submission.contribution?.claimId,
+      submission.contribution?.outputIndex,
       submission.login,
       issuer.data?.did,
     ],
@@ -549,15 +575,16 @@ function SubmittedVerification({
   return (
     <section aria-labelledby="github-result-title">
       <div className="account-verification-section-heading">
-        <span>Submission</span>
+        <span>Issuance</span>
         <h2 id="github-result-title">@{submission.login}</h2>
-        <p>The OAuth credential has been released. Only public claim data remains.</p>
+        <p>Temporary GitHub access was revoked. Only public claim data remains.</p>
       </div>
 
       <ResultStatus
         result={result}
         issuerFailed={issuer.isError}
         claimFailed={confirmation.isError}
+        claimCount={submission.contribution ? 2 : 1}
       />
 
       <dl className="account-verification-result-grid">
@@ -568,16 +595,12 @@ function SubmittedVerification({
           </dd>
         </div>
         <div>
-          <dt>Schema</dt>
-          <dd className="mono">vellum.social.github.v1</dd>
-        </div>
-        <div>
           <dt>Payer</dt>
           <dd>Vellum issuer</dd>
         </div>
         <div>
-          <dt>Output</dt>
-          <dd className="mono">{submission.outputIndex}</dd>
+          <dt>Evidence</dt>
+          <dd>{submission.contribution ? "Identity + CKB contributions" : "Identity only"}</dd>
         </div>
         <div>
           <dt>Transaction</dt>
@@ -593,13 +616,9 @@ function SubmittedVerification({
             </a>
           </dd>
         </div>
-        <div>
-          <dt>Claim ID</dt>
-          <dd className="mono" title={submission.claimId}>
-            {shorten(submission.claimId)}
-          </dd>
-        </div>
       </dl>
+
+      <GithubIssuedClaims submission={submission} />
 
       {(issuer.isError || confirmation.isError) && (
         <button
@@ -618,10 +637,12 @@ function ResultStatus({
   result,
   issuerFailed,
   claimFailed,
+  claimCount,
 }: {
   result?: GithubClaimConfirmation;
   issuerFailed: boolean;
   claimFailed: boolean;
+  claimCount: number;
 }) {
   if (issuerFailed || claimFailed) {
     return (
@@ -640,7 +661,7 @@ function ResultStatus({
         <AlertCircle size={18} aria-hidden="true" />
         <div>
           <strong>Transaction rejected</strong>
-          <p>No live GitHub Claim Cell was created.</p>
+          <p>No live GitHub Claim Cell{claimCount === 1 ? " was" : "s were"} created.</p>
         </div>
       </div>
     );
@@ -653,9 +674,12 @@ function ResultStatus({
       >
         <Check size={18} aria-hidden="true" />
         <div>
-          <StatusMark tone="positive">Claim confirmed</StatusMark>
+          <StatusMark tone="positive">
+            {claimCount === 1 ? "Claim confirmed" : "Claims confirmed"}
+          </StatusMark>
           <p>
-            The claim is live, readable through the Vellum SDK, and backed by an active issuer DID.
+            {claimCount === 1 ? "The claim is" : "Both claims are"} live, readable through the
+            Vellum SDK, and backed by an active issuer DID.
           </p>
         </div>
       </div>
@@ -667,9 +691,11 @@ function ResultStatus({
         <Clock3 size={18} aria-hidden="true" />
         <div>
           <StatusMark tone="warning" icon={false}>
-            Indexing claim
+            Indexing {claimCount === 1 ? "claim" : "claims"}
           </StatusMark>
-          <p>The transaction is committed. Waiting for the Testnet indexer to expose the claim.</p>
+          <p>
+            The transaction is committed. Waiting for the Testnet indexer to expose every claim.
+          </p>
         </div>
       </div>
     );
@@ -681,7 +707,7 @@ function ResultStatus({
         <StatusMark tone="info" icon={false}>
           Transaction submitted
         </StatusMark>
-        <p>Vellum submitted the claim. Waiting for the transaction to commit on CKB Testnet.</p>
+        <p>Vellum submitted the claim transaction. Waiting for it to commit on CKB Testnet.</p>
       </div>
     </div>
   );
@@ -714,18 +740,18 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
       <dl>
         <div>
           <dt>GitHub access</dt>
-          <dd>Public profile only</dd>
+          <dd>Public profile and eligible public repository activity</dd>
         </div>
         <div>
-          <dt>Claim fields</dt>
-          <dd>User ID, login, profile URL, account age, verification time</dd>
+          <dt>Schemas</dt>
+          <dd>GitHub identity and optional CKB contribution evidence</dd>
         </div>
         <div>
           <dt>Claim issuer</dt>
           <dd>Vellum issuer DID</dd>
         </div>
         <div>
-          <dt>Submission</dt>
+          <dt>Issuance</dt>
           <dd>Automatic after verification</dd>
         </div>
         <div>
@@ -733,13 +759,13 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
           <dd>Paid by Vellum</dd>
         </div>
         <div>
-          <dt>OAuth credential</dt>
-          <dd>{submission ? "Released" : "Released before issuance"}</dd>
+          <dt>OAuth access</dt>
+          <dd>{submission ? "Revoked" : "Revoked before issuance"}</dd>
         </div>
       </dl>
       <p>
-        The claim is public on CKB Testnet. Your GitHub token is not stored in the claim or returned
-        to the dashboard.
+        Claims are public on CKB Testnet. Private repositories, email addresses, and OAuth tokens
+        are never written to them.
       </p>
     </aside>
   );

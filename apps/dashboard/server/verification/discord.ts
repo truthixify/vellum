@@ -489,7 +489,7 @@ async function revokeDiscordCredentials(
   throw new DiscordOAuthError(
     "credential_revocation_failed",
     502,
-    "Discord access could not be released. Remove Vellum from Discord Authorized Apps before retrying.",
+    "Discord access could not be revoked. Remove Vellum from Discord Authorized Apps before retrying.",
     response.status === 429 ? retryTimestamp(response, dependencies.now()) : undefined,
   );
 }

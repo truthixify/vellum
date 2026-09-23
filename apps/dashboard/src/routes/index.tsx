@@ -3,14 +3,17 @@ import {
   BLUESKY_CLAIM_SCHEMA_ID,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  GITHUB_CLAIM_SCHEMA_ID,
+  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   TELEGRAM_CLAIM_SCHEMA_ID,
   TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
 } from "@vellum/schemas";
-import { ArrowUpRight, BadgeCheck, Copy, RefreshCw } from "lucide-react";
+import { ArrowUpRight, Copy, RefreshCw } from "lucide-react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
 
 import { Avatar } from "@/components/vellum/Avatar";
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { VButton } from "@/components/vellum/VButton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useReputation } from "@/hooks/use-reputation";
@@ -334,7 +337,13 @@ function EvidenceCoverage({
   failed: boolean;
 }) {
   const available = result?.status === "available" ? result : undefined;
-  const github = available?.evidence.find((item) => item.account.platform === "github");
+  const githubIdentity = available?.evidence.find(
+    (item) => item.schemaId === GITHUB_CLAIM_SCHEMA_ID,
+  );
+  const githubContribution = available?.evidence.find(
+    (item) => item.schemaId === GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  );
+  const github = githubIdentity ?? githubContribution;
   const discord = available?.evidence.find((item) => item.schemaId === DISCORD_CLAIM_SCHEMA_ID);
   const discordCommunity = available?.evidence.find(
     (item) => item.schemaId === DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
@@ -387,15 +396,21 @@ function EvidenceCoverage({
           <small>
             {checking
               ? "Reading active claims and issuer state"
-              : github
-                ? `Claim accepted under ${available?.policyVersion}`
-                : unavailable
-                  ? "No conclusion was drawn from unavailable evidence"
-                  : "Add an issuer-backed GitHub claim to the active identity"}
+              : githubContribution && "githubContributions" in githubContribution
+                ? `${githubContribution.githubContributions.eligibleArtifactCount} eligible public ${
+                    githubContribution.githubContributions.eligibleArtifactCount === 1
+                      ? "contribution"
+                      : "contributions"
+                  } in the current evidence window`
+                : github
+                  ? "Account verified; no qualifying CKB contribution claim"
+                  : unavailable
+                    ? "No conclusion was drawn from unavailable evidence"
+                    : "Verify identity, account age, and eligible public CKB contributions"}
           </small>
         </span>
         <Link className="v-button v-button--quiet" to="/verify/github">
-          <BadgeCheck size={13} aria-hidden="true" /> {github ? "View" : "Verify"}
+          <ProviderMark provider="github" size={13} /> {github ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">
@@ -426,7 +441,7 @@ function EvidenceCoverage({
           </small>
         </span>
         <Link className="v-button v-button--quiet" to="/verify/discord">
-          <BadgeCheck size={13} aria-hidden="true" /> {discord ? "View" : "Verify"}
+          <ProviderMark provider="discord" size={13} /> {discord ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">
@@ -457,7 +472,7 @@ function EvidenceCoverage({
           </small>
         </span>
         <Link className="v-button v-button--quiet" to="/verify/telegram">
-          <BadgeCheck size={13} aria-hidden="true" /> {telegram ? "View" : "Verify"}
+          <ProviderMark provider="telegram" size={13} /> {telegram ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">
@@ -478,11 +493,11 @@ function EvidenceCoverage({
                 ? `Stable AT Protocol identity accepted under ${available?.policyVersion}`
                 : unavailable
                   ? "No conclusion was drawn from unavailable evidence"
-                  : "Add an issuer-backed Bluesky claim to the active identity"}
+                  : "Verify a stable AT Protocol identity for the active DID"}
           </small>
         </span>
         <Link className="v-button v-button--quiet" to="/verify/bluesky" search={{}}>
-          <BadgeCheck size={13} aria-hidden="true" /> {bluesky ? "View" : "Verify"}
+          <ProviderMark provider="bluesky" size={13} /> {bluesky ? "View" : "Verify"}
         </Link>
       </div>
       <div className="coverage-action">

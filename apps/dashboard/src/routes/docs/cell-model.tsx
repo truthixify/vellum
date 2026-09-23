@@ -10,13 +10,14 @@ function CellModelPage() {
   useDocumentTitle("Cell model · Docs");
   return (
     <>
-      <div className="mono-caps text-muted-foreground mb-3">PRIMER · CKB</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-6">Cell model.</h1>
-      <p className="text-base leading-[1.6] text-ink mb-12 max-w-[60ch]">
-        Nervos CKB uses an evolved UTXO model. Where Bitcoin tracks coins, CKB tracks Cells, and a
-        Cell can carry arbitrary data plus the rules that govern it. Your did:ckb lives inside one
-        of these Cells.
-      </p>
+      <header className="docs-page-header">
+        <span>Primer · CKB</span>
+        <h1>Cell model</h1>
+        <p>
+          CKB Cells carry data and the rules that govern it. A did:ckb identity lives inside one of
+          those Cells.
+        </p>
+      </header>
 
       <Section title="What is a Cell">
         <p>A Cell has four parts:</p>

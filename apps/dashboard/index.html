@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f2f4ef" />
     <meta name="color-scheme" content="light dark" />
+    <script data-vellum-theme-init>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("vellum-theme-preference");
+        } catch {}
+        const dark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            typeof matchMedia === "function" &&
+            matchMedia("(prefers-color-scheme: dark)").matches);
+        const theme = dark ? "dark" : "light";
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = theme;
+        document
+          .querySelector('meta[name="theme-color"]')
+          ?.setAttribute("content", dark ? "#111411" : "#f2f4ef");
+      })();
+    </script>
     <meta name="application-name" content="Vellum Dashboard" />
     <meta name="apple-mobile-web-app-title" content="Vellum" />
     <meta

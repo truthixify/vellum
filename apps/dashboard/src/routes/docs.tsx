@@ -49,7 +49,7 @@ function DocsLayout() {
   return (
     <>
       <MobileTabs />
-      <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pb-12 lg:py-16">
+      <div className="docs-layout">
         <div className="grid lg:grid-cols-[240px_minmax(0,1fr)] gap-12 lg:gap-16">
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
             <SidebarNav />
@@ -74,10 +74,9 @@ function SidebarNav() {
             <Link
               to={item.to}
               activeOptions={{ exact: true }}
-              className="mono-caps text-ink hover:text-cobalt block px-3 py-1.5 -mx-3 transition-colors"
+              className="docs-nav-link"
               activeProps={{
-                className:
-                  "mono-caps bg-verdant text-paper block px-3 py-1.5 -mx-3 transition-colors",
+                className: "docs-nav-link docs-nav-link--active",
               }}
             >
               {item.label}
@@ -89,12 +88,7 @@ function SidebarNav() {
       <ul className="space-y-1">
         {EXTERNAL.map((item) => (
           <li key={item.href}>
-            <a
-              href={item.href}
-              target="_blank"
-              rel="noreferrer"
-              className="mono-caps text-ink hover:text-cobalt block px-3 py-1.5 -mx-3 transition-colors"
-            >
+            <a href={item.href} target="_blank" rel="noreferrer" className="docs-nav-link">
               {item.label} <span aria-hidden>↗</span>
             </a>
           </li>
@@ -104,16 +98,9 @@ function SidebarNav() {
   );
 }
 
-// Mobile: a horizontal tab strip that sits in flow below the top nav and
-// sticks at top-16 (right below the sticky top nav) once the user scrolls
-// past it. The global top nav stays visible above. Desktop hides this and
-// uses the sidebar instead.
 function MobileTabs() {
   return (
-    <nav
-      aria-label="Documentation pages"
-      className="lg:hidden sticky top-16 z-30 bg-paper border-b border-ink"
-    >
+    <nav aria-label="Documentation pages" className="docs-mobile-nav lg:hidden">
       <div className="overflow-x-auto">
         <ul className="flex items-stretch gap-0 min-w-max">
           {INTERNAL.map((item) => (
@@ -121,10 +108,9 @@ function MobileTabs() {
               <Link
                 to={item.to}
                 activeOptions={{ exact: true }}
-                className="mono-caps text-ink px-4 h-12 inline-flex items-center border-r border-hairline hover:bg-ink hover:text-paper transition-colors"
+                className="docs-mobile-tab"
                 activeProps={{
-                  className:
-                    "mono-caps bg-verdant text-paper px-4 h-12 inline-flex items-center border-r border-hairline",
+                  className: "docs-mobile-tab docs-mobile-tab--active",
                 }}
               >
                 {item.label}
@@ -146,30 +132,19 @@ function DocsPager() {
   if (!prev && !next) return null;
 
   return (
-    <nav
-      aria-label="Documentation pager"
-      className="mt-16 pt-8 border-t-2 border-ink grid grid-cols-1 sm:grid-cols-2 gap-4"
-    >
+    <nav aria-label="Documentation pager" className="docs-pager">
       {prev ? (
-        <Link
-          to={prev.to}
-          className="group border border-ink p-5 hover:bg-ink hover:text-paper transition-colors sm:text-left"
-        >
-          <div className="mono-caps text-muted-foreground group-hover:text-paper mb-1">
-            ← Previous
-          </div>
-          <div className="text-lg font-medium">{prev.label}</div>
+        <Link to={prev.to} className="docs-pager__link docs-pager__link--previous">
+          <span>Previous</span>
+          <strong>← {prev.label}</strong>
         </Link>
       ) : (
         <div className="hidden sm:block" />
       )}
       {next ? (
-        <Link
-          to={next.to}
-          className="group border border-ink p-5 hover:bg-ink hover:text-paper transition-colors sm:text-right"
-        >
-          <div className="mono-caps text-muted-foreground group-hover:text-paper mb-1">Next →</div>
-          <div className="text-lg font-medium">{next.label}</div>
+        <Link to={next.to} className="docs-pager__link docs-pager__link--next">
+          <span>Next</span>
+          <strong>{next.label} →</strong>
         </Link>
       ) : (
         <div className="hidden sm:block" />

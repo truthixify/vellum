@@ -12,6 +12,7 @@ import {
 const DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 const TX_HASH = `0x${"11".repeat(32)}` as `0x${string}`;
 const CLAIM_ID = `0x${"22".repeat(32)}` as `0x${string}`;
+const CONTRIBUTION_CLAIM_ID = `0x${"44".repeat(32)}` as `0x${string}`;
 const STATE = "A".repeat(43);
 const CODE_CHALLENGE = "C".repeat(43);
 const NOW = 1_800_000_000;
@@ -30,6 +31,8 @@ describe("GitHub verification client contract", () => {
       transaction: TX_HASH,
       claim: CLAIM_ID,
       output: "1",
+      contributionClaim: CONTRIBUTION_CLAIM_ID,
+      contributionOutput: "2",
       login: "truthixify",
     });
     expect(githubSubmissionFromSearch(valid)).toEqual({
@@ -38,6 +41,10 @@ describe("GitHub verification client contract", () => {
       claimId: CLAIM_ID,
       outputIndex: 1,
       login: "truthixify",
+      contribution: {
+        claimId: CONTRIBUTION_CLAIM_ID,
+        outputIndex: 2,
+      },
     });
 
     expect(
@@ -54,10 +61,57 @@ describe("GitHub verification client contract", () => {
       transaction: undefined,
       claim: undefined,
       output: undefined,
+      contributionClaim: undefined,
+      contributionOutput: undefined,
       login: undefined,
       code: undefined,
       retryAt: undefined,
     });
+  });
+
+  test("keeps identity-only results valid and rejects partial contribution references", () => {
+    const identityOnly = parseGithubVerificationSearch({
+      status: "submitted",
+      subject: DID,
+      transaction: TX_HASH,
+      claim: CLAIM_ID,
+      output: "1",
+      login: "truthixify",
+    });
+    expect(githubSubmissionFromSearch(identityOnly)).toEqual({
+      subject: DID,
+      transactionHash: TX_HASH,
+      claimId: CLAIM_ID,
+      outputIndex: 1,
+      login: "truthixify",
+    });
+
+    expect(
+      githubSubmissionFromSearch({
+        ...identityOnly,
+        contributionClaim: CONTRIBUTION_CLAIM_ID,
+      }),
+    ).toBeUndefined();
+    expect(
+      githubSubmissionFromSearch({
+        ...identityOnly,
+        contributionOutput: 2,
+      }),
+    ).toBeUndefined();
+    expect(
+      githubSubmissionFromSearch({
+        ...identityOnly,
+        contributionClaim: CLAIM_ID,
+        contributionOutput: 2,
+      }),
+    ).toBeUndefined();
+    expect(
+      githubSubmissionFromSearch({
+        ...identityOnly,
+        contributionClaim: CONTRIBUTION_CLAIM_ID,
+        contributionOutput: 1,
+      }),
+    ).toBeUndefined();
   });
 
   test("starts OAuth with the exact subject and accepts only GitHub authorization URLs", async () => {

@@ -506,12 +506,15 @@ async function handleCallback(
     }
 
     const identity = issuance[0];
+    const contribution = issuance[1];
     return callbackRedirect(request, config.callbackUrl, secure, {
       status: "submitted",
       subject: oauthState.subject.did,
       transaction: identity.transactionHash,
       claim: identity.claimId,
       output: identity.outputIndex,
+      contributionClaim: contribution?.claimId,
+      contributionOutput: contribution?.outputIndex,
       login: verified.account.login,
     });
   } catch (error) {

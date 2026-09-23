@@ -1,6 +1,8 @@
 import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { StatusMark } from "@vellum/ui";
+import { AlertCircle, ShieldCheck, WalletCards } from "lucide-react";
 
 import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
@@ -29,58 +31,65 @@ function MyDid() {
 
   if (!isConnected) {
     return (
-      <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-32 text-center">
-        <div className="mono-caps text-muted-foreground mb-3">REGISTRY · MY DOCUMENT</div>
-        <h1 className="text-4xl md:text-5xl font-medium mb-6">
-          Connect a wallet to view your DID.
-        </h1>
-        <p className="text-muted-foreground mb-10 max-w-[60ch] mx-auto">
-          Your DID Cells are indexed by the lock script your wallet controls. Connect a wallet to
-          read or manage them.
-        </p>
-        <VButton variant="verdant" onClick={() => open()}>
-          Connect wallet
-        </VButton>
+      <div className="identity-page">
+        <section className="dashboard-state dashboard-state--empty">
+          <WalletCards className="dashboard-state__icon" size={24} aria-hidden="true" />
+          <span>Identity registry</span>
+          <h1>Connect a wallet to view your DID</h1>
+          <p>
+            Your DID Cells are indexed by the lock script your wallet controls. Connect a wallet to
+            read or manage them.
+          </p>
+          <VButton variant="verdant" onClick={() => open()}>
+            Connect wallet
+          </VButton>
+        </section>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-24">
-        <div className="mono-caps text-muted-foreground">INDEXING CELLS, RESOLVING DIDS…</div>
+      <div className="identity-page">
+        <section className="dashboard-state dashboard-state--loading" role="status">
+          <span className="pulse-dot" aria-hidden="true" />
+          <p>Looking up identities controlled by this wallet</p>
+        </section>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-24">
-        <div className="border-2 border-alarm p-10">
-          <div className="mono-caps text-alarm mb-2">ERROR</div>
-          <p className="text-sm font-mono break-all">
-            {error instanceof Error ? error.message : String(error)}
-          </p>
-          <button onClick={() => refetch()} className="mt-4 mono-caps underline">
+      <div className="identity-page">
+        <section className="dashboard-state dashboard-state--error" role="alert">
+          <AlertCircle className="dashboard-state__icon" size={24} aria-hidden="true" />
+          <span>Identity lookup failed</span>
+          <h1>Your identities could not be loaded</h1>
+          <p className="mono break-all">{error instanceof Error ? error.message : String(error)}</p>
+          <button type="button" onClick={() => refetch()} className="v-button v-button--quiet">
             Retry
           </button>
-        </div>
+        </section>
       </div>
     );
   }
 
   if (records.length === 0) {
     return (
-      <div className="max-w-[920px] mx-auto px-6 lg:px-12 py-32 text-center">
-        <div className="mono-caps text-muted-foreground mb-3">REGISTRY · MY DOCUMENT</div>
-        <h1 className="text-4xl md:text-5xl font-medium mb-6">No DID yet.</h1>
-        <p className="text-muted-foreground mb-10 max-w-[60ch] mx-auto">
-          This wallet doesn't control any did:ckb cells on {networkLabel.toLowerCase()}. Claim one
-          to get started.
-        </p>
-        <Link to="/claim">
-          <VButton variant="verdant">Claim a DID</VButton>
-        </Link>
+      <div className="identity-page">
+        <section className="dashboard-state dashboard-state--empty">
+          <ShieldCheck className="dashboard-state__icon" size={24} aria-hidden="true" />
+          <span>Identity registry</span>
+          <h1>No DID found</h1>
+          <p>
+            This wallet does not control a did:ckb identity on {networkLabel.toLowerCase()}. Claim
+            one to get started.
+          </p>
+          <Link to="/claim" className="v-button v-button--primary">
+            Claim a DID
+          </Link>
+        </section>
       </div>
     );
   }
@@ -88,16 +97,21 @@ function MyDid() {
   const active = activeIdentity ?? records[0];
 
   return (
-    <div className="max-w-[1320px] mx-auto px-6 lg:px-12 py-12">
-      <div className="mono-caps text-muted-foreground mb-3">
-        REGISTRY · MY DOCUMENT · {networkLabel}
-      </div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-8">Your did:ckb.</h1>
+    <div className="identity-page">
+      <header className="dashboard-page-header">
+        <div>
+          <span className="dashboard-page-kicker">Identity registry</span>
+          <h1>Your did:ckb</h1>
+          <p>Inspect the live document and manage the identity controlled by your wallet.</p>
+        </div>
+        <StatusMark tone="positive">{networkLabel}</StatusMark>
+      </header>
 
       {records.length > 1 && (
         <div className="flex flex-wrap gap-2 mb-8">
           {records.map((r) => (
             <button
+              type="button"
               key={r.did}
               onClick={() => setActiveDid(r.did)}
               className={`mono-caps px-3 py-2 border ${

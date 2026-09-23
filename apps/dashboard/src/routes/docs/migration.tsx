@@ -10,14 +10,14 @@ function MigrationPage() {
   useDocumentTitle("Migration · Docs");
   return (
     <>
-      <div className="mono-caps text-muted-foreground mb-3">SPEC · WIP-02</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-6">did:plc migration.</h1>
-      <p className="text-base leading-[1.6] text-ink mb-12 max-w-[60ch]">
-        Migration brings an existing did:plc identity (typical for AT Protocol / Bluesky users) onto
-        CKB without abandoning the history. The migration is authorized by one of the source DID's
-        rotation keys, and there is a 72-hour window after submission during which a higher-priority
-        key can contest.
-      </p>
+      <header className="docs-page-header">
+        <span>Spec · WIP-02</span>
+        <h1>did:plc migration</h1>
+        <p>
+          Move an existing did:plc identity onto CKB without abandoning its history or recovery
+          authority.
+        </p>
+      </header>
 
       <div className="border-2 border-verdant bg-paper px-6 py-4 mb-12">
         <div className="mono-caps text-verdant mb-1">LIVE</div>
