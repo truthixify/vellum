@@ -1,8 +1,7 @@
 import {
   AT_PROTOCOL_DID_PATTERN,
-  BLUESKY_CLAIM_SCHEMA_HASH,
-  BLUESKY_CLAIM_SCHEMA_ID,
   BLUESKY_HANDLE_PATTERN,
+  blueskyIdentitySchema,
   parseBlueskyClaimPayload,
   type BlueskyClaimPayload,
 } from "@vellum/schemas";
@@ -309,7 +308,7 @@ export async function verifyBlueskyCredentials(
       profileUrl: payload.profile_url,
     },
     claim: {
-      schema: { id: BLUESKY_CLAIM_SCHEMA_ID, hash: BLUESKY_CLAIM_SCHEMA_HASH },
+      schema: { id: blueskyIdentitySchema.id, hash: blueskyIdentitySchema.hash },
       payload,
       issuedAt,
     },

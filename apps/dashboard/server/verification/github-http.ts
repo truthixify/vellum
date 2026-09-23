@@ -1,9 +1,7 @@
 import {
-  GITHUB_CLAIM_SCHEMA_HASH,
-  GITHUB_CLAIM_SCHEMA_ID,
-  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
-  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
+  githubContributionSchema,
+  githubIdentitySchema,
   parseGithubClaimPayload,
   parseGithubContributionClaimPayload,
 } from "@vellum/schemas";
@@ -100,8 +98,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
   const parsed = claims.map((claim) => verifiedClaimSchema.parse(claim));
   const identity = parsed[0];
   if (
-    identity.schema.id !== GITHUB_CLAIM_SCHEMA_ID ||
-    identity.schema.hash !== GITHUB_CLAIM_SCHEMA_HASH
+    identity.schema.id !== githubIdentitySchema.id ||
+    identity.schema.hash !== githubIdentitySchema.hash
   ) {
     throw new GithubOAuthError(
       "provider_unavailable",
@@ -140,8 +138,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
       );
     }
     if (
-      contribution.schema.id !== GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID ||
-      contribution.schema.hash !== GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH ||
+      contribution.schema.id !== githubContributionSchema.id ||
+      contribution.schema.hash !== githubContributionSchema.hash ||
       contribution.issuedAt !== contributionPayload.verified_at ||
       contribution.expiresAt !== contribution.issuedAt + GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS ||
       contributionPayload.user_id !== identityPayload.user_id ||

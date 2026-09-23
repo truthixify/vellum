@@ -1,8 +1,4 @@
-import {
-  BLUESKY_CLAIM_SCHEMA_HASH,
-  BLUESKY_CLAIM_SCHEMA_ID,
-  parseBlueskyClaimPayload,
-} from "@vellum/schemas";
+import { blueskyIdentitySchema, parseBlueskyClaimPayload } from "@vellum/schemas";
 
 import {
   VERIFICATION_API_VERSION,
@@ -266,8 +262,8 @@ function validateVerification(verification: BlueskyVerification): {
   const claim = verifiedClaimSchema.parse(verification.claim);
   const payload = parseBlueskyClaimPayload(claim.payload);
   if (
-    claim.schema.id !== BLUESKY_CLAIM_SCHEMA_ID ||
-    claim.schema.hash !== BLUESKY_CLAIM_SCHEMA_HASH ||
+    claim.schema.id !== blueskyIdentitySchema.id ||
+    claim.schema.hash !== blueskyIdentitySchema.hash ||
     claim.issuedAt !== payload.verified_at ||
     claim.expiresAt !== undefined ||
     verification.account.did !== payload.did ||
