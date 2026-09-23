@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Check,
   Clock3,
-  Cloud,
   ExternalLink,
   Eye,
   EyeOff,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { reputationQueryKey } from "@/hooks/use-reputation";
 import { useActiveIdentity } from "@/lib/active-identity-context";
@@ -93,7 +93,7 @@ function BlueskyVerificationPage() {
       <header className="account-verification-header">
         <div>
           <span className="account-verification-kicker">
-            <Cloud size={15} aria-hidden="true" /> Bluesky verification
+            <ProviderMark provider="bluesky" size={15} /> Bluesky verification
           </span>
           <h1>Bluesky verification</h1>
           <p>Link a stable AT Protocol identity to a did:ckb identity you control.</p>
@@ -151,9 +151,9 @@ function VerificationSteps({
           ? -1
           : 1;
   const steps = [
-    ["Authenticate", "Bluesky account"],
-    ["Submit", "Claim transaction"],
-    ["Confirm", "Live Claim Cell"],
+    ["Verify", "Bluesky account"],
+    ["Issue", "Vellum claim transaction"],
+    ["Confirm", "Live claim"],
   ] as const;
 
   return (
@@ -517,11 +517,11 @@ function ConnectionPanel({
                   disabled={!canSubmit}
                   aria-busy={submitting}
                 >
-                  <Cloud size={15} aria-hidden="true" />
+                  <ProviderMark provider="bluesky" size={15} />
                   {submitting
                     ? "Verifying Bluesky..."
                     : existingClaims.data.length > 0
-                      ? "Verify again"
+                      ? "Refresh evidence"
                       : "Verify Bluesky"}
                 </button>
                 <span>Your wallet confirms which DID receives the claim.</span>
@@ -556,7 +556,7 @@ function ExistingBlueskyClaims({ claims }: { claims: BlueskyAccountClaim[] }) {
         {claims.map((claim) => (
           <li key={claim.claimId}>
             <div className="account-verification-account-list__identity">
-              <Cloud size={18} strokeWidth={1.7} aria-hidden="true" />
+              <ProviderMark provider="bluesky" size={18} />
               <span>
                 <strong>@{claim.account.handle}</strong>
                 <small>Verified {formatDate(claim.account.verified_at)}</small>
@@ -629,7 +629,7 @@ function SubmittedVerification({
   return (
     <section aria-labelledby="bluesky-result-title">
       <div className="account-verification-section-heading">
-        <span>Submission</span>
+        <span>Issuance</span>
         <h2 id="bluesky-result-title">@{submission.handle}</h2>
         <p>
           The app password and temporary session are no longer retained. Only public claim data
@@ -801,7 +801,7 @@ function ProtocolSummary({ submission }: { submission?: BlueskySubmission }) {
           <dd>Vellum issuer DID</dd>
         </div>
         <div>
-          <dt>Submission</dt>
+          <dt>Issuance</dt>
           <dd>Automatic after verification</dd>
         </div>
         <div>

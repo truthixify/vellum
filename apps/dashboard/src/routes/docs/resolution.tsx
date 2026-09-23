@@ -10,12 +10,13 @@ function ResolutionPage() {
   useDocumentTitle("Resolution · Docs");
   return (
     <>
-      <div className="mono-caps text-muted-foreground mb-3">SPEC · RESOLUTION</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-6">Resolution.</h1>
-      <p className="text-base leading-[1.6] text-ink mb-12 max-w-[60ch]">
-        Resolution is the act of turning a DID string into a document. With did:ckb the chain is the
-        only source of truth, so a resolver is just an indexer query plus a decode.
-      </p>
+      <header className="docs-page-header">
+        <span>Spec · Resolution</span>
+        <h1>Resolution</h1>
+        <p>
+          Turn a did:ckb identifier into its current document with an indexer query and a decode.
+        </p>
+      </header>
 
       <Section title="From string to args">
         <p>

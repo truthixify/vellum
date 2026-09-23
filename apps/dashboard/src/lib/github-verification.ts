@@ -31,6 +31,8 @@ export type GithubVerificationSearch = {
   transaction?: string;
   claim?: string;
   output?: number;
+  contributionClaim?: string;
+  contributionOutput?: number;
   login?: string;
   code?: GithubVerificationErrorCode;
   retryAt?: number;
@@ -42,6 +44,10 @@ export type GithubSubmission = {
   claimId: ccc.Hex;
   outputIndex: number;
   login: string;
+  contribution?: {
+    claimId: ccc.Hex;
+    outputIndex: number;
+  };
 };
 
 type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -72,6 +78,8 @@ export function parseGithubVerificationSearch(
   const transactionValue = scalar(search.transaction);
   const claimValue = scalar(search.claim);
   const outputValue = positiveInteger(search.output);
+  const contributionClaimValue = scalar(search.contributionClaim);
+  const contributionOutputValue = positiveInteger(search.contributionOutput);
   const loginValue = scalar(search.login);
   const codeValue = scalar(search.code);
   const retryAtValue = positiveInteger(search.retryAt);
@@ -83,6 +91,11 @@ export function parseGithubVerificationSearch(
       transactionValue && HEX_32_PATTERN.test(transactionValue) ? transactionValue : undefined,
     claim: claimValue && HEX_32_PATTERN.test(claimValue) ? claimValue : undefined,
     output: outputValue,
+    contributionClaim:
+      contributionClaimValue && HEX_32_PATTERN.test(contributionClaimValue)
+        ? contributionClaimValue
+        : undefined,
+    contributionOutput: contributionOutputValue,
     login: loginValue && GITHUB_LOGIN_PATTERN.test(loginValue) ? loginValue : undefined,
     code: codeValue && isErrorCode(codeValue) ? codeValue : undefined,
     retryAt: retryAtValue && retryAtValue > 0 ? retryAtValue : undefined,
@@ -92,23 +105,35 @@ export function parseGithubVerificationSearch(
 export function githubSubmissionFromSearch(
   search: GithubVerificationSearch,
 ): GithubSubmission | undefined {
+  const hasContributionClaim = search.contributionClaim !== undefined;
+  const hasContributionOutput = search.contributionOutput !== undefined;
   if (
     search.status !== "submitted" ||
     !search.subject ||
     !search.transaction ||
     !search.claim ||
     search.output === undefined ||
-    !search.login
+    !search.login ||
+    hasContributionClaim !== hasContributionOutput ||
+    (search.contributionClaim !== undefined && search.contributionClaim === search.claim) ||
+    (search.contributionOutput !== undefined && search.contributionOutput === search.output)
   ) {
     return undefined;
   }
-  return {
+  const submission: GithubSubmission = {
     subject: search.subject,
     transactionHash: search.transaction as ccc.Hex,
     claimId: search.claim as ccc.Hex,
     outputIndex: search.output,
     login: search.login,
   };
+  if (search.contributionClaim && search.contributionOutput !== undefined) {
+    submission.contribution = {
+      claimId: search.contributionClaim as ccc.Hex,
+      outputIndex: search.contributionOutput,
+    };
+  }
+  return submission;
 }
 
 const ERROR_MESSAGES: Record<GithubVerificationErrorCode, string> = {
@@ -121,7 +146,7 @@ const ERROR_MESSAGES: Record<GithubVerificationErrorCode, string> = {
   provider_rate_limited: "GitHub is rate limiting verification requests.",
   provider_unavailable: "GitHub could not complete verification. Try again shortly.",
   credential_revocation_failed:
-    "Vellum could not release GitHub access. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
+    "Vellum could not revoke GitHub access. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
   verification_failed: "The GitHub account could not be verified.",
   issuer_unavailable: "The Vellum issuer is temporarily unavailable.",
   issuance_failed: "The account was verified, but the claim transaction could not be submitted.",

@@ -318,14 +318,14 @@ async function revokeGithubCredentials(
     throw new GithubOAuthError(
       "credential_revocation_failed",
       502,
-      "GitHub access could not be released. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
+      "GitHub access could not be revoked. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
       retryTimestamp(response, dependencies.now()),
     );
   }
   throw new GithubOAuthError(
     "credential_revocation_failed",
     502,
-    "GitHub access could not be released. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
+    "GitHub access could not be revoked. Remove Vellum from GitHub Authorized OAuth Apps before retrying.",
   );
 }
 

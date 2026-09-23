@@ -10,13 +10,14 @@ function DidCkbPage() {
   useDocumentTitle("did:ckb method · Docs");
   return (
     <>
-      <div className="mono-caps text-muted-foreground mb-3">SPEC · WIP-01</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-6">did:ckb method.</h1>
-      <p className="text-base leading-[1.6] text-ink mb-12 max-w-[60ch]">
-        A Decentralized Identifier method that puts the entire identity record into a single Cell on
-        the Nervos CKB blockchain. The identifier is permanent for the life of the Cell, and the
-        document inside it is rendered directly from chain state with no central authority.
-      </p>
+      <header className="docs-page-header">
+        <span>Spec · WIP-01</span>
+        <h1>did:ckb method</h1>
+        <p>
+          A Decentralized Identifier method that puts the identity record in a CKB Cell and resolves
+          it directly from chain state.
+        </p>
+      </header>
 
       <Section title="Identifier format">
         <p>

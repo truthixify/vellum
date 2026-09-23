@@ -42,8 +42,14 @@ function DocsIndex() {
   useDocumentTitle("Docs");
   return (
     <>
-      <div className="mono-caps text-muted-foreground mb-3">DOCUMENTATION · 0.1</div>
-      <h1 className="text-4xl md:text-5xl font-medium mb-6">Vellum documentation.</h1>
+      <header className="docs-page-header">
+        <span>Documentation · 0.1</span>
+        <h1>Vellum documentation</h1>
+        <p>
+          Understand did:ckb identity records, CKB Cells, resolution, and migration from the
+          dashboard that uses them.
+        </p>
+      </header>
       <p className="text-base leading-[1.6] text-ink mb-3">
         Vellum is a reference dashboard for <span className="font-mono">did:ckb</span>, the
         Decentralized Identifier method defined in <span className="font-mono">WIP-01</span> and
@@ -59,23 +65,17 @@ function DocsIndex() {
 
       <div className="grid sm:grid-cols-2 gap-6 mb-16">
         {CARDS.map((card) => (
-          <Link
-            key={card.to}
-            to={card.to}
-            className="block border-2 border-ink p-6 hover:bg-ink hover:text-paper transition-colors group"
-          >
-            <div className="mono-caps text-muted-foreground group-hover:text-paper mb-2">
-              {card.number}
-            </div>
-            <h3 className="text-xl font-medium mb-3">{card.title}</h3>
-            <p className="text-sm leading-[1.55]">{card.body}</p>
+          <Link key={card.to} to={card.to} className="docs-card">
+            <span>{card.number}</span>
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
           </Link>
         ))}
       </div>
 
-      <div className="border border-ink p-6 bg-paper">
-        <div className="mono-caps text-muted-foreground mb-2">CONVENTIONS</div>
-        <p className="text-sm leading-[1.6]">
+      <div className="docs-conventions">
+        <span>Conventions</span>
+        <p>
           Mono blocks are encoded on chain.{" "}
           <span className="font-mono">did:ckb:&lt;32 base32 chars&gt;</span> is the canonical
           identifier string. <span className="font-mono">testnet</span> code hash{" "}

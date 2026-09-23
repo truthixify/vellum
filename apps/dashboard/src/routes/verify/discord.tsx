@@ -9,7 +9,6 @@ import {
   Check,
   Clock3,
   ExternalLink,
-  MessagesSquare,
   RefreshCw,
   ShieldCheck,
   Users,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { reputationQueryKey } from "@/hooks/use-reputation";
 import { useActiveIdentity } from "@/lib/active-identity-context";
@@ -86,7 +86,7 @@ function DiscordVerificationPage() {
       <header className="account-verification-header">
         <div>
           <span className="account-verification-kicker">
-            <MessagesSquare size={15} aria-hidden="true" /> Discord verification
+            <ProviderMark provider="discord" size={15} /> Discord verification
           </span>
           <h1>Discord verification</h1>
           <p>
@@ -151,9 +151,9 @@ function VerificationSteps({
           ? -1
           : 1;
   const steps = [
-    ["Authorize", "Discord account"],
-    ["Submit", "Claim transaction"],
-    ["Confirm", "Live Claim Cells"],
+    ["Verify", "Discord account"],
+    ["Issue", "Vellum claim transaction"],
+    ["Confirm", "Live claims"],
   ] as const;
 
   return (
@@ -290,7 +290,7 @@ function ConnectionPanel({
         <span>Account source</span>
         <h2 id="discord-connect-title">Discord account</h2>
         <p>
-          Vellum checks your account and recognized CKB communities, then releases OAuth access
+          Vellum checks your account and recognized CKB communities, then revokes OAuth access
           before issuance.
         </p>
       </div>
@@ -418,7 +418,7 @@ function ConnectionPanel({
             <ExistingDiscordClaims
               claims={existingClaims.data ?? []}
               starting={starting}
-              onVerifyAgain={() => void startVerification()}
+              onRefreshEvidence={() => void startVerification()}
             />
           ) : (
             <div className="account-verification-action">
@@ -429,8 +429,8 @@ function ConnectionPanel({
                 aria-busy={starting}
                 onClick={() => void startVerification()}
               >
-                <MessagesSquare size={15} aria-hidden="true" />
-                {starting ? "Opening Discord..." : "Continue with Discord"}
+                <ProviderMark provider="discord" size={15} />
+                {starting ? "Opening Discord..." : "Verify with Discord"}
               </button>
               <span>Authorization expires after five minutes.</span>
             </div>
@@ -444,11 +444,11 @@ function ConnectionPanel({
 function ExistingDiscordClaims({
   claims,
   starting,
-  onVerifyAgain,
+  onRefreshEvidence,
 }: {
   claims: DiscordAccountClaim[];
   starting: boolean;
-  onVerifyAgain: () => void;
+  onRefreshEvidence: () => void;
 }) {
   return (
     <div className="account-verification-existing">
@@ -470,7 +470,7 @@ function ExistingDiscordClaims({
         {claims.map((claim) => (
           <li className="account-verification-account" key={claim.claimId}>
             <div className="account-verification-account-list__identity">
-              <MessagesSquare size={18} strokeWidth={1.7} aria-hidden="true" />
+              <ProviderMark provider="discord" size={18} />
               <span>
                 <strong>@{claim.account.username}</strong>
                 <small>Verified {formatDate(claim.account.verified_at)}</small>
@@ -530,7 +530,7 @@ function ExistingDiscordClaims({
           type="button"
           disabled={starting}
           aria-busy={starting}
-          onClick={onVerifyAgain}
+          onClick={onRefreshEvidence}
         >
           <RefreshCw size={14} aria-hidden="true" />
           {starting ? "Opening Discord..." : "Refresh evidence"}
@@ -585,10 +585,10 @@ function SubmittedVerification({
   return (
     <section aria-labelledby="discord-result-title">
       <div className="account-verification-section-heading">
-        <span>Submission</span>
+        <span>Issuance</span>
         <h2 id="discord-result-title">@{submission.username}</h2>
         <p>
-          Discord access has been released. The transaction contains public identity evidence
+          Temporary Discord access was revoked. The transaction contains public identity evidence
           {submission.communityCount > 0 ? " and current CKB community evidence" : ""}.
         </p>
       </div>
@@ -779,12 +779,12 @@ function ProtocolSummary({ submission }: { submission?: DiscordSubmission }) {
           <dd>Messages, unrelated servers, channels, email, and activity history</dd>
         </div>
         <div>
-          <dt>Submission</dt>
+          <dt>Issuance</dt>
           <dd>Separate claim outputs in one transaction</dd>
         </div>
         <div>
-          <dt>OAuth credential</dt>
-          <dd>{submission ? "Released" : "Released before issuance"}</dd>
+          <dt>OAuth access</dt>
+          <dd>{submission ? "Revoked" : "Revoked before issuance"}</dd>
         </div>
       </dl>
       <p>

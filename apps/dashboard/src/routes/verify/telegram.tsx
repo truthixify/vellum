@@ -9,7 +9,6 @@ import {
   Check,
   Clock3,
   ExternalLink,
-  Send,
   RefreshCw,
   ShieldCheck,
   Users,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { ProviderMark } from "@/components/verification/ProviderMark";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { reputationQueryKey } from "@/hooks/use-reputation";
 import { useActiveIdentity } from "@/lib/active-identity-context";
@@ -94,7 +94,7 @@ function TelegramVerificationPage() {
       <header className="account-verification-header">
         <div>
           <span className="account-verification-kicker">
-            <Send size={15} aria-hidden="true" /> Telegram verification
+            <ProviderMark provider="telegram" size={15} /> Telegram verification
           </span>
           <h1>Telegram verification</h1>
           <p>
@@ -159,9 +159,9 @@ function VerificationSteps({
           ? -1
           : 1;
   const steps = [
-    ["Authorize", "Telegram account"],
-    ["Submit", "Claim transaction"],
-    ["Confirm", "Live Claim Cells"],
+    ["Verify", "Telegram account"],
+    ["Issue", "Vellum claim transaction"],
+    ["Confirm", "Live claims"],
   ] as const;
 
   return (
@@ -298,8 +298,8 @@ function ConnectionPanel({
         <span>Account source</span>
         <h2 id="telegram-connect-title">Telegram account</h2>
         <p>
-          Vellum checks your account and recognized CKB communities, then discards OAuth access
-          before issuance.
+          Vellum checks your account and recognized CKB communities, then discards the signed login
+          response before issuance.
         </p>
       </div>
 
@@ -426,7 +426,7 @@ function ConnectionPanel({
             <ExistingTelegramClaims
               claims={existingClaims.data ?? []}
               starting={starting}
-              onVerifyAgain={() => void startVerification()}
+              onRefreshEvidence={() => void startVerification()}
             />
           ) : (
             <div className="account-verification-action">
@@ -437,8 +437,8 @@ function ConnectionPanel({
                 aria-busy={starting}
                 onClick={() => void startVerification()}
               >
-                <Send size={15} aria-hidden="true" />
-                {starting ? "Opening Telegram..." : "Continue with Telegram"}
+                <ProviderMark provider="telegram" size={15} />
+                {starting ? "Opening Telegram..." : "Verify with Telegram"}
               </button>
               <span>Authorization expires after five minutes.</span>
             </div>
@@ -452,11 +452,11 @@ function ConnectionPanel({
 function ExistingTelegramClaims({
   claims,
   starting,
-  onVerifyAgain,
+  onRefreshEvidence,
 }: {
   claims: TelegramAccountClaim[];
   starting: boolean;
-  onVerifyAgain: () => void;
+  onRefreshEvidence: () => void;
 }) {
   return (
     <div className="account-verification-existing">
@@ -478,7 +478,7 @@ function ExistingTelegramClaims({
         {claims.map((claim) => (
           <li className="account-verification-account" key={claim.claimId}>
             <div className="account-verification-account-list__identity">
-              <Send size={18} strokeWidth={1.7} aria-hidden="true" />
+              <ProviderMark provider="telegram" size={18} />
               <span>
                 <strong>{telegramAccountLabel(claim.account)}</strong>
                 {claim.account.username ? <small>{claim.account.display_name}</small> : null}
@@ -538,7 +538,7 @@ function ExistingTelegramClaims({
           type="button"
           disabled={starting}
           aria-busy={starting}
-          onClick={onVerifyAgain}
+          onClick={onRefreshEvidence}
         >
           <RefreshCw size={14} aria-hidden="true" />
           {starting ? "Opening Telegram..." : "Refresh evidence"}
@@ -593,13 +593,13 @@ function SubmittedVerification({
   return (
     <section aria-labelledby="telegram-result-title">
       <div className="account-verification-section-heading">
-        <span>Submission</span>
+        <span>Issuance</span>
         <h2 id="telegram-result-title">
           {submission.username ? `@${submission.username}` : submission.displayName}
         </h2>
         <p>
-          Telegram access has been discarded. The transaction contains public identity evidence
-          {submission.communityCount > 0 ? " and current CKB community evidence" : ""}.
+          The Telegram login response was discarded. The transaction contains public identity
+          evidence{submission.communityCount > 0 ? " and current CKB community evidence" : ""}.
         </p>
       </div>
 
@@ -795,17 +795,17 @@ function ProtocolSummary({ submission }: { submission?: TelegramSubmission }) {
           <dd>Messages, phone number, unrelated chats, and activity history</dd>
         </div>
         <div>
-          <dt>Submission</dt>
+          <dt>Issuance</dt>
           <dd>Separate claim outputs in one transaction</dd>
         </div>
         <div>
-          <dt>OAuth credential</dt>
+          <dt>Login response</dt>
           <dd>{submission ? "Discarded" : "Discarded before issuance"}</dd>
         </div>
       </dl>
       <p>
-        The claims are public on CKB Testnet. Telegram credentials are not stored in either claim or
-        returned to the dashboard.
+        The claims are public on CKB Testnet. Telegram login data is not stored in either claim or
+        retained by the dashboard.
       </p>
     </aside>
   );

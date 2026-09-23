@@ -149,7 +149,7 @@ const ERROR_MESSAGES: Record<DiscordVerificationErrorCode, string> = {
   provider_rate_limited: "Discord is rate limiting verification requests.",
   provider_unavailable: "Discord could not complete verification. Try again shortly.",
   credential_revocation_failed:
-    "Vellum could not release Discord access. Remove Vellum from Discord Authorized Apps before retrying.",
+    "Vellum could not revoke Discord access. Remove Vellum from Discord Authorized Apps before retrying.",
   verification_failed: "The Discord account could not be verified.",
   issuer_unavailable: "The Vellum issuer is temporarily unavailable.",
   issuance_failed: "The account was verified, but the claim transaction could not be submitted.",

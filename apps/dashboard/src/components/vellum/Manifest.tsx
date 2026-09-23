@@ -99,14 +99,15 @@ export function Brackets({ children, className }: { children: ReactNode; classNa
 
 export function MetaStrip({ items }: { items: { label: string; value: string }[] }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 border-t border-b border-hairline">
+    <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-b border-hairline">
       {items.map((it, i) => (
         <div
           key={it.label}
           className={cn(
-            "px-6 py-4",
-            i > 0 && "md:border-l border-hairline",
-            i > 0 && i % 2 === 0 && "border-t md:border-t-0",
+            "min-w-0 px-4 py-4 sm:px-6",
+            i % 2 === 1 && "border-l border-hairline",
+            i >= 2 && "border-t border-hairline lg:border-t-0",
+            i > 0 && "lg:border-l border-hairline",
           )}
         >
           <div className="mono-caps text-muted-foreground mb-1.5">{it.label}</div>

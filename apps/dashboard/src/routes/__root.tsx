@@ -1,15 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
-  Activity,
   BadgeCheck,
   BookOpen,
   ChartNoAxesColumnIncreasing,
   ExternalLink,
-  Landmark,
   LayoutGrid,
   MoreHorizontal,
-  Plus,
   Search,
   Shield,
 } from "lucide-react";
@@ -32,6 +29,14 @@ import {
 import { WalletButton } from "@/components/vellum/WalletButton";
 import { ReputationChip } from "@/components/reputation/ReputationChip";
 import { ActiveIdentityProvider } from "@/lib/active-identity";
+import {
+  MOBILE_MORE_NAVIGATION,
+  MOBILE_NAVIGATION,
+  PRIMARY_NAVIGATION,
+  isDashboardNavItemActive,
+  type DashboardNavDefinition,
+  type DashboardNavPath,
+} from "@/lib/dashboard-navigation";
 
 const SITE_ORIGIN =
   import.meta.env.VITE_SITE_URL ??
@@ -43,62 +48,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
-type NavItem = {
-  label: string;
-  to:
-    | "/"
-    | "/my"
-    | "/verify"
-    | "/reputation"
-    | "/resolve"
-    | "/issue"
-    | "/activity"
-    | "/governance"
-    | "/docs";
+type NavItem = DashboardNavDefinition & {
   icon: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
 };
 
-const PRIMARY_NAV: NavItem[] = [
-  { label: "Overview", to: "/", icon: LayoutGrid },
-  { label: "Identity", to: "/my", icon: Shield },
-  { label: "Verify", to: "/verify", icon: BadgeCheck },
-  { label: "Reputation", to: "/reputation", icon: ChartNoAxesColumnIncreasing },
-  { label: "Resolve", to: "/resolve", icon: Search },
-  { label: "Issue", to: "/issue", icon: Plus },
-  { label: "Activity", to: "/activity", icon: Activity },
-  { label: "Governance", to: "/governance", icon: Landmark },
-];
+const NAV_ICONS: Record<DashboardNavPath, NavItem["icon"]> = {
+  "/": LayoutGrid,
+  "/my": Shield,
+  "/verify": BadgeCheck,
+  "/reputation": ChartNoAxesColumnIncreasing,
+  "/resolve": Search,
+  "/docs": BookOpen,
+};
 
-const MOBILE_NAV: NavItem[] = [
-  { label: "Overview", to: "/", icon: LayoutGrid },
-  { label: "Identity", to: "/my", icon: Shield },
-  { label: "Verify", to: "/verify", icon: BadgeCheck },
-  { label: "Score", to: "/reputation", icon: ChartNoAxesColumnIncreasing },
-];
-
-const MOBILE_MORE_NAV: NavItem[] = [
-  { label: "Resolve a DID", to: "/resolve", icon: Search },
-  { label: "Issue a claim", to: "/issue", icon: Plus },
-  { label: "Activity", to: "/activity", icon: Activity },
-  { label: "Governance", to: "/governance", icon: Landmark },
-  { label: "Documentation", to: "/docs", icon: BookOpen },
-];
-
-function isNavItemActive(item: NavItem, pathname: string) {
-  if (item.to === "/") return pathname === "/";
-  if (item.to === "/my") {
-    return ["/my", "/claim", "/edit", "/rotate", "/migrate", "/deactivate"].some(
-      (path) => pathname === path || pathname.startsWith(`${path}/`),
-    );
-  }
-  return pathname === item.to || pathname.startsWith(`${item.to}/`);
+function withIcons(items: readonly DashboardNavDefinition[]): NavItem[] {
+  return items.map((item) => ({ ...item, icon: NAV_ICONS[item.to] }));
 }
+
+const PRIMARY_NAV = withIcons(PRIMARY_NAVIGATION);
+const MOBILE_NAV = withIcons(MOBILE_NAVIGATION);
+const MOBILE_MORE_NAV = withIcons(MOBILE_MORE_NAVIGATION);
 
 function DashboardNavLink({ item, mobile = false }: { item: NavItem; mobile?: boolean }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const Icon = item.icon;
   const base = mobile ? "dashboard-mobile-link" : "dashboard-nav-link";
-  const active = isNavItemActive(item, pathname);
+  const active = isDashboardNavItemActive(item, pathname);
   return (
     <Link
       to={item.to}
@@ -181,7 +156,7 @@ function ContextBar() {
 
 function MobileNavigation() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const moreActive = MOBILE_MORE_NAV.some((item) => isNavItemActive(item, pathname));
+  const moreActive = MOBILE_MORE_NAV.some((item) => isDashboardNavItemActive(item, pathname));
 
   return (
     <nav className="dashboard-mobile-nav" aria-label="Dashboard navigation">
@@ -207,7 +182,7 @@ function MobileNavigation() {
         >
           {MOBILE_MORE_NAV.map((item) => {
             const Icon = item.icon;
-            const active = isNavItemActive(item, pathname);
+            const active = isDashboardNavItemActive(item, pathname);
             return (
               <DropdownMenuItem asChild key={item.to}>
                 <Link
