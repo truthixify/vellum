@@ -118,5 +118,19 @@ describe("vellum.contribution.github.v1", () => {
         ],
       }),
     ).toThrow();
+    const oversizedRepository = `${"a".repeat(40)}/${"b".repeat(100)}`;
+    expect(oversizedRepository).toHaveLength(141);
+    expect(() =>
+      parseGithubContributionClaimPayload({
+        ...payload,
+        artifacts: [
+          {
+            ...payload.artifacts[0],
+            repository: oversizedRepository,
+            url: `https://github.com/${oversizedRepository}/pull/${payload.artifacts[0].number}`,
+          },
+        ],
+      }),
+    ).toThrow();
   });
 });

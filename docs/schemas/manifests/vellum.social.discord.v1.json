@@ -1,0 +1,47 @@
+{
+  "encoding": "dag-cbor",
+  "name": "vellum.social.discord.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "profile_url == 'https://discord.com/users/' + user_id",
+      "account_created_at == discord_snowflake_time(user_id)",
+      "account_created_at <= verified_at"
+    ],
+    "properties": {
+      "account_created_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "profile_url": {
+        "maxLength": 256,
+        "pattern": "^https://discord\\.com/users/[1-9][0-9]{16,19}$",
+        "template": "https://discord.com/users/{user_id}",
+        "type": "string"
+      },
+      "user_id": {
+        "maxLength": 20,
+        "minLength": 17,
+        "pattern": "^[1-9][0-9]{16,19}$",
+        "type": "string"
+      },
+      "username": {
+        "maxLength": 32,
+        "minLength": 1,
+        "pattern": "^[^\\u0000-\\u0020\\u007f]{1,32}$",
+        "type": "string"
+      },
+      "verified_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "required": ["user_id", "username", "profile_url", "account_created_at", "verified_at"],
+    "type": "object"
+  },
+  "version": 1
+}

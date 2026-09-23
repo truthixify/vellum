@@ -1,9 +1,7 @@
 import {
-  GITHUB_CLAIM_SCHEMA_HASH,
-  GITHUB_CLAIM_SCHEMA_ID,
-  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
-  GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   GITHUB_CONTRIBUTION_CLAIM_TTL_SECONDS,
+  githubContributionSchema,
+  githubIdentitySchema,
   parseGithubClaimPayload,
 } from "@vellum/schemas";
 
@@ -394,15 +392,15 @@ export async function verifyGithubAuthorization(
   }
 
   const identityClaim: VerifiedClaim = {
-    schema: { id: GITHUB_CLAIM_SCHEMA_ID, hash: GITHUB_CLAIM_SCHEMA_HASH },
+    schema: { id: githubIdentitySchema.id, hash: githubIdentitySchema.hash },
     payload,
     issuedAt: verifiedAt,
   };
   const contributionClaim: VerifiedClaim | undefined = contribution
     ? {
         schema: {
-          id: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
-          hash: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
+          id: githubContributionSchema.id,
+          hash: githubContributionSchema.hash,
         },
         payload: contribution,
         issuedAt: verifiedAt,

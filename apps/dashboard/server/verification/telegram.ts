@@ -1,11 +1,9 @@
 import {
-  TELEGRAM_CLAIM_SCHEMA_HASH,
-  TELEGRAM_CLAIM_SCHEMA_ID,
-  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
-  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
   parseTelegramClaimPayload,
   parseTelegramCommunityClaimPayload,
+  telegramCommunitySchema,
+  telegramIdentitySchema,
   type TelegramCommunityMembership,
   type TelegramCommunityType,
 } from "@vellum/schemas";
@@ -589,15 +587,15 @@ export async function verifyTelegramAuthorization(
         })
       : undefined;
   const identityClaim: VerifiedClaim = {
-    schema: { id: TELEGRAM_CLAIM_SCHEMA_ID, hash: TELEGRAM_CLAIM_SCHEMA_HASH },
+    schema: { id: telegramIdentitySchema.id, hash: telegramIdentitySchema.hash },
     payload: claimPayload,
     issuedAt: verifiedAt,
   };
   const communityClaim: VerifiedClaim | undefined = communityPayload
     ? {
         schema: {
-          id: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
-          hash: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
+          id: telegramCommunitySchema.id,
+          hash: telegramCommunitySchema.hash,
         },
         payload: communityPayload,
         issuedAt: verifiedAt,

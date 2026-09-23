@@ -1,11 +1,9 @@
 import {
-  TELEGRAM_CLAIM_SCHEMA_HASH,
-  TELEGRAM_CLAIM_SCHEMA_ID,
-  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
-  TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   TELEGRAM_COMMUNITY_CLAIM_TTL_SECONDS,
   parseTelegramClaimPayload,
   parseTelegramCommunityClaimPayload,
+  telegramCommunitySchema,
+  telegramIdentitySchema,
 } from "@vellum/schemas";
 
 import {
@@ -345,8 +343,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
     );
   }
   if (
-    identity.schema.id !== TELEGRAM_CLAIM_SCHEMA_ID ||
-    identity.schema.hash !== TELEGRAM_CLAIM_SCHEMA_HASH ||
+    identity.schema.id !== telegramIdentitySchema.id ||
+    identity.schema.hash !== telegramIdentitySchema.hash ||
     identity.issuedAt !== identityPayload.verified_at ||
     identity.expiresAt !== undefined
   ) {
@@ -370,8 +368,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
       );
     }
     if (
-      community.schema.id !== TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID ||
-      community.schema.hash !== TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH ||
+      community.schema.id !== telegramCommunitySchema.id ||
+      community.schema.hash !== telegramCommunitySchema.hash ||
       communityPayload.user_id !== identityPayload.user_id ||
       community.issuedAt !== communityPayload.verified_at ||
       community.issuedAt !== identity.issuedAt ||

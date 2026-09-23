@@ -73,6 +73,7 @@ export function parseBlueskyClaimPayload(value: unknown): BlueskyClaimPayload {
     keys.length !== PAYLOAD_KEYS.length ||
     keys.some((key, index) => key !== PAYLOAD_KEYS[index]) ||
     typeof payload.did !== "string" ||
+    payload.did.length < 13 ||
     payload.did.length > 2_048 ||
     !AT_PROTOCOL_DID_PATTERN.test(payload.did) ||
     typeof payload.handle !== "string" ||

@@ -130,7 +130,8 @@ schema_hash = CKB_HASH(JCS(schema_manifest))
 Readers resolve known hashes through a schema registry and may expose an unknown schema as raw
 authorized data. Changing a manifest produces a new hash, and an incompatible change MUST also use
 a new human-readable version. The schema package defines the manifest shape and publication
-process.
+process. Vellum's immutable v1 manifests and hashes are published in the
+[claim schema registry](./schemas/README.md).
 
 ## Claim identity
 

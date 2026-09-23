@@ -107,6 +107,8 @@ Both applications are React 19 and Vite 7 SPAs in a Bun workspace. The dashboard
 Router, Tailwind CSS 4, and CCC's connector packages. Shared Vellum components live in `@vellum/ui`.
 The claim scripts are tested locally with `ckb-testtool` and deployed on CKB Testnet. The schema
 package pins canonical manifests and validates payloads used by verification adapters and readers.
+The [published schema registry](./docs/schemas/README.md) lists every verifier output with its exact
+manifest, pinned hash, payload contract, and valid example.
 
 ## Run locally
 

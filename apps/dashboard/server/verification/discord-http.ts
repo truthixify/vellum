@@ -1,9 +1,4 @@
-import {
-  DISCORD_CLAIM_SCHEMA_HASH,
-  DISCORD_CLAIM_SCHEMA_ID,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
-} from "@vellum/schemas";
+import { discordCommunitySchema, discordIdentitySchema } from "@vellum/schemas";
 
 import {
   VERIFICATION_API_VERSION,
@@ -329,8 +324,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
   const parsed = claims.map((claim) => verifiedClaimSchema.parse(claim));
   const identity = parsed[0];
   if (
-    identity.schema.id !== DISCORD_CLAIM_SCHEMA_ID ||
-    identity.schema.hash !== DISCORD_CLAIM_SCHEMA_HASH
+    identity.schema.id !== discordIdentitySchema.id ||
+    identity.schema.hash !== discordIdentitySchema.hash
   ) {
     throw new DiscordOAuthError(
       "provider_unavailable",
@@ -341,8 +336,8 @@ function validateClaims(claims: readonly VerifiedClaim[]): readonly VerifiedClai
   const community = parsed[1];
   if (
     community &&
-    (community.schema.id !== DISCORD_COMMUNITY_CLAIM_SCHEMA_ID ||
-      community.schema.hash !== DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH)
+    (community.schema.id !== discordCommunitySchema.id ||
+      community.schema.hash !== discordCommunitySchema.hash)
   ) {
     throw new DiscordOAuthError(
       "provider_unavailable",

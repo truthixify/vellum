@@ -15,6 +15,11 @@ of payloads.
 - `src/index.ts` re-exports and a registry map keyed by schema id
 - `src/hash.ts` for canonical JSON plus BLAKE2b-256 hash derivation
 
+The [published schema registry](../../docs/schemas/README.md) contains the exact JSON manifests,
+field contracts, hashes, and valid examples used by the current verifiers. In code, use
+`vellumSchemaRegistry` or a named definition such as `githubIdentitySchema` so the ID, hash,
+manifest, specification, and example stay linked.
+
 ## GitHub account claim
 
 `vellum.social.github.v1` records GitHub's stable numeric user ID, current login and profile URL,

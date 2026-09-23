@@ -38,5 +38,12 @@ describe("vellum.social.bluesky.v1", () => {
     ).toThrow();
     expect(() => parseBlueskyClaimPayload({ ...payload, accessJwt: "secret" })).toThrow();
     expect(() => parseBlueskyClaimPayload({ ...payload, did: "did:key:unsupported" })).toThrow();
+    expect(() =>
+      parseBlueskyClaimPayload({
+        ...payload,
+        did: "did:web:a",
+        profile_url: "https://bsky.app/profile/did:web:a",
+      }),
+    ).toThrow();
   });
 });

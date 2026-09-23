@@ -1,8 +1,6 @@
 import {
-  DISCORD_CLAIM_SCHEMA_HASH,
-  DISCORD_CLAIM_SCHEMA_ID,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
-  DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  discordCommunitySchema,
+  discordIdentitySchema,
   discordSnowflakeTimestamp,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
@@ -559,15 +557,15 @@ export async function verifyDiscordAuthorization(
   }
 
   const identityClaim: VerifiedClaim = {
-    schema: { id: DISCORD_CLAIM_SCHEMA_ID, hash: DISCORD_CLAIM_SCHEMA_HASH },
+    schema: { id: discordIdentitySchema.id, hash: discordIdentitySchema.hash },
     payload: identityPayload,
     issuedAt: verifiedAt,
   };
   const communityClaim: VerifiedClaim | undefined = communityPayload
     ? {
         schema: {
-          id: DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
-          hash: DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
+          id: discordCommunitySchema.id,
+          hash: discordCommunitySchema.hash,
         },
         payload: communityPayload,
         issuedAt: verifiedAt,

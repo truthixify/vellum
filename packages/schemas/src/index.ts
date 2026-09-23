@@ -1,5 +1,18 @@
 export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash.js";
 export {
+  blueskyIdentitySchema,
+  discordCommunitySchema,
+  discordIdentitySchema,
+  getVellumSchemaDefinition,
+  githubContributionSchema,
+  githubIdentitySchema,
+  telegramCommunitySchema,
+  telegramIdentitySchema,
+  vellumSchemaRegistry,
+  type VellumSchemaDefinition,
+  type VellumSchemaId,
+} from "./registry.js";
+export {
   AT_PROTOCOL_DID_PATTERN,
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
