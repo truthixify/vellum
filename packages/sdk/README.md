@@ -196,3 +196,16 @@ The reclaim proof links creation transaction
 [`0x6003e4e1...255640`](https://testnet.explorer.nervos.org/transaction/0x6003e4e13d757a02003cc23d156f100ff351ca28f0d67df7f04bf71d18255640)
 to spend transaction
 [`0x647a5253...38816`](https://testnet.explorer.nervos.org/transaction/0x647a5253321acb45e8aa07195f0414678831f955610bdfcce59efa1107638816).
+
+## Releases
+
+Every public SDK change includes a Changeset describing its semver impact:
+
+```bash
+bun run changeset
+```
+
+After changes land on `main`, the release workflow creates or updates one version pull request. That
+pull request applies the version bump and changelog. Merging it publishes the validated package,
+creates the matching Git tag and GitHub release, and records npm provenance. Other workspace
+packages are private and are not published.

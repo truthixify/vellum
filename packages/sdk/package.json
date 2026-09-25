@@ -30,7 +30,8 @@
     "url": "https://github.com/truthixify/vellum/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "bun run clean && tsc -p tsconfig.build.json",

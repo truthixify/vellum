@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches:
@@ -48,6 +49,10 @@ jobs:
           --from "${{ github.event.before }}"
           --to "${{ github.sha }}"
           --verbose
+
+      - name: Check dispatched commit message
+        if: github.event_name == 'workflow_dispatch'
+        run: bun run commitlint --last --verbose
 
       - name: Check formatting
         run: bun run format:check
