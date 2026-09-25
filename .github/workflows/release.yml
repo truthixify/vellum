@@ -54,7 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      actions: write
       contents: write
       pull-requests: write
 
@@ -80,19 +79,10 @@ jobs:
         run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Create or update release pull request
-        id: version
         uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           commit-message: Release @usevellum/sdk
           pr-title: Release @usevellum/sdk
-
-      - name: Run CI for release pull request
-        run: |
-          release_branch=$(gh pr view "$PR_NUMBER" --json headRefName --jq .headRefName)
-          gh workflow run ci.yml --ref "$release_branch"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ steps.version.outputs.pr-number }}
 
   pack:
     name: Validate and pack release
