@@ -14,7 +14,7 @@ import {
   type TelegramCommunityClaimPayload,
   type BlueskyClaimPayload,
 } from "@vellum/schemas";
-import type { Claim, ClaimReadFailure } from "@vellum/sdk";
+import type { Claim, ClaimReadFailure } from "@usevellum/sdk";
 
 import { VELLUM_REPUTATION_POLICY_V5 } from "./policy.js";
 import type {

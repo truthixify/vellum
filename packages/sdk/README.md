@@ -1,15 +1,15 @@
-# @vellum/sdk
+# @usevellum/sdk
 
-`@vellum/sdk` provides typed Claim Cell codecs, reads, and transaction construction for Vellum and
-other CKB applications. It uses `@ckb-ccc/did-ckb` for identity primitives while keeping the Claim
-Cell API and release lifecycle in Vellum.
+`@usevellum/sdk` provides typed Claim Cell codecs, reads, and transaction construction for Vellum
+and other CKB applications. It uses `@ckb-ccc/did-ckb` for identity primitives while keeping the
+Claim Cell API and release lifecycle in Vellum.
 
 The package is ESM-only and supports browser and server applications that use CCC.
 
 ## Install
 
 ```bash
-bun add @vellum/sdk @ckb-ccc/core
+bun add @usevellum/sdk @ckb-ccc/core
 ```
 
 ## Testnet deployment
@@ -35,7 +35,7 @@ A complete configuration object is available in
 union written to cell data. Payloads are encoded as canonical DAG-CBOR.
 
 ```ts
-import { ClaimData, ClaimDataV1 } from "@vellum/sdk";
+import { ClaimData, ClaimDataV1 } from "@usevellum/sdk";
 
 const data = ClaimDataV1.from({
   issuerId,
@@ -56,7 +56,7 @@ contract deployment, the subject, and any issuer or schema filters they want to 
 
 ```ts
 import { ccc } from "@ckb-ccc/core";
-import { readClaims } from "@vellum/sdk";
+import { readClaims } from "@usevellum/sdk";
 
 const client = new ccc.ClientPublicTestnet();
 const result = await readClaims({
@@ -94,7 +94,7 @@ The base reader returns payloads as `unknown`. `parseClaimPayload` checks the sc
 running an application parser.
 
 ```ts
-import { parseClaimPayload } from "@vellum/sdk";
+import { parseClaimPayload } from "@usevellum/sdk";
 
 const profile = parseClaimPayload(claim, {
   id: "example.profile.v1",
@@ -111,7 +111,7 @@ and fee balancing once. Neither function signs or broadcasts. The returned metad
 caller inspect every output and collect every required signature before submitting it.
 
 ```ts
-import { writeClaim } from "@vellum/sdk";
+import { writeClaim } from "@usevellum/sdk";
 
 const built = await writeClaim({
   issuerSigner,
@@ -174,8 +174,8 @@ bun run --cwd packages/sdk typecheck
 bun run --cwd packages/sdk verify:package
 ```
 
-`verify:package` starts from a clean build, type-checks and runs the example, then inspects the
-publishable tarball.
+`verify:package` starts from a clean build, type-checks and runs the example, inspects the
+publishable tarball, and validates its ESM and TypeScript package exports.
 
 The network-dependent suite reads committed Testnet fixtures, covers a claim whose issuer and
 subject are different DIDs, proves a destroyed claim's capacity returned to the subject controller,

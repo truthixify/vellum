@@ -4,7 +4,7 @@ import {
   type ClaimScriptConfigLike,
   type WriteClaimsProps,
   type WriteClaimsResult,
-} from "@vellum/sdk";
+} from "@usevellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json" with { type: "json" };
 import type { ClaimIssuanceResult, VerificationSubject, VerifiedClaim } from "./contracts.js";

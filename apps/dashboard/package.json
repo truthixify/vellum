@@ -52,7 +52,7 @@
     "@tanstack/router-plugin": "^1.167.28",
     "@vellum/schemas": "workspace:*",
     "@vellum/scoring": "workspace:*",
-    "@vellum/sdk": "workspace:*",
+    "@usevellum/sdk": "workspace:*",
     "@vellum/ui": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

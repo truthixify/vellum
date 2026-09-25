@@ -8,7 +8,7 @@ import {
   type TelegramClaimPayload,
   type TelegramCommunityClaimPayload,
 } from "@vellum/schemas";
-import { readClaims, type Claim, type ReadClaimsResult } from "@vellum/sdk";
+import { readClaims, type Claim, type ReadClaimsResult } from "@usevellum/sdk";
 
 import { dashboardClaimScripts } from "./claim-scripts";
 import type { TelegramSubmission } from "./telegram-verification";

@@ -5,7 +5,7 @@ import type {
   GithubContributionClassification,
   TelegramCommunityMembership,
 } from "@vellum/schemas";
-import type { ReadClaimsResult } from "@vellum/sdk";
+import type { ReadClaimsResult } from "@usevellum/sdk";
 
 export type ReputationCategoryId =
   | "technical"

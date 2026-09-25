@@ -8,7 +8,7 @@ import {
   TELEGRAM_CLAIM_SCHEMA_HASH,
   TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
 } from "@vellum/schemas";
-import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@vellum/sdk";
+import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@usevellum/sdk";
 
 import { VELLUM_REPUTATION_POLICY_V5 } from "./policy";
 import { scoreReputation } from "./score";

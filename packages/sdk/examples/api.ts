@@ -1,6 +1,6 @@
 import { ccc } from "@ckb-ccc/core";
-import { ClaimData, ClaimDataV1, parseClaimPayload, readClaims, writeClaim } from "@vellum/sdk";
-import type { Claim, ClaimSchema, ClaimScriptConfigLike, WriteClaimInput } from "@vellum/sdk";
+import { ClaimData, ClaimDataV1, parseClaimPayload, readClaims, writeClaim } from "@usevellum/sdk";
+import type { Claim, ClaimSchema, ClaimScriptConfigLike, WriteClaimInput } from "@usevellum/sdk";
 
 if (
   typeof ClaimData !== "function" ||

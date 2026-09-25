@@ -1,5 +1,5 @@
 import { ccc } from "@ckb-ccc/core";
-import type { ClaimScriptConfigLike } from "@vellum/sdk";
+import type { ClaimScriptConfigLike } from "@usevellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json";
 

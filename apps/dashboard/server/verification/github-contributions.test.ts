@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
-import { ClaimData } from "@vellum/sdk";
+import { ClaimData } from "@usevellum/sdk";
 
 import { GithubOAuthError } from "./errors";
 import { classifyGithubPath, collectGithubContributions } from "./github-contributions";

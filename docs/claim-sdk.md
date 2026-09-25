@@ -1,6 +1,6 @@
-# Claim SDK API
+# `@usevellum/sdk` Claim API
 
-This document defines the public Claim Cell API for the Vellum SDK. It maps directly to the
+This document defines the public Claim Cell API exported by `@usevellum/sdk`. It maps directly to the
 [Claim Cell protocol](./claim-cell.md) and follows the existing CCC convention of accepting one
 properties object and returning transaction builders without signing or broadcasting them.
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
-import type { ReadClaimsProps, ReadClaimsResult } from "@vellum/sdk";
+import type { ReadClaimsProps, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   InvalidReputationSubjectError,

@@ -56,7 +56,7 @@ without requiring those products to share one backend.
 | Reputation dashboard | Live on CKB Testnet             | Scores, categories, contributing evidence, exclusions, and share cards come from the scoring service.                                                   |
 
 The published [`@ckb-ccc/did-ckb`](https://www.npmjs.com/package/@ckb-ccc/did-ckb) package provides
-the identity operations used by Vellum. The Vellum SDK builds on those primitives with Claim Cell
+the identity operations used by Vellum. `@usevellum/sdk` builds on those primitives with Claim Cell
 codecs, live reads, and unsigned transaction construction that other CKB applications can use
 without depending on the Vellum interface.
 
