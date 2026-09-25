@@ -424,6 +424,24 @@ describe("writeClaim issuer authorization", () => {
     expect(result.controllerInputIndex).toBe(0);
   });
 
+  test("reuses a pre-existing controller input", async () => {
+    const identity = cell({ byte: 0x53, type: issuerType() });
+    const funding = cell({ byte: 0x54, capacity: 100_000_000_000n });
+    const { client } = fakeClient({ cells: [identity, funding], liveCells: [identity] });
+    const signer = fakeSigner(client, [CONTROLLER_LOCK], []);
+
+    const result = await writeClaim({
+      issuerSigner: signer,
+      scripts: SCRIPTS,
+      input: BASE_INPUT,
+      tx: { inputs: [funding] },
+    });
+
+    expect(result.controllerInputIndex).toBe(0);
+    expect(result.tx.inputs).toHaveLength(1);
+    expect(result.tx.inputs[0].previousOutput).toEqual(funding.outPoint);
+  });
+
   test("resolves an issuer state through a dep group", async () => {
     const identity = cell({ byte: 0x08, type: issuerType() });
     const depGroup = cell({

@@ -543,10 +543,9 @@ async function ensureControllerInput(
     return selection.source.inputIndex;
   }
 
-  const inputs = await loadInputs(tx, client);
-  const existing = inputs.find(({ cell }) => cell.cellOutput.lock.eq(selection.controller));
-  if (existing) {
-    return existing.index;
+  const existing = await tx.findInputIndexByLock(selection.controller, client);
+  if (existing !== undefined) {
+    return existing;
   }
   return addControllerInput(tx, issuerSigner, selection.controller, mirrorCapacity);
 }

@@ -26,6 +26,8 @@ type DecodedClaim = Omit<Claim, "duplicateCells" | "issuerState"> & {
   duplicateCells: ccc.Cell[];
 };
 
+type GroupedTransaction = ccc.ClientFindTransactionsGroupedResponse["transactions"][number];
+
 type DecodeContext = {
   claimType: ccc.ScriptInfo;
   didCkb: ccc.ScriptInfo;
@@ -117,6 +119,38 @@ async function collectCells(
     }
     if (!page.lastCursor || page.lastCursor === after) {
       throw new Error("CKB indexer pagination did not advance");
+    }
+    after = page.lastCursor;
+  }
+}
+
+async function collectIssuerTransactions(
+  client: ccc.Client,
+  issuerType: ccc.Script,
+  pageSize: number,
+): Promise<GroupedTransaction[]> {
+  const transactions: GroupedTransaction[] = [];
+  let after: string | undefined;
+
+  while (true) {
+    const page = await client.findTransactionsPaged(
+      {
+        script: issuerType,
+        scriptType: "type",
+        scriptSearchMode: "exact",
+        groupByTransaction: true,
+      },
+      "asc",
+      pageSize,
+      after,
+    );
+    transactions.push(...page.transactions);
+
+    if (page.transactions.length < pageSize) {
+      return transactions;
+    }
+    if (!page.lastCursor || page.lastCursor === after) {
+      throw new Error("CKB indexer transaction pagination did not advance");
     }
     after = page.lastCursor;
   }
@@ -312,8 +346,9 @@ async function resolveIssuerHistory(
   const liveOutPoints = new Set<string>();
   const seenTransactions = new Set<ccc.Hex>();
   let sawOutput = false;
+  const history = await collectIssuerTransactions(client, issuerType, pageSize);
 
-  for await (const record of client.findTransactionsByType(issuerType, true, "asc", pageSize)) {
+  for (const record of history) {
     if (seenTransactions.has(record.txHash)) {
       throw new Error(`Issuer history repeated transaction ${record.txHash}`);
     }
