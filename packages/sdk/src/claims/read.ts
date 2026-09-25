@@ -3,6 +3,13 @@ import { argsToDid, didToArgs } from "@ckb-ccc/did-ckb";
 import { decode as decodeDagCbor, encode as encodeDagCbor } from "@ipld/dag-cbor";
 
 import { decodeClaimDataRaw } from "./codec.js";
+import {
+  CLAIM_TYPE_ARGS_LENGTH,
+  MAX_CLAIM_DATA_LENGTH,
+  MAX_UINT64,
+  claimId,
+  requireByteLength,
+} from "./protocol.js";
 import type {
   Claim,
   ClaimIssuerState,
@@ -14,13 +21,9 @@ import type {
   ReadClaimsResult,
 } from "./types.js";
 
-const CLAIM_TYPE_ARGS_LENGTH = 65;
-const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
-const MAX_UINT64 = (1n << 64n) - 1n;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_CONCURRENT_ISSUER_LOOKUPS = 8;
-const CLAIM_ID_DOMAIN = "0x56454c4c554d5f434c41494d5f563100" satisfies ccc.Hex;
 
 type DecodedClaim = Omit<Claim, "duplicateCells" | "issuerState"> & {
   duplicateCells: ccc.Cell[];
@@ -39,14 +42,6 @@ type DecodeContext = {
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function requireByteLength(value: ccc.HexLike, byteLength: number, field: string): ccc.Hex {
-  const bytes = ccc.bytesFrom(value);
-  if (bytes.length !== byteLength) {
-    throw new Error(`${field} must be ${byteLength} bytes, got ${bytes.length}`);
-  }
-  return ccc.hexFrom(bytes);
 }
 
 function validatePageSize(value: number | undefined): number {
@@ -311,7 +306,7 @@ function decodeCell(
 
   return {
     version: "v1",
-    claimId: ccc.hashCkb(CLAIM_ID_DOMAIN, type.hash(), subjectLockHash, cell.outputData),
+    claimId: claimId(type, subjectLock, cell.outputData),
     issuerDid: argsToDid(issuerId),
     issuerId,
     issuerType,

@@ -2,6 +2,13 @@ import { ccc } from "@ckb-ccc/core";
 import { didToArgs } from "@ckb-ccc/did-ckb";
 
 import { ClaimData, decodeClaimDataRaw } from "./codec.js";
+import {
+  CLAIM_TYPE_ARGS_LENGTH,
+  MAX_CLAIM_DATA_LENGTH,
+  MAX_UINT64,
+  claimId,
+  requireByteLength,
+} from "./protocol.js";
 import type {
   ClaimIssuerSource,
   ClaimScriptConfigLike,
@@ -13,10 +20,6 @@ import type {
   WriteClaimsResult,
 } from "./types.js";
 
-const CLAIM_TYPE_ARGS_LENGTH = 65;
-const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
-const MAX_UINT64 = (1n << 64n) - 1n;
-const CLAIM_ID_DOMAIN = "0x56454c4c554d5f434c41494d5f563100" satisfies ccc.Hex;
 const OutPointVec = ccc.mol.vector(ccc.OutPoint);
 
 type ResolvedScripts = {
@@ -71,14 +74,6 @@ function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function requireByteLength(value: ccc.HexLike, byteLength: number, field: string): ccc.Hex {
-  const bytes = ccc.bytesFrom(value);
-  if (bytes.length !== byteLength) {
-    throw new Error(`${field} must be ${byteLength} bytes, got ${bytes.length}`);
-  }
-  return ccc.hexFrom(bytes);
-}
-
 function requireUint64(value: ccc.NumLike, field: string): ccc.Num {
   if (typeof value === "number" && !Number.isSafeInteger(value)) {
     throw new Error(`${field} numbers must be safe integers; use bigint for larger values`);
@@ -104,10 +99,6 @@ function sameScriptId(
 function outPointKey(value: ccc.OutPointLike): string {
   const outPoint = ccc.OutPoint.from(value);
   return `${outPoint.txHash}:${outPoint.index}`;
-}
-
-function claimId(type: ccc.Script, lock: ccc.Script, outputData: ccc.HexLike): ccc.Hex {
-  return ccc.hashCkb(CLAIM_ID_DOMAIN, type.hash(), lock.hash(), outputData);
 }
 
 function outputStateKey(tx: ccc.Transaction, outputIndex: number): string {
