@@ -111,7 +111,7 @@ and fee balancing once. Neither function signs or broadcasts. The returned metad
 caller inspect every output and collect every required signature before submitting it.
 
 ```ts
-import { writeClaim } from "@usevellum/sdk";
+import { writeClaim, writeClaims } from "@usevellum/sdk";
 
 const built = await writeClaim({
   issuerSigner,
@@ -133,11 +133,17 @@ if (signed.hash() !== preparedHash) {
 
 const txHash = await issuerSigner.client.sendTransaction(signed);
 const claimOutPoint = { txHash, index: built.outputIndex };
+
+const batch = await writeClaims({
+  issuerSigner,
+  scripts,
+  inputs: [firstClaim, secondClaim],
+});
 ```
 
-Use `writeClaims({ ...props, inputs: [firstClaim, secondClaim] })` when one verification produces
-multiple claims. Its result contains `claims`, in input order, with each claim's ID and output index.
-Batch construction avoids selecting the same payer Cell independently for several transactions.
+Use `writeClaims` when one verification produces multiple claims. Its result contains `claims`, in
+input order, with each claim's ID and output index. Batch construction avoids selecting the same
+payer Cell independently for several transactions.
 
 The issuer must control the current `did:ckb` controller lock. By default the issuer also pays for
 the Claim Cell and transaction fee. Pass `payerSigner` to use a separate payer and
@@ -209,3 +215,11 @@ After changes land on `main`, the release workflow creates or updates one versio
 pull request applies the version bump and changelog. Merging it publishes the validated package,
 creates the matching Git tag and GitHub release, and records npm provenance. Other workspace
 packages are private and are not published.
+
+Repository maintainers must enable GitHub Actions to create pull requests and create an `npm`
+environment. The first publication uses a granular npm token with read/write access to the
+`@usevellum` scope and permission to bypass publishing 2FA, stored as that environment's `NPM_TOKEN`
+secret. After `0.1.0` exists, configure npm trusted publishing for `truthixify/vellum`, workflow
+`release.yml`, and environment `npm`, allowing direct `npm publish`; set the repository variable
+`NPM_TRUSTED_PUBLISHING=true`; then remove and revoke the bootstrap token. Later releases use OIDC
+and do not require an npm token.

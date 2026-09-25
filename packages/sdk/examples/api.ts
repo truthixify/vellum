@@ -1,5 +1,12 @@
 import { ccc } from "@ckb-ccc/core";
-import { ClaimData, ClaimDataV1, parseClaimPayload, readClaims, writeClaim } from "@usevellum/sdk";
+import {
+  ClaimData,
+  ClaimDataV1,
+  parseClaimPayload,
+  readClaims,
+  writeClaim,
+  writeClaims,
+} from "@usevellum/sdk";
 import type { Claim, ClaimSchema, ClaimScriptConfigLike, WriteClaimInput } from "@usevellum/sdk";
 
 if (
@@ -7,7 +14,8 @@ if (
   typeof ClaimDataV1 !== "function" ||
   typeof parseClaimPayload !== "function" ||
   typeof readClaims !== "function" ||
-  typeof writeClaim !== "function"
+  typeof writeClaim !== "function" ||
+  typeof writeClaims !== "function"
 ) {
   throw new Error("SDK runtime exports are incomplete");
 }
@@ -55,6 +63,13 @@ export function findClaims(client: ccc.Client, subjectDid: string, evaluationTim
 
 export function prepareClaim<TPayload>(issuerSigner: ccc.Signer, input: WriteClaimInput<TPayload>) {
   return writeClaim({ issuerSigner, scripts: testnetScripts, input });
+}
+
+export function prepareClaims<TPayload>(
+  issuerSigner: ccc.Signer,
+  inputs: readonly WriteClaimInput<TPayload>[],
+) {
+  return writeClaims({ issuerSigner, scripts: testnetScripts, inputs });
 }
 
 type ProfileClaim = { account: string };
