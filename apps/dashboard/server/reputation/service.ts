@@ -5,7 +5,7 @@ import {
   VELLUM_REPUTATION_POLICY_V5,
   type ReputationResult,
 } from "@vellum/scoring";
-import { readClaims, type ReadClaimsProps, type ReadClaimsResult } from "@vellum/sdk";
+import { readClaims, type ReadClaimsProps, type ReadClaimsResult } from "@usevellum/sdk";
 
 import { claimScripts, issuerMetadata, issuerRpcUrl } from "../verification/issuer.js";
 

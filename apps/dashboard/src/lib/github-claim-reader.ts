@@ -8,7 +8,7 @@ import {
   type GithubClaimPayload,
   type GithubContributionClaimPayload,
 } from "@vellum/schemas";
-import { readClaims, type Claim, type ReadClaimsResult } from "@vellum/sdk";
+import { readClaims, type Claim, type ReadClaimsResult } from "@usevellum/sdk";
 
 import { dashboardClaimScripts } from "./claim-scripts";
 import type { GithubSubmission, PublicIssuerMetadata } from "./github-verification";

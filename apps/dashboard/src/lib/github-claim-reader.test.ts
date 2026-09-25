@@ -4,7 +4,7 @@ import {
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
   type GithubContributionClaimPayload,
 } from "@vellum/schemas";
-import type { Claim, ReadClaimsResult } from "@vellum/sdk";
+import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   githubAccountClaimsFromRead,

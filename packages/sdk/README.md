@@ -1,15 +1,15 @@
-# @vellum/sdk
+# @usevellum/sdk
 
-`@vellum/sdk` provides typed Claim Cell codecs, reads, and transaction construction for Vellum and
-other CKB applications. It uses `@ckb-ccc/did-ckb` for identity primitives while keeping the Claim
-Cell API and release lifecycle in Vellum.
+`@usevellum/sdk` provides typed Claim Cell codecs, reads, and transaction construction for Vellum
+and other CKB applications. It uses `@ckb-ccc/did-ckb` for identity primitives while keeping the
+Claim Cell API and release lifecycle in Vellum.
 
 The package is ESM-only and supports browser and server applications that use CCC.
 
 ## Install
 
 ```bash
-bun add @vellum/sdk @ckb-ccc/core
+bun add @usevellum/sdk @ckb-ccc/core
 ```
 
 ## Testnet deployment
@@ -35,7 +35,7 @@ A complete configuration object is available in
 union written to cell data. Payloads are encoded as canonical DAG-CBOR.
 
 ```ts
-import { ClaimData, ClaimDataV1 } from "@vellum/sdk";
+import { ClaimData, ClaimDataV1 } from "@usevellum/sdk";
 
 const data = ClaimDataV1.from({
   issuerId,
@@ -56,7 +56,7 @@ contract deployment, the subject, and any issuer or schema filters they want to 
 
 ```ts
 import { ccc } from "@ckb-ccc/core";
-import { readClaims } from "@vellum/sdk";
+import { readClaims } from "@usevellum/sdk";
 
 const client = new ccc.ClientPublicTestnet();
 const result = await readClaims({
@@ -94,7 +94,7 @@ The base reader returns payloads as `unknown`. `parseClaimPayload` checks the sc
 running an application parser.
 
 ```ts
-import { parseClaimPayload } from "@vellum/sdk";
+import { parseClaimPayload } from "@usevellum/sdk";
 
 const profile = parseClaimPayload(claim, {
   id: "example.profile.v1",
@@ -111,7 +111,7 @@ and fee balancing once. Neither function signs or broadcasts. The returned metad
 caller inspect every output and collect every required signature before submitting it.
 
 ```ts
-import { writeClaim } from "@vellum/sdk";
+import { writeClaim, writeClaims } from "@usevellum/sdk";
 
 const built = await writeClaim({
   issuerSigner,
@@ -133,11 +133,17 @@ if (signed.hash() !== preparedHash) {
 
 const txHash = await issuerSigner.client.sendTransaction(signed);
 const claimOutPoint = { txHash, index: built.outputIndex };
+
+const batch = await writeClaims({
+  issuerSigner,
+  scripts,
+  inputs: [firstClaim, secondClaim],
+});
 ```
 
-Use `writeClaims({ ...props, inputs: [firstClaim, secondClaim] })` when one verification produces
-multiple claims. Its result contains `claims`, in input order, with each claim's ID and output index.
-Batch construction avoids selecting the same payer Cell independently for several transactions.
+Use `writeClaims` when one verification produces multiple claims. Its result contains `claims`, in
+input order, with each claim's ID and output index. Batch construction avoids selecting the same
+payer Cell independently for several transactions.
 
 The issuer must control the current `did:ckb` controller lock. By default the issuer also pays for
 the Claim Cell and transaction fee. Pass `payerSigner` to use a separate payer and
@@ -174,8 +180,8 @@ bun run --cwd packages/sdk typecheck
 bun run --cwd packages/sdk verify:package
 ```
 
-`verify:package` starts from a clean build, type-checks and runs the example, then inspects the
-publishable tarball.
+`verify:package` starts from a clean build, type-checks and runs the example, inspects the
+publishable tarball, and validates its ESM and TypeScript package exports.
 
 The network-dependent suite reads committed Testnet fixtures, covers a claim whose issuer and
 subject are different DIDs, proves a destroyed claim's capacity returned to the subject controller,
@@ -196,3 +202,24 @@ The reclaim proof links creation transaction
 [`0x6003e4e1...255640`](https://testnet.explorer.nervos.org/transaction/0x6003e4e13d757a02003cc23d156f100ff351ca28f0d67df7f04bf71d18255640)
 to spend transaction
 [`0x647a5253...38816`](https://testnet.explorer.nervos.org/transaction/0x647a5253321acb45e8aa07195f0414678831f955610bdfcce59efa1107638816).
+
+## Releases
+
+Every public SDK change includes a Changeset describing its semver impact:
+
+```bash
+bun run changeset
+```
+
+After changes land on `main`, the release workflow creates or updates one version pull request. That
+pull request applies the version bump and changelog. Merging it publishes the validated package,
+creates the matching Git tag and GitHub release, and records npm provenance. Other workspace
+packages are private and are not published.
+
+Repository maintainers must enable GitHub Actions to create pull requests and create an `npm`
+environment. The first publication uses a granular npm token with read/write access to the
+`@usevellum` scope and permission to bypass publishing 2FA, stored as that environment's `NPM_TOKEN`
+secret. After `0.1.0` exists, configure npm trusted publishing for `truthixify/vellum`, workflow
+`release.yml`, and environment `npm`, allowing direct `npm publish`; set the repository variable
+`NPM_TRUSTED_PUBLISHING=true`; then remove and revoke the bootstrap token. Later releases use OIDC
+and do not require an npm token.

@@ -1,6 +1,6 @@
 {
-  "name": "@vellum/sdk",
-  "version": "0.1.0",
+  "name": "@usevellum/sdk",
+  "version": "0.0.0",
   "description": "Typed Claim Cell APIs for Vellum and CKB applications.",
   "license": "MIT",
   "type": "module",
@@ -10,8 +10,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -31,17 +30,19 @@
     "url": "https://github.com/truthixify/vellum/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "bun run clean && tsc -p tsconfig.build.json",
     "clean": "rm -rf ./dist",
     "example": "bun run examples/api.ts",
+    "lint:package": "publint . && attw --profile esm-only --pack .",
     "prepack": "bun run build",
     "test": "bun test src",
     "test:testnet": "bun test testnet",
     "typecheck": "tsc --noEmit",
-    "verify:package": "bun run build && tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts"
+    "verify:package": "bun run build && tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts && bun run lint:package"
   },
   "dependencies": {
     "@ckb-ccc/core": "1.19.1",
@@ -49,7 +50,9 @@
     "@ipld/dag-cbor": "10.0.2"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "bun-types": "1.4.2",
+    "publint": "0.3.24",
     "typescript": "5.8.3"
   }
 }

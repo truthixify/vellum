@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { TELEGRAM_CLAIM_SCHEMA_HASH, TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH } from "@vellum/schemas";
-import type { Claim, ReadClaimsResult } from "@vellum/sdk";
+import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   telegramAccountClaimsFromRead,

@@ -138,6 +138,7 @@ type FakeClientOptions = {
   failSubjectScan?: boolean;
   failIssuerScan?: boolean;
   stallSubjectCursor?: boolean;
+  stallIssuerHistoryCursor?: boolean;
   issuerScanDelayMs?: number;
 };
 
@@ -204,13 +205,24 @@ function fakeClient(options: FakeClientOptions = {}) {
             : `${cursorPrefix}:${offset + page.length}`,
       };
     },
-    findTransactionsByType: (type: ccc.ScriptLike): AsyncGenerator<GroupedTransaction> =>
-      (async function* () {
-        const records = options.history?.get(ccc.Script.from(type).hash()) ?? [];
-        for (const record of records) {
-          yield record;
-        }
-      })(),
+    findTransactionsPaged: async (
+      key: ccc.ClientIndexerSearchKeyTransactionLike,
+      order?: "asc" | "desc",
+      limit?: ccc.NumLike,
+      after?: string,
+    ): Promise<ccc.ClientFindTransactionsGroupedResponse> => {
+      const pageSize = Number(limit ?? 10);
+      const offset = after ? Number(after.slice(after.lastIndexOf(":") + 1)) : 0;
+      const records = options.history?.get(ccc.Script.from(key.script).hash()) ?? [];
+      const orderedRecords = order === "desc" ? [...records].reverse() : records;
+      const page = orderedRecords.slice(offset, offset + pageSize);
+      return {
+        transactions: page,
+        lastCursor: options.stallIssuerHistoryCursor
+          ? (after ?? "")
+          : `history:${offset + page.length}`,
+      };
+    },
     getTransaction: async (txHash: ccc.HexLike) => options.transactions?.get(ccc.hexFrom(txHash)),
   } as unknown as ccc.Client;
 
@@ -741,10 +753,42 @@ describe("readClaims", () => {
         transactions,
       }).client,
       scripts: SCRIPTS,
-      filter: { subject: { lock: SUBJECT_LOCK } },
+      filter: { subject: { lock: SUBJECT_LOCK }, pageSize: 1 },
     });
 
     expect(result.claims[0].issuerState).toEqual({ status: "deactivated" });
+  });
+
+  test("fails closed when issuer history pagination does not advance", async () => {
+    const type = issuerType();
+    const history = new Map<ccc.Hex, GroupedTransaction[]>([
+      [
+        type.hash(),
+        [
+          {
+            txHash: repeatedHex(0x5a, 32),
+            blockNumber: 1n,
+            txIndex: 0n,
+            cells: [{ isInput: false, cellIndex: 0n }],
+          },
+        ],
+      ],
+    ]);
+
+    const result = await readClaims({
+      client: fakeClient({
+        claimCells: [claimCell({ outPointByte: 0x5b })],
+        history,
+        stallIssuerHistoryCursor: true,
+      }).client,
+      scripts: SCRIPTS,
+      filter: { subject: { lock: SUBJECT_LOCK }, pageSize: 1 },
+    });
+
+    expect(result.claims[0].issuerState).toEqual({
+      status: "unavailable",
+      reason: "CKB indexer transaction pagination did not advance",
+    });
   });
 
   test("fails closed when issuer history transaction contents do not match", async () => {

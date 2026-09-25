@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
-import type { WriteClaimsResult } from "@vellum/sdk";
+import type { WriteClaimsResult } from "@usevellum/sdk";
 
 import deployment from "../../../../deployments/testnet.json";
 import type { VerifiedClaim } from "./contracts";

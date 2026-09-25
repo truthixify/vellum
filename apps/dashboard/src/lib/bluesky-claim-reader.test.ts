@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { BLUESKY_CLAIM_SCHEMA_HASH, type BlueskyClaimPayload } from "@vellum/schemas";
-import type { Claim, ReadClaimsResult } from "@vellum/sdk";
+import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   blueskyAccountClaimsFromRead,

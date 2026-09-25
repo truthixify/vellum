@@ -3,6 +3,13 @@ import { argsToDid, didToArgs } from "@ckb-ccc/did-ckb";
 import { decode as decodeDagCbor, encode as encodeDagCbor } from "@ipld/dag-cbor";
 
 import { decodeClaimDataRaw } from "./codec.js";
+import {
+  CLAIM_TYPE_ARGS_LENGTH,
+  MAX_CLAIM_DATA_LENGTH,
+  MAX_UINT64,
+  claimId,
+  requireByteLength,
+} from "./protocol.js";
 import type {
   Claim,
   ClaimIssuerState,
@@ -14,17 +21,15 @@ import type {
   ReadClaimsResult,
 } from "./types.js";
 
-const CLAIM_TYPE_ARGS_LENGTH = 65;
-const MAX_CLAIM_DATA_LENGTH = 16 * 1024;
-const MAX_UINT64 = (1n << 64n) - 1n;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_CONCURRENT_ISSUER_LOOKUPS = 8;
-const CLAIM_ID_DOMAIN = "0x56454c4c554d5f434c41494d5f563100" satisfies ccc.Hex;
 
 type DecodedClaim = Omit<Claim, "duplicateCells" | "issuerState"> & {
   duplicateCells: ccc.Cell[];
 };
+
+type GroupedTransaction = ccc.ClientFindTransactionsGroupedResponse["transactions"][number];
 
 type DecodeContext = {
   claimType: ccc.ScriptInfo;
@@ -37,14 +42,6 @@ type DecodeContext = {
 
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function requireByteLength(value: ccc.HexLike, byteLength: number, field: string): ccc.Hex {
-  const bytes = ccc.bytesFrom(value);
-  if (bytes.length !== byteLength) {
-    throw new Error(`${field} must be ${byteLength} bytes, got ${bytes.length}`);
-  }
-  return ccc.hexFrom(bytes);
 }
 
 function validatePageSize(value: number | undefined): number {
@@ -117,6 +114,38 @@ async function collectCells(
     }
     if (!page.lastCursor || page.lastCursor === after) {
       throw new Error("CKB indexer pagination did not advance");
+    }
+    after = page.lastCursor;
+  }
+}
+
+async function collectIssuerTransactions(
+  client: ccc.Client,
+  issuerType: ccc.Script,
+  pageSize: number,
+): Promise<GroupedTransaction[]> {
+  const transactions: GroupedTransaction[] = [];
+  let after: string | undefined;
+
+  while (true) {
+    const page = await client.findTransactionsPaged(
+      {
+        script: issuerType,
+        scriptType: "type",
+        scriptSearchMode: "exact",
+        groupByTransaction: true,
+      },
+      "asc",
+      pageSize,
+      after,
+    );
+    transactions.push(...page.transactions);
+
+    if (page.transactions.length < pageSize) {
+      return transactions;
+    }
+    if (!page.lastCursor || page.lastCursor === after) {
+      throw new Error("CKB indexer transaction pagination did not advance");
     }
     after = page.lastCursor;
   }
@@ -277,7 +306,7 @@ function decodeCell(
 
   return {
     version: "v1",
-    claimId: ccc.hashCkb(CLAIM_ID_DOMAIN, type.hash(), subjectLockHash, cell.outputData),
+    claimId: claimId(type, subjectLock, cell.outputData),
     issuerDid: argsToDid(issuerId),
     issuerId,
     issuerType,
@@ -312,8 +341,9 @@ async function resolveIssuerHistory(
   const liveOutPoints = new Set<string>();
   const seenTransactions = new Set<ccc.Hex>();
   let sawOutput = false;
+  const history = await collectIssuerTransactions(client, issuerType, pageSize);
 
-  for await (const record of client.findTransactionsByType(issuerType, true, "asc", pageSize)) {
+  for (const record of history) {
     if (seenTransactions.has(record.txHash)) {
       throw new Error(`Issuer history repeated transaction ${record.txHash}`);
     }

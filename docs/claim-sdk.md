@@ -1,6 +1,6 @@
-# Claim SDK API
+# `@usevellum/sdk` Claim API
 
-This document defines the public Claim Cell API for the Vellum SDK. It maps directly to the
+This document defines the public Claim Cell API exported by `@usevellum/sdk`. It maps directly to the
 [Claim Cell protocol](./claim-cell.md) and follows the existing CCC convention of accepting one
 properties object and returning transaction builders without signing or broadcasting them.
 
@@ -293,9 +293,9 @@ that an application should trust the issuer.
 
 `issuerState` describes the issuer DID at read time. For each distinct issuer Type Script, the
 reader first performs an exact live-Cell lookup. Exactly one Cell is `active`; more than one is
-`ambiguous`. When no live Cell exists, the reader exhausts an ascending, grouped
-`client.findTransactionsByType` query for that exact Script and fetches the referenced committed
-transactions needed to connect each matching output to a later input.
+`ambiguous`. When no live Cell exists, the reader exhausts an ascending, grouped transaction query
+for that exact Script and fetches the referenced committed transactions needed to connect each
+matching output to a later input.
 
 `deactivated` requires a complete, coherent single-state history whose final transition consumes
 the issuer Cell without creating a replacement. `missing` requires a successfully completed history

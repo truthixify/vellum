@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { DISCORD_CLAIM_SCHEMA_HASH, DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH } from "@vellum/schemas";
-import type { Claim, ReadClaimsResult } from "@vellum/sdk";
+import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   discordAccountClaimsFromRead,

@@ -2,7 +2,7 @@
 
 The dashboard deployment includes an API that turns platform verification results into Claim Cell
 transactions. Platform adapters verify the external proof and return a schema-bound JSON payload.
-The service then uses `@vellum/sdk` to build the Claim Cell transaction, signs it with the current
+The service then uses `@usevellum/sdk` to build the Claim Cell transaction, signs it with the current
 issuer DID controller, and submits it to CKB Testnet. Redis-backed coordination prevents challenge
 replay, repeated subsidized issuance, and concurrent use of the issuer's funding Cell. There is no
 detached claim signature.

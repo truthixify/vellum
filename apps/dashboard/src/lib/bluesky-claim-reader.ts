@@ -4,7 +4,7 @@ import {
   parseBlueskyClaimPayload,
   type BlueskyClaimPayload,
 } from "@vellum/schemas";
-import { readClaims, type Claim, type ReadClaimsResult } from "@vellum/sdk";
+import { readClaims, type Claim, type ReadClaimsResult } from "@usevellum/sdk";
 
 import { dashboardClaimScripts } from "./claim-scripts";
 import type { BlueskySubmission } from "./bluesky-verification";

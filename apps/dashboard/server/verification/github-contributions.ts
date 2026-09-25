@@ -8,7 +8,7 @@ import {
   type GithubContributionClaimPayload,
   type GithubContributionClassification,
 } from "@vellum/schemas";
-import { ClaimData } from "@vellum/sdk";
+import { ClaimData } from "@usevellum/sdk";
 
 import { GithubOAuthError } from "./errors.js";
 import {
