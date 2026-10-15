@@ -1661,6 +1661,202 @@ a.profile-account:hover {
   height: 40px;
 }
 
+.claim-renderer {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 16px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.claim-renderer__mark {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.claim-renderer__mark--warning {
+  color: var(--warning);
+}
+
+.claim-renderer__content {
+  min-width: 0;
+}
+
+.claim-renderer__header {
+  min-height: 40px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.claim-renderer__title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.claim-renderer__title small {
+  overflow: hidden;
+  color: var(--ink-secondary);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claim-renderer__title strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.claim-renderer__title > span {
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.claim-renderer__header > a,
+.claim-renderer__records a {
+  min-height: 40px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.claim-renderer__header > a:focus-visible,
+.claim-renderer__records a:focus-visible,
+.claim-renderer__details > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.claim-renderer__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.claim-renderer__facts > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 1px solid var(--line);
+}
+
+.claim-renderer__facts > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.claim-renderer__facts dt,
+.claim-renderer__facts dd {
+  margin: 0;
+}
+
+.claim-renderer__facts dt {
+  color: var(--ink-secondary);
+  font-size: 11px;
+}
+
+.claim-renderer__facts dd {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.claim-renderer__records {
+  margin: 14px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.claim-renderer__records > li {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.claim-renderer__records > li > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.claim-renderer__records strong {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.claim-renderer__records small {
+  overflow-wrap: anywhere;
+  color: var(--ink-secondary);
+  font-size: 11px;
+}
+
+.claim-renderer__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.claim-renderer__tags > span {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  color: var(--ink-secondary);
+  font-size: 11px;
+}
+
+.claim-renderer__details {
+  margin-top: 10px;
+}
+
+.claim-renderer__details > summary {
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 11px 0;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.claim-renderer__details > pre {
+  max-height: 360px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--ink-secondary);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .profile-record-band {
   padding: 40px 0 88px;
   border-top: 2px solid var(--ink);
@@ -2443,6 +2639,40 @@ a.profile-account:hover {
 
   .claim-cell__state b {
     grid-column: 2;
+  }
+
+  .claim-renderer {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .claim-renderer__mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .claim-renderer__header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .claim-renderer__facts {
+    grid-template-columns: 1fr;
+  }
+
+  .claim-renderer__facts > div,
+  .claim-renderer__facts > div:first-child {
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .claim-renderer__facts > div:first-child {
+    border-top: 0;
+  }
+
+  .claim-renderer__records > li {
+    flex-direction: column;
+    gap: 4px;
   }
 
   .excluded-list > div {
