@@ -1,5 +1,6 @@
 import { isDidCkb } from "@ckb-ccc/did-ckb";
 import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
+import { vellumSchemaRegistry } from "@vellum/schemas";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -22,6 +23,7 @@ import {
 } from "@vellum/ui";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
+import { ClaimPayloadRenderer } from "../components/ClaimRenderer";
 import { dashboardUrl } from "../config";
 import { publicAvatarUrl } from "../lib/avatar";
 import { canonicalProfileDid } from "../lib/profile-metadata";
@@ -64,6 +66,9 @@ const PLATFORM_LABELS = {
   telegram: "Telegram",
   bluesky: "Bluesky",
 } as const;
+const CLAIM_SCHEMA_IDS = new Map<string, string>(
+  Object.values(vellumSchemaRegistry).map((schema) => [schema.hash, schema.id]),
+);
 const DATE_FORMATTER = new Intl.DateTimeFormat("en", {
   day: "numeric",
   month: "short",
@@ -785,6 +790,7 @@ function ClaimLedger({
       {claimCellRecords(claims).map(({ claim, cell, duplicate, key }) => {
         const acceptedEvidence = accepted.get(key);
         const excludedEvidence = excluded.get(key);
+        const schemaId = CLAIM_SCHEMA_IDS.get(claim.schemaHash) ?? acceptedEvidence?.schemaId;
         const state = claimPolicyState(
           claim,
           Boolean(acceptedEvidence),
@@ -800,7 +806,7 @@ function ClaimLedger({
           <div className="claims-table__row" key={key}>
             <span className="claim-cell__identity">
               <small>Claim</small>
-              <strong>{acceptedEvidence?.schemaId ?? "Claim Cell"}</strong>
+              <strong>{schemaId ?? "Unknown schema"}</strong>
               <span className="mono" title={claim.schemaHash}>
                 {shorten(claim.schemaHash, 12, 8)}
               </span>
@@ -830,6 +836,7 @@ function ClaimLedger({
             >
               <ArrowUpRight size={15} aria-hidden="true" />
             </a>
+            <ClaimPayloadRenderer claim={claim} />
           </div>
         );
       })}
