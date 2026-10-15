@@ -22,12 +22,15 @@ import type { ReactElement, ReactNode } from "react";
 
 type ClaimRendererProps = { claim: Claim };
 
-type ClaimRenderer = (props: ClaimRendererProps) => ReactElement;
+type ClaimSchemaDefinition = {
+  hash: string;
+  id: string;
+};
 
 type ClaimRendererRegistration = {
   schemaHash: string;
   schemaId: string;
-  renderer: ClaimRenderer;
+  prepare: (payload: unknown) => () => ReactElement;
 };
 
 type PreviewValue =
@@ -58,7 +61,21 @@ const RAW_MAX_OUTPUT_LENGTH = 12_000;
 const RAW_MAX_BYTES = 64;
 
 function truncate(value: string, maximum: number): string {
-  return value.length <= maximum ? value : `${value.slice(0, maximum)} [truncated]`;
+  if (value.length <= maximum) return value;
+  const suffix = " [truncated]";
+  return `${value.slice(0, Math.max(0, maximum - suffix.length))}${suffix}`;
+}
+
+function uniquePreviewKey(preview: Record<string, PreviewValue>, sourceKey: string): string {
+  const base = truncate(sourceKey, RAW_MAX_KEY_LENGTH);
+  if (!Object.hasOwn(preview, base)) return base;
+
+  for (let index = 2; index <= RAW_MAX_ITEMS + 1; index += 1) {
+    const suffix = ` [${index}]`;
+    const candidate = `${base.slice(0, RAW_MAX_KEY_LENGTH - suffix.length)}${suffix}`;
+    if (!Object.hasOwn(preview, candidate)) return candidate;
+  }
+  return `[field ${Object.keys(preview).length + 1}]`;
 }
 
 function bytesPreview(value: ArrayBuffer | ArrayBufferView): string {
@@ -103,34 +120,44 @@ function previewValue(value: unknown, depth: number, context: PreviewContext): P
   }
 
   if (value instanceof Map) {
-    const entries = Array.from(value.entries()).slice(0, RAW_MAX_ITEMS);
-    const preview = entries.map(([key, item]) => ({
-      key: previewValue(key, depth + 1, context),
-      value: previewValue(item, depth + 1, context),
-    }));
+    const preview: PreviewValue[] = [];
+    const iterator = value.entries();
+    for (let index = 0; index < RAW_MAX_ITEMS; index += 1) {
+      const entry = iterator.next();
+      if (entry.done) break;
+      preview.push({
+        key: previewValue(entry.value[0], depth + 1, context),
+        value: previewValue(entry.value[1], depth + 1, context),
+      });
+    }
     if (value.size > RAW_MAX_ITEMS) preview.push({ key: "[truncated]", value: value.size });
     return preview;
   }
 
   if (value instanceof Set) {
-    const entries = Array.from(value.values()).slice(0, RAW_MAX_ITEMS);
-    const preview = entries.map((item) => previewValue(item, depth + 1, context));
+    const preview: PreviewValue[] = [];
+    const iterator = value.values();
+    for (let index = 0; index < RAW_MAX_ITEMS; index += 1) {
+      const entry = iterator.next();
+      if (entry.done) break;
+      preview.push(previewValue(entry.value, depth + 1, context));
+    }
     if (value.size > RAW_MAX_ITEMS) preview.push(`[${value.size - RAW_MAX_ITEMS} more items]`);
     return preview;
   }
 
   const keys = Object.keys(value).sort();
-  const preview: Record<string, PreviewValue> = {};
+  const preview: Record<string, PreviewValue> = Object.create(null);
   for (const key of keys.slice(0, RAW_MAX_ITEMS)) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    const previewKey = truncate(key, RAW_MAX_KEY_LENGTH);
+    const previewKey = uniquePreviewKey(preview, key);
     preview[previewKey] =
       descriptor && "value" in descriptor
         ? previewValue(descriptor.value, depth + 1, context)
         : "[accessor omitted]";
   }
   if (keys.length > RAW_MAX_ITEMS) {
-    preview["[truncated fields]"] = keys.length - RAW_MAX_ITEMS;
+    preview[uniquePreviewKey(preview, "[truncated fields]")] = keys.length - RAW_MAX_ITEMS;
   }
   return preview;
 }
@@ -270,8 +297,7 @@ function InvalidRegisteredClaim({
   );
 }
 
-function GithubIdentityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseGithubClaimPayload(claim.payload);
+function renderGithubIdentityClaim(payload: ReturnType<typeof parseGithubClaimPayload>) {
   return (
     <ClaimFrame
       provider="github"
@@ -292,8 +318,7 @@ function GithubIdentityClaim({ claim }: ClaimRendererProps) {
   );
 }
 
-function DiscordIdentityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseDiscordClaimPayload(claim.payload);
+function renderDiscordIdentityClaim(payload: ReturnType<typeof parseDiscordClaimPayload>) {
   return (
     <ClaimFrame
       provider="discord"
@@ -314,8 +339,7 @@ function DiscordIdentityClaim({ claim }: ClaimRendererProps) {
   );
 }
 
-function TelegramIdentityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseTelegramClaimPayload(claim.payload);
+function renderTelegramIdentityClaim(payload: ReturnType<typeof parseTelegramClaimPayload>) {
   return (
     <ClaimFrame
       provider="telegram"
@@ -340,8 +364,7 @@ function TelegramIdentityClaim({ claim }: ClaimRendererProps) {
   );
 }
 
-function BlueskyIdentityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseBlueskyClaimPayload(claim.payload);
+function renderBlueskyIdentityClaim(payload: ReturnType<typeof parseBlueskyClaimPayload>) {
   return (
     <ClaimFrame
       provider="bluesky"
@@ -386,8 +409,9 @@ function ArtifactRow({ artifact }: { artifact: GithubContributionArtifact }) {
   );
 }
 
-function GithubContributionClaim({ claim }: ClaimRendererProps) {
-  const payload = parseGithubContributionClaimPayload(claim.payload);
+function renderGithubContributionClaim(
+  payload: ReturnType<typeof parseGithubContributionClaimPayload>,
+) {
   return (
     <ClaimFrame
       provider="github"
@@ -416,8 +440,9 @@ function GithubContributionClaim({ claim }: ClaimRendererProps) {
   );
 }
 
-function DiscordCommunityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseDiscordCommunityClaimPayload(claim.payload);
+function renderDiscordCommunityClaim(
+  payload: ReturnType<typeof parseDiscordCommunityClaimPayload>,
+) {
   return (
     <ClaimFrame
       provider="discord"
@@ -427,7 +452,7 @@ function DiscordCommunityClaim({ claim }: ClaimRendererProps) {
         "recognized community",
         "recognized communities",
       )}
-      description="Current Discord community evidence recorded by the issuer."
+      description="Discord community membership recorded by the issuer."
     >
       <ClaimFacts
         facts={[
@@ -459,8 +484,9 @@ function DiscordCommunityClaim({ claim }: ClaimRendererProps) {
   );
 }
 
-function TelegramCommunityClaim({ claim }: ClaimRendererProps) {
-  const payload = parseTelegramCommunityClaimPayload(claim.payload);
+function renderTelegramCommunityClaim(
+  payload: ReturnType<typeof parseTelegramCommunityClaimPayload>,
+) {
   return (
     <ClaimFrame
       provider="telegram"
@@ -470,7 +496,7 @@ function TelegramCommunityClaim({ claim }: ClaimRendererProps) {
         "recognized community",
         "recognized communities",
       )}
-      description="Current Telegram community evidence recorded by the issuer."
+      description="Telegram community membership recorded by the issuer."
     >
       <ClaimFacts
         facts={[
@@ -496,42 +522,45 @@ function TelegramCommunityClaim({ claim }: ClaimRendererProps) {
   );
 }
 
+function defineClaimRenderer<TPayload>(
+  schema: ClaimSchemaDefinition,
+  parse: (payload: unknown) => TPayload,
+  render: (payload: TPayload) => ReactElement,
+): ClaimRendererRegistration {
+  return {
+    schemaHash: schema.hash,
+    schemaId: schema.id,
+    prepare(payload) {
+      const parsed = parse(payload);
+      return () => render(parsed);
+    },
+  };
+}
+
 const registrations = [
-  {
-    schemaHash: githubIdentitySchema.hash,
-    schemaId: githubIdentitySchema.id,
-    renderer: GithubIdentityClaim,
-  },
-  {
-    schemaHash: discordIdentitySchema.hash,
-    schemaId: discordIdentitySchema.id,
-    renderer: DiscordIdentityClaim,
-  },
-  {
-    schemaHash: telegramIdentitySchema.hash,
-    schemaId: telegramIdentitySchema.id,
-    renderer: TelegramIdentityClaim,
-  },
-  {
-    schemaHash: blueskyIdentitySchema.hash,
-    schemaId: blueskyIdentitySchema.id,
-    renderer: BlueskyIdentityClaim,
-  },
-  {
-    schemaHash: githubContributionSchema.hash,
-    schemaId: githubContributionSchema.id,
-    renderer: GithubContributionClaim,
-  },
-  {
-    schemaHash: discordCommunitySchema.hash,
-    schemaId: discordCommunitySchema.id,
-    renderer: DiscordCommunityClaim,
-  },
-  {
-    schemaHash: telegramCommunitySchema.hash,
-    schemaId: telegramCommunitySchema.id,
-    renderer: TelegramCommunityClaim,
-  },
+  defineClaimRenderer(githubIdentitySchema, parseGithubClaimPayload, renderGithubIdentityClaim),
+  defineClaimRenderer(discordIdentitySchema, parseDiscordClaimPayload, renderDiscordIdentityClaim),
+  defineClaimRenderer(
+    telegramIdentitySchema,
+    parseTelegramClaimPayload,
+    renderTelegramIdentityClaim,
+  ),
+  defineClaimRenderer(blueskyIdentitySchema, parseBlueskyClaimPayload, renderBlueskyIdentityClaim),
+  defineClaimRenderer(
+    githubContributionSchema,
+    parseGithubContributionClaimPayload,
+    renderGithubContributionClaim,
+  ),
+  defineClaimRenderer(
+    discordCommunitySchema,
+    parseDiscordCommunityClaimPayload,
+    renderDiscordCommunityClaim,
+  ),
+  defineClaimRenderer(
+    telegramCommunitySchema,
+    parseTelegramCommunityClaimPayload,
+    renderTelegramCommunityClaim,
+  ),
 ] satisfies readonly ClaimRendererRegistration[];
 
 function createRendererRegistry(
@@ -559,9 +588,11 @@ export function ClaimPayloadRenderer({ claim }: ClaimRendererProps) {
   const registration = getClaimRenderer(claim.schemaHash);
   if (!registration) return <UnknownClaimRenderer claim={claim} />;
 
+  let render: () => ReactElement;
   try {
-    return registration.renderer({ claim });
+    render = registration.prepare(claim.payload);
   } catch {
     return <InvalidRegisteredClaim claim={claim} registration={registration} />;
   }
+  return render();
 }
