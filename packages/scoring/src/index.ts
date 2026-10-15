@@ -6,6 +6,15 @@ export {
   VELLUM_REPUTATION_POLICY_V5,
 } from "./policy.js";
 export { scoreReputation } from "./score.js";
+export { parseReputationApiBody } from "./public-api.js";
+export type {
+  AvailableReputation,
+  ParsedReputationApiBody,
+  ReputationApiError,
+  ReputationCategory,
+  ReputationResponse,
+  UnavailableReputation,
+} from "./public-api.js";
 export type {
   AvailableReputationResult,
   ReputationAccount,

@@ -59,6 +59,7 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("en", {
   day: "numeric",
   month: "short",
   year: "numeric",
+  timeZone: "UTC",
 });
 
 function shorten(value: string, start = 14, end = 8): string {
@@ -544,7 +545,7 @@ function VerifiedAccount({ account }: { account: PublicVerifiedAccount }) {
       </span>
       <span className="profile-account__identity">
         <strong>{PLATFORM_LABELS[account.platform]}</strong>
-        <small>{account.label.startsWith("@") ? account.label : `@${account.label}`}</small>
+        <small>{account.displayLabel}</small>
       </span>
       <span className="profile-account__issuer" title={account.issuerDid}>
         <small>Issuer</small>
@@ -681,6 +682,11 @@ function ClaimsSection({
     reputation.status === "available" && reputation.value.status === "available"
       ? reputation.value
       : undefined;
+  const claimCellTotal =
+    claims.status === "available"
+      ? claims.value.invalid.length +
+        claims.value.claims.reduce((total, claim) => total + 1 + claim.duplicateCells.length, 0)
+      : 0;
 
   return (
     <section className="profile-ledger site-content" aria-labelledby="activity-title">
@@ -690,9 +696,7 @@ function ClaimsSection({
           <p>Live Claim Cells held by this identity on CKB Testnet.</p>
         </div>
         {claims.status === "available" && (
-          <StatusMark icon={false}>
-            {claims.value.claims.length + claims.value.invalid.length} total
-          </StatusMark>
+          <StatusMark icon={false}>{claimCellTotal} total</StatusMark>
         )}
       </div>
 
@@ -769,6 +773,11 @@ function ClaimLedger({
         const acceptedEvidence = accepted.get(key);
         const excludedEvidence = excluded.get(key);
         const state = claimPolicyState(claim, Boolean(acceptedEvidence), Boolean(excludedEvidence));
+        const contributionPoints =
+          acceptedEvidence?.contributions.reduce(
+            (total, contribution) => total + contribution.points,
+            0,
+          ) ?? 0;
         return (
           <div className="claims-table__row" key={key}>
             <span className="claim-cell__identity">
@@ -791,9 +800,7 @@ function ClaimLedger({
               <StatusMark tone={state.tone} icon={state.tone === "positive"}>
                 {state.label}
               </StatusMark>
-              {acceptedEvidence && acceptedEvidence.contributionPoints > 0 && (
-                <b className="mono">+{acceptedEvidence.contributionPoints}</b>
-              )}
+              {contributionPoints > 0 && <b className="mono">+{contributionPoints}</b>}
             </span>
             <a
               className="v-icon-button claim-cell__source"
@@ -840,20 +847,22 @@ function ExcludedEvidenceSection({
   reputation: ProfileSection<PublicReputationResponse>;
 }) {
   const loading = claims.status === "loading" || reputation.status === "loading";
-  const reputationUnavailable =
-    reputation.status === "unavailable" ||
-    (reputation.status === "available" && reputation.value.status === "unavailable");
-  const reputationMessage =
-    reputation.status === "unavailable"
-      ? reputation.message
-      : reputation.status === "available" && reputation.value.status === "unavailable"
-        ? reputation.value.error.message
-        : "";
   const excluded =
     reputation.status === "available" && reputation.value.status === "available"
       ? reputation.value.excludedEvidence
       : [];
   const invalid = claims.status === "available" ? claims.value.invalid : [];
+  const recordCount = excluded.length + invalid.length;
+  const unavailableMessages = [
+    ...new Set([
+      ...(claims.status === "unavailable" ? [claims.message] : []),
+      ...(reputation.status === "unavailable"
+        ? [reputation.message]
+        : reputation.status === "available" && reputation.value.status === "unavailable"
+          ? [reputation.value.error.message]
+          : []),
+    ]),
+  ];
 
   return (
     <section className="profile-record-band" aria-labelledby="excluded-title">
@@ -865,31 +874,26 @@ function ExcludedEvidenceSection({
           </div>
           {loading ? (
             <StatusMark icon={false}>Checking</StatusMark>
-          ) : reputationUnavailable ? (
+          ) : unavailableMessages.length > 0 ? (
             <StatusMark tone="warning" icon={false}>
-              Unavailable
+              {recordCount > 0 ? `${recordCount} records` : "Unavailable"}
             </StatusMark>
           ) : (
-            <StatusMark
-              tone={excluded.length + invalid.length > 0 ? "warning" : "positive"}
-              icon={excluded.length + invalid.length === 0}
-            >
-              {excluded.length + invalid.length} records
+            <StatusMark tone={recordCount > 0 ? "warning" : "positive"} icon={recordCount === 0}>
+              {recordCount} records
             </StatusMark>
           )}
         </div>
-        {loading ? (
+        {loading && recordCount === 0 ? (
           <div className="profile-section-loading" role="status">
             <div className="profile-skeleton profile-skeleton--row" />
             <span className="sr-only">Checking excluded evidence.</span>
           </div>
-        ) : reputationUnavailable ? (
-          <SectionUnavailable message={reputationMessage} />
-        ) : excluded.length === 0 && invalid.length === 0 ? (
+        ) : !loading && unavailableMessages.length === 0 && recordCount === 0 ? (
           <div className="profile-section-empty">
             No evidence was excluded or unreadable at this evaluation.
           </div>
-        ) : (
+        ) : recordCount > 0 ? (
           <div className="excluded-list">
             {excluded.map((item) => (
               <div key={referenceKey(item.claim.transactionHash, item.claim.outputIndex)}>
@@ -922,7 +926,10 @@ function ExcludedEvidenceSection({
               </div>
             ))}
           </div>
-        )}
+        ) : null}
+        {unavailableMessages.map((message) => (
+          <SectionUnavailable message={message} key={message} />
+        ))}
       </div>
     </section>
   );

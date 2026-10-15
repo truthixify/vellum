@@ -13,6 +13,7 @@
     "@ckb-ccc/did-ckb": "^0.2.9",
     "@usevellum/sdk": "workspace:*",
     "@vellum/schemas": "workspace:*",
+    "@vellum/scoring": "workspace:*",
     "@vellum/ui": "workspace:*",
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
