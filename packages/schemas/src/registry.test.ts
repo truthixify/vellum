@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
+import { parseCkboostQuestClaimPayload } from "./ckboost/quest.v1";
 import { parseDiscordCommunityClaimPayload } from "./community/discord.v1";
 import { parseTelegramCommunityClaimPayload } from "./community/telegram.v1";
 import { parseGithubContributionClaimPayload } from "./contribution/github.v1";
@@ -12,6 +13,7 @@ import { parseGithubClaimPayload } from "./social/github.v1";
 import { parseTelegramClaimPayload } from "./social/telegram.v1";
 
 const parsers: Record<VellumSchemaId, (value: unknown) => unknown> = {
+  "ckboost.quest.v1": parseCkboostQuestClaimPayload,
   "vellum.social.github.v1": parseGithubClaimPayload,
   "vellum.contribution.github.v1": parseGithubContributionClaimPayload,
   "vellum.social.discord.v1": parseDiscordClaimPayload,
@@ -24,8 +26,8 @@ const parsers: Record<VellumSchemaId, (value: unknown) => unknown> = {
 describe("Vellum schema registry", () => {
   test("indexes every published schema by its immutable ID", () => {
     const definitions = Object.values(vellumSchemaRegistry);
-    expect(definitions).toHaveLength(7);
-    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(7);
+    expect(definitions).toHaveLength(8);
+    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(8);
 
     for (const definition of definitions) {
       expect(getVellumSchemaDefinition(definition.id)).toBe(definition);

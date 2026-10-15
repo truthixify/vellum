@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { Claim } from "@usevellum/sdk";
 import {
   blueskyIdentitySchema,
+  ckboostQuestSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   githubContributionSchema,
@@ -19,8 +20,9 @@ function claim(schemaHash: string, payload: unknown): Claim {
 }
 
 describe("public Claim Cell renderers", () => {
-  test("renders every published Vellum schema through its exact hash registration", () => {
+  test("renders every published schema through its exact hash registration", () => {
     const examples = [
+      [ckboostQuestSchema, "Ship a CKB integration"],
       [githubIdentitySchema, "@vellum-builder"],
       [discordIdentitySchema, "vellum-builder"],
       [telegramIdentitySchema, "@vellum_builder"],
@@ -42,6 +44,28 @@ describe("public Claim Cell renderers", () => {
       expect(html).toContain(schema.id);
       expect(html).toContain(expected);
     }
+  });
+
+  test("renders escaped CKBoost labels with final and approval evidence links", () => {
+    const html = renderToStaticMarkup(
+      <ClaimPayloadRenderer
+        claim={claim(ckboostQuestSchema.hash, {
+          ...ckboostQuestSchema.example,
+          campaign_title: "CKB <Builders>",
+          quest_title: "Ship & verify",
+        })}
+      />,
+    );
+
+    expect(html).toContain("Ship &amp; verify");
+    expect(html).toContain("CKB &lt;Builders&gt;");
+    expect(html).not.toContain("<Builders>");
+    expect(html).toContain(
+      `href="https://pudge.explorer.nervos.org/transaction/${ckboostQuestSchema.example.reward_claim_tx_hash}"`,
+    );
+    expect(html).toContain(
+      `href="https://pudge.explorer.nervos.org/transaction/${ckboostQuestSchema.example.approval_tx_hash}"`,
+    );
   });
 
   test("does not select a trusted renderer from payload contents", () => {

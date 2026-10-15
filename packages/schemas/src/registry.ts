@@ -1,4 +1,9 @@
 import {
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+  ckboostQuestClaimSchemaManifest,
+} from "./ckboost/quest.v1.js";
+import {
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   discordCommunityClaimSchemaManifest,
@@ -36,6 +41,25 @@ import {
 } from "./social/telegram.v1.js";
 
 const VERIFIED_AT = 2_000_000_000;
+
+export const ckboostQuestSchema = {
+  id: CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+  hash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  manifest: ckboostQuestClaimSchemaManifest,
+  specification: "docs/schemas/ckboost.quest.v1.md",
+  manifestFile: "docs/schemas/manifests/ckboost.quest.v1.json",
+  example: {
+    campaign_type_id: `0x${"11".repeat(32)}`,
+    campaign_title: "Build on CKB",
+    quest_id: 7,
+    quest_title: "Ship a CKB integration",
+    ckboost_user_type_id: `0x${"22".repeat(32)}`,
+    completed_at: VERIFIED_AT,
+    approval_tx_hash: `0x${"33".repeat(32)}`,
+    reward_claim_tx_hash: `0x${"44".repeat(32)}`,
+    points_awarded: "250",
+  },
+} as const;
 
 export const githubIdentitySchema = {
   id: GITHUB_CLAIM_SCHEMA_ID,
@@ -173,6 +197,7 @@ export const blueskyIdentitySchema = {
 } as const;
 
 export const vellumSchemaRegistry = {
+  [ckboostQuestSchema.id]: ckboostQuestSchema,
   [githubIdentitySchema.id]: githubIdentitySchema,
   [githubContributionSchema.id]: githubContributionSchema,
   [discordIdentitySchema.id]: discordIdentitySchema,

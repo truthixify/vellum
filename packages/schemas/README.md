@@ -3,8 +3,8 @@
 Canonical claim payload schemas for Vellum, plus TypeScript types and schema-hash helpers.
 
 The package currently includes GitHub identity and contribution, Discord identity and CKB
-community, Telegram identity and community, and Bluesky identity schemas. Each manifest is
-serialized with RFC 8785 JSON Canonicalization Scheme and identified by
+community, Telegram identity and community, Bluesky identity, and CKBoost quest-completion schemas.
+Each manifest is serialized with RFC 8785 JSON Canonicalization Scheme and identified by
 `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider credentials out
 of payloads.
 
@@ -64,6 +64,14 @@ that timestamp. Community claims expire after 30 days and must be refreshed to r
 `vellum.social.bluesky.v1` records the account's stable AT Protocol DID, normalized current handle,
 stable-DID profile URL, and verification time. It does not infer account age or community activity.
 The app password and temporary Bluesky session credentials are never part of the claim.
+
+## CKBoost quest claim
+
+`ckboost.quest.v1` records a non-repeatable CKBoost quest completion using the campaign Type ID,
+campaign-scoped quest ID, and contributor's CKBoost user Type ID. It preserves separate approval
+and final reward-claim transaction references, plus the awarded `Uint128` points as a decimal
+string. Human-readable campaign and quest titles are display snapshots; their on-chain IDs remain
+the stable references.
 
 ## Consumers
 

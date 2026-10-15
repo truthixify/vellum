@@ -1,5 +1,12 @@
 export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash.js";
 export {
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+  ckboostQuestClaimSchemaManifest,
+  parseCkboostQuestClaimPayload,
+  type CkboostQuestClaimPayload,
+} from "./ckboost/quest.v1.js";
+export {
   DEFAULT_AVATAR_BASE,
   PROFILE_SERVICE_KEY,
   PROFILE_SERVICE_TYPE,
@@ -15,6 +22,7 @@ export {
 } from "./identity/profile.js";
 export {
   blueskyIdentitySchema,
+  ckboostQuestSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   getVellumSchemaDefinition,
