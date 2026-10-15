@@ -21,6 +21,11 @@ export function claimCellCount(result: ReadClaimsResult): number {
   );
 }
 
+export function claimLedgerState(result: ReadClaimsResult): "empty" | "invalid-only" | "available" {
+  if (result.claims.length > 0) return "available";
+  return result.invalid.length > 0 ? "invalid-only" : "empty";
+}
+
 export function claimCellRecords(claims: readonly Claim[]): readonly ClaimCellRecord[] {
   return claims.flatMap((claim) => [
     {

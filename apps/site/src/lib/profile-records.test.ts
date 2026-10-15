@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Claim, ReadClaimsResult } from "@usevellum/sdk";
 
-import { claimCellCount, claimCellRecords, unreportedDuplicateClaims } from "./profile-records";
+import {
+  claimCellCount,
+  claimCellRecords,
+  claimLedgerState,
+  unreportedDuplicateClaims,
+} from "./profile-records";
 
 function cell(transactionHash: string, index: bigint) {
   return { outPoint: { txHash: transactionHash, index } } as Claim["cell"];
@@ -21,6 +26,7 @@ describe("public profile Claim Cell records", () => {
     };
 
     expect(claimCellCount(result)).toBe(4);
+    expect(claimLedgerState(result)).toBe("available");
     expect(
       claimCellRecords(result.claims).map(({ key, duplicate }) => ({ key, duplicate })),
     ).toEqual([
@@ -28,6 +34,16 @@ describe("public profile Claim Cell records", () => {
       { key: "0xduplicate-a:1", duplicate: true },
       { key: "0xduplicate-b:2", duplicate: true },
     ]);
+  });
+
+  test("distinguishes an empty ledger from unreadable live cells", () => {
+    expect(claimLedgerState({ claims: [], invalid: [] })).toBe("empty");
+    expect(
+      claimLedgerState({
+        claims: [],
+        invalid: [{ cell: cell("0xinvalid", 0n) } as ReadClaimsResult["invalid"][number]],
+      }),
+    ).toBe("invalid-only");
   });
 
   test("keeps duplicate cells visible when reputation does not report them", () => {

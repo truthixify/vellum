@@ -83,12 +83,8 @@ export async function scoreSubjectReputation(
 
   try {
     const client = dependencies.createClient(issuerRpcUrl(environment));
-    const did = await dependencies.resolveDid({ client, did: subjectDid });
-    if (!did) {
-      throw new ReputationSubjectNotFoundError("The did:ckb identity is not active on Testnet.");
-    }
-
-    const claims = await dependencies.readClaims({
+    const didTask = dependencies.resolveDid({ client, did: subjectDid });
+    const claimsTask = dependencies.readClaims({
       client,
       scripts: claimScripts,
       filter: {
@@ -97,7 +93,17 @@ export async function scoreSubjectReputation(
         order: "asc",
       },
     });
-    return scoreReputation({ claims, evaluatedAt });
+    const guardedClaimsTask = claimsTask.then(
+      (value) => ({ status: "available", value }) as const,
+      (reason: unknown) => ({ status: "unavailable", reason }) as const,
+    );
+    const did = await didTask;
+    if (!did) {
+      throw new ReputationSubjectNotFoundError("The did:ckb identity is not active on Testnet.");
+    }
+    const claims = await guardedClaimsTask;
+    if (claims.status === "unavailable") throw claims.reason;
+    return scoreReputation({ claims: claims.value, evaluatedAt });
   } catch (error) {
     if (error instanceof ReputationSubjectNotFoundError) throw error;
     return unavailable(evaluatedAt);

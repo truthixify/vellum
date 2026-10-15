@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import type { Connect, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { fileURLToPath } from "node:url";
 
 import { handleAvatarRequest } from "./server/avatar";
 
@@ -35,8 +36,44 @@ function avatarEndpoint(): Plugin {
   };
 }
 
+function profileBootstrapEntry(): Plugin {
+  return {
+    name: "vellum-profile-bootstrap-entry",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, context) {
+        let source = "/src/profile-bootstrap.ts";
+        if (context.bundle) {
+          const entry = Object.values(context.bundle).find(
+            (output) =>
+              output.type === "chunk" && output.isEntry && output.name === "profile-bootstrap",
+          );
+          if (!entry) throw new Error("The public profile bootstrap entry was not emitted.");
+          source = `/${entry.fileName}`;
+        }
+
+        return [
+          {
+            tag: "script",
+            attrs: { type: "module", crossorigin: true, src: source },
+            injectTo: "head-prepend",
+          },
+        ];
+      },
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [avatarEndpoint(), react()],
+  plugins: [profileBootstrapEntry(), avatarEndpoint(), react()],
+  build: {
+    rollupOptions: {
+      input: {
+        site: fileURLToPath(new URL("./index.html", import.meta.url)),
+        "profile-bootstrap": fileURLToPath(new URL("./src/profile-bootstrap.ts", import.meta.url)),
+      },
+    },
+  },
   server: {
     host: true,
     port: 8081,

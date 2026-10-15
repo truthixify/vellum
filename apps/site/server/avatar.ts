@@ -1,5 +1,8 @@
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { request as httpRequest, type IncomingHttpHeaders, type IncomingMessage } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { BlockList, isIP } from "node:net";
+import { Readable } from "node:stream";
 
 import { normalizeProfileAvatarUrl } from "@vellum/schemas";
 
@@ -13,10 +16,29 @@ const IMAGE_CONTENT_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const BLOCKED_IPV6 = new BlockList();
+for (const [network, prefix] of [
+  ["::", 128],
+  ["::1", 128],
+  ["::ffff:0.0.0.0", 96],
+  ["64:ff9b::", 96],
+  ["64:ff9b:1::", 48],
+  ["100::", 64],
+  ["2001::", 23],
+  ["2001:db8::", 32],
+  ["2002::", 16],
+  ["3fff::", 20],
+  ["5f00::", 16],
+  ["fc00::", 7],
+  ["fe80::", 10],
+  ["ff00::", 8],
+] as const) {
+  BLOCKED_IPV6.addSubnet(network, prefix, "ipv6");
+}
 
-type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 type AddressRecord = { address: string; family: number };
 type LookupImplementation = (hostname: string) => Promise<readonly AddressRecord[]>;
+type AvatarRequestImplementation = (url: URL, address: AddressRecord) => Promise<Response>;
 
 const defaultLookup: LookupImplementation = (hostname) =>
   lookup(hostname, { all: true, verbatim: true });
@@ -59,21 +81,7 @@ function isPrivateIpv4(parts: readonly number[]): boolean {
 function isPrivateIpAddress(address: string): boolean {
   if (isIP(address) === 4) return isPrivateIpv4(address.split(".").map(Number));
   if (isIP(address) !== 6) return true;
-
-  const normalized = address.toLowerCase();
-  if (normalized.startsWith("::ffff:")) {
-    const mapped = normalized.slice("::ffff:".length);
-    return isIP(mapped) !== 4 || isPrivateIpv4(mapped.split(".").map(Number));
-  }
-  return (
-    normalized === "::" ||
-    normalized === "::1" ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    /^fe[89ab]/.test(normalized) ||
-    normalized.startsWith("ff") ||
-    normalized.startsWith("2001:db8:")
-  );
+  return BLOCKED_IPV6.check(address, "ipv6");
 }
 
 function isUnsafeHostname(hostname: string): boolean {
@@ -105,8 +113,9 @@ function remoteAvatarUrl(value: string): URL {
   return url;
 }
 
-async function assertPublicResolution(url: URL, lookupImplementation: LookupImplementation) {
-  if (isIP(url.hostname) > 0) return;
+async function resolvePublicAddress(url: URL, lookupImplementation: LookupImplementation) {
+  const literalFamily = isIP(url.hostname);
+  if (literalFamily > 0) return { address: url.hostname, family: literalFamily };
 
   let addresses: readonly AddressRecord[];
   try {
@@ -117,6 +126,68 @@ async function assertPublicResolution(url: URL, lookupImplementation: LookupImpl
   if (addresses.length === 0 || addresses.some(({ address }) => isPrivateIpAddress(address))) {
     throw new AvatarProxyError(400, "The avatar URL is not publicly reachable.");
   }
+  const selected = addresses[0];
+  const family = isIP(selected.address);
+  if (family === 0) {
+    throw new AvatarProxyError(502, "The remote avatar host returned an invalid address.");
+  }
+  return { address: selected.address, family };
+}
+
+function responseHeaders(headers: IncomingHttpHeaders): Headers {
+  const result = new Headers();
+  for (const [name, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) value.forEach((item) => result.append(name, item));
+    else if (value !== undefined) result.set(name, value);
+  }
+  return result;
+}
+
+function requestPinnedAvatar(url: URL, address: AddressRecord): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const options = {
+      family: address.family,
+      headers: {
+        accept: "image/avif,image/webp,image/png,image/jpeg,image/gif",
+        "accept-encoding": "identity",
+        host: url.host,
+      },
+      hostname: address.address,
+      method: "GET",
+      path: `${url.pathname}${url.search}`,
+      ...(url.protocol === "https:" ? { servername: url.hostname } : {}),
+    };
+    const handleResponse = (incoming: IncomingMessage) => {
+      const timer = setTimeout(() => incoming.destroy(), FETCH_TIMEOUT_MS);
+      const clearTimer = () => clearTimeout(timer);
+      incoming.once("close", clearTimer);
+      incoming.once("end", clearTimer);
+      incoming.once("error", clearTimer);
+      resolve(
+        new Response(Readable.toWeb(incoming) as unknown as ReadableStream<Uint8Array>, {
+          status:
+            incoming.statusCode && incoming.statusCode >= 200 && incoming.statusCode <= 599
+              ? incoming.statusCode
+              : 502,
+          headers: responseHeaders(incoming.headers),
+        }),
+      );
+    };
+    const outgoing =
+      url.protocol === "https:"
+        ? httpsRequest(options, handleResponse)
+        : httpRequest(options, handleResponse);
+    const timer = setTimeout(
+      () => outgoing.destroy(new Error("The remote avatar request timed out.")),
+      FETCH_TIMEOUT_MS,
+    );
+    outgoing.once("response", () => clearTimeout(timer));
+    outgoing.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    outgoing.end();
+  });
 }
 
 async function readLimitedBody(response: Response): Promise<Uint8Array> {
@@ -151,19 +222,15 @@ async function readLimitedBody(response: Response): Promise<Uint8Array> {
 
 async function fetchAvatar(
   initialUrl: URL,
-  fetchImplementation: FetchImplementation,
+  requestImplementation: AvatarRequestImplementation,
   lookupImplementation: LookupImplementation,
 ): Promise<{ body: Uint8Array; contentType: string }> {
   let url = initialUrl;
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
-    await assertPublicResolution(url, lookupImplementation);
+    const address = await resolvePublicAddress(url, lookupImplementation);
     let response: Response;
     try {
-      response = await fetchImplementation(url, {
-        headers: { accept: "image/avif,image/webp,image/png,image/jpeg,image/gif" },
-        redirect: "manual",
-        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      });
+      response = await requestImplementation(url, address);
     } catch {
       throw new AvatarProxyError(502, "The remote avatar could not be reached.");
     }
@@ -191,7 +258,7 @@ async function fetchAvatar(
 
 export async function handleAvatarRequest(
   request: Request,
-  fetchImplementation: FetchImplementation = globalThis.fetch,
+  requestImplementation: AvatarRequestImplementation = requestPinnedAvatar,
   lookupImplementation: LookupImplementation = defaultLookup,
 ): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -204,7 +271,7 @@ export async function handleAvatarRequest(
 
     const avatar = await fetchAvatar(
       remoteAvatarUrl(values[0]),
-      fetchImplementation,
+      requestImplementation,
       lookupImplementation,
     );
     return new Response(request.method === "HEAD" ? null : (avatar.body.buffer as ArrayBuffer), {

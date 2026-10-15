@@ -46,6 +46,7 @@ function dependencies(
         evidence: [],
         excludedEvidence: [],
       }) as never,
+    timeoutMs: 8_000,
     ...overrides,
   };
 }
@@ -115,6 +116,39 @@ describe("public profile loader", () => {
       message: "Vellum could not read this identity's complete Claim Cell ledger.",
     });
     expect(result.reputation.status).toBe("available");
+  });
+
+  test("settles stalled secondary sections as unavailable", async () => {
+    const stalled = new Promise<never>(() => undefined);
+    const result = await loadPublicProfile(
+      DID,
+      dependencies({
+        readClaims: (() => stalled) as never,
+        fetchReputation: (() => stalled) as never,
+        timeoutMs: 5,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      status: "available",
+      claims: { status: "unavailable" },
+      reputation: { status: "unavailable" },
+    });
+  });
+
+  test("settles a stalled identity read as unavailable", async () => {
+    const result = await loadPublicProfile(
+      DID,
+      dependencies({
+        resolveDid: (() => new Promise<never>(() => undefined)) as never,
+        timeoutMs: 5,
+      }),
+    );
+
+    expect(result).toEqual({
+      status: "unavailable",
+      message: "Vellum could not resolve this identity on CKB Testnet.",
+    });
   });
 
   test("publishes the identity before slower profile sections settle", async () => {

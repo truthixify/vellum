@@ -217,4 +217,23 @@ describe("public reputation client", () => {
     await expect(malformed).rejects.toBeInstanceOf(ReputationRequestError);
     await expect(malformed).rejects.toMatchObject({ code: "invalid_response" });
   });
+
+  test("aborts a reputation request that exceeds its deadline", async () => {
+    const pending = fetchPublicReputation(
+      DID,
+      async (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+      "https://dashboard.example",
+      5,
+    );
+
+    await expect(pending).rejects.toMatchObject({
+      code: "service_unavailable",
+      message: "Vellum could not reach the reputation service.",
+    });
+  });
 });

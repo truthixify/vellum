@@ -23,6 +23,7 @@ export type PublicVerifiedAccount = {
 };
 
 type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+const REPUTATION_REQUEST_TIMEOUT_MS = 8_000;
 
 const PLATFORM_ORDER: Record<PublicReputationAccount["platform"], number> = {
   github: 0,
@@ -60,12 +61,16 @@ export async function fetchPublicReputation(
   did: string,
   fetchImplementation: FetchImplementation = globalThis.fetch,
   origin = REPUTATION_API_ORIGIN,
+  timeout = REPUTATION_REQUEST_TIMEOUT_MS,
 ): Promise<PublicReputationResponse> {
   let response: Response;
   try {
     response = await fetchImplementation(
       `${origin.replace(/\/+$/, "")}/api/reputation/${encodeURIComponent(did)}`,
-      { headers: { accept: "application/json" } },
+      {
+        headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(timeout),
+      },
     );
   } catch {
     throw new ReputationRequestError(

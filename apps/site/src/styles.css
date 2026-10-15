@@ -1245,7 +1245,9 @@ button {
 }
 
 .profile-lookup__inner > a:focus-visible,
+.breadcrumbs a:focus-visible,
 .profile-account:focus-visible,
+.profile-section-empty > a:focus-visible,
 .excluded-list a:focus-visible,
 .resolved-record__links a:focus-visible {
   outline: 2px solid var(--focus);
@@ -1443,7 +1445,23 @@ a.profile-account:hover {
   flex-wrap: wrap;
 }
 
+.profile-section-empty > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-section-empty > span strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.profile-section-empty > span small {
+  font-size: 12px;
+}
+
 .profile-section-empty > a {
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2288,6 +2306,18 @@ a.profile-account:hover {
 
   .profile-lookup__form > div {
     flex-direction: column;
+  }
+
+  .profile-lookup__form input {
+    width: 100%;
+    height: 44px;
+    flex: none;
+  }
+
+  .breadcrumbs a {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .profile-heading {

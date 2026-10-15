@@ -28,6 +28,7 @@ import { canonicalProfileDid } from "../lib/profile-metadata";
 import {
   claimCellCount,
   claimCellRecords,
+  claimLedgerState,
   claimReferenceKey,
   unreportedDuplicateClaims,
 } from "../lib/profile-records";
@@ -691,6 +692,7 @@ function ClaimsSection({
       ? reputation.value
       : undefined;
   const claimCellTotal = claims.status === "available" ? claimCellCount(claims.value) : 0;
+  const ledgerState = claims.status === "available" ? claimLedgerState(claims.value) : undefined;
 
   return (
     <section className="profile-ledger site-content" aria-labelledby="activity-title">
@@ -721,12 +723,20 @@ function ClaimsSection({
             </Button>
           </div>
         </div>
-      ) : claims.value.claims.length === 0 ? (
+      ) : ledgerState === "empty" ? (
         <div className="profile-section-empty">
           <strong>This identity has no public claims yet.</strong>
           <a href={dashboardUrl("/verify")}>
             Open verification options <ArrowUpRight size={13} aria-hidden="true" />
           </a>
+        </div>
+      ) : ledgerState === "invalid-only" ? (
+        <div className="profile-section-empty">
+          <span>
+            <strong>No readable claims were found.</strong>
+            <small>The live Claim Cells are listed below as unreadable evidence.</small>
+          </span>
+          <a href="#excluded-title">Review unreadable evidence</a>
         </div>
       ) : (
         <ClaimLedger claims={claims.value.claims} reputation={availableReputation} />

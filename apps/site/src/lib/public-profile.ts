@@ -46,6 +46,7 @@ export type PublicProfileDependencies = {
   resolveDid: typeof resolveDidCkb;
   readClaims: typeof readClaims;
   fetchReputation: typeof fetchPublicReputation;
+  timeoutMs: number;
 };
 
 const defaultDependencies: PublicProfileDependencies = {
@@ -53,7 +54,22 @@ const defaultDependencies: PublicProfileDependencies = {
   resolveDid: resolveDidCkb,
   readClaims,
   fetchReputation: fetchPublicReputation,
+  timeoutMs: 8_000,
 };
+
+function settleWithin<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: T) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(fallback), timeoutMs);
+    void promise.then(finish);
+  });
+}
 
 function identityFrom(record: ResolvedDid): PublicIdentity {
   if (record.data.type !== "v1") {
@@ -87,53 +103,71 @@ export async function loadPublicProfile(
     return result;
   }
 
-  const identityTask = resolvedDependencies.resolveDid({ client, did }).then(
-    (record): PublicProfileResult => {
-      if (!record) return { status: "not-found" };
-      try {
-        return {
-          status: "available",
-          identity: identityFrom(record),
-          claims: { status: "loading" },
-          reputation: { status: "loading" },
-        };
-      } catch {
-        return {
-          status: "unavailable",
-          message: "This identity uses a DID document version Vellum cannot display.",
-        };
-      }
-    },
-    (): PublicProfileResult => ({
-      status: "unavailable",
-      message: "Vellum could not resolve this identity on CKB Testnet.",
-    }),
+  const identityUnavailable = {
+    status: "unavailable",
+    message: "Vellum could not resolve this identity on CKB Testnet.",
+  } as const;
+  const identityTask = settleWithin(
+    resolvedDependencies.resolveDid({ client, did }).then(
+      (record): PublicProfileResult => {
+        if (!record) return { status: "not-found" };
+        try {
+          return {
+            status: "available",
+            identity: identityFrom(record),
+            claims: { status: "loading" },
+            reputation: { status: "loading" },
+          };
+        } catch {
+          return {
+            status: "unavailable",
+            message: "This identity uses a DID document version Vellum cannot display.",
+          };
+        }
+      },
+      (): PublicProfileResult => identityUnavailable,
+    ),
+    resolvedDependencies.timeoutMs,
+    identityUnavailable,
   );
-  const claimsTask = resolvedDependencies
-    .readClaims({
-      client,
-      scripts: siteClaimScripts,
-      filter: { subject: { did }, order: "desc" },
-    })
-    .then<ProfileSection<ReadClaimsResult>, ProfileSection<ReadClaimsResult>>(
-      (value) => ({ status: "available", value }),
-      () => ({
-        status: "unavailable",
-        message: "Vellum could not read this identity's complete Claim Cell ledger.",
-      }),
-    );
-  const reputationTask = resolvedDependencies
-    .fetchReputation(did)
-    .then<ProfileSection<PublicReputationResponse>, ProfileSection<PublicReputationResponse>>(
-      (value) => ({ status: "available", value }),
-      (reason) => ({
-        status: "unavailable",
-        message:
-          reason instanceof ReputationRequestError
-            ? reason.message
-            : "Vellum could not load this identity's reputation result.",
-      }),
-    );
+  const claimsUnavailable = {
+    status: "unavailable",
+    message: "Vellum could not read this identity's complete Claim Cell ledger.",
+  } as const;
+  const claimsTask = settleWithin<ProfileSection<ReadClaimsResult>>(
+    resolvedDependencies
+      .readClaims({
+        client,
+        scripts: siteClaimScripts,
+        filter: { subject: { did }, order: "desc" },
+      })
+      .then<ProfileSection<ReadClaimsResult>, ProfileSection<ReadClaimsResult>>(
+        (value) => ({ status: "available", value }),
+        () => claimsUnavailable,
+      ),
+    resolvedDependencies.timeoutMs,
+    claimsUnavailable,
+  );
+  const reputationUnavailable = {
+    status: "unavailable",
+    message: "Vellum could not load this identity's reputation result.",
+  } as const;
+  const reputationTask = settleWithin<ProfileSection<PublicReputationResponse>>(
+    resolvedDependencies
+      .fetchReputation(did)
+      .then<ProfileSection<PublicReputationResponse>, ProfileSection<PublicReputationResponse>>(
+        (value) => ({ status: "available", value }),
+        (reason) => ({
+          status: "unavailable",
+          message:
+            reason instanceof ReputationRequestError
+              ? reason.message
+              : reputationUnavailable.message,
+        }),
+      ),
+    resolvedDependencies.timeoutMs,
+    reputationUnavailable,
+  );
 
   void identityTask.then((value) => onUpdate?.({ section: "identity", value }));
   void claimsTask.then((value) => onUpdate?.({ section: "claims", value }));

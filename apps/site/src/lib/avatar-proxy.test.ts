@@ -18,12 +18,14 @@ describe("public profile avatars", () => {
 
   test("returns a bounded raster image with defensive response headers", async () => {
     let remoteUrl = "";
+    let remoteAddress = "";
     const response = await handleAvatarRequest(
       new Request(
         "https://usevellum.xyz/api/avatar?url=https%3A%2F%2Fimages.usevellum.xyz%2Favatar.png",
       ),
-      async (input) => {
+      async (input, address) => {
         remoteUrl = String(input);
+        remoteAddress = address.address;
         return new Response(new Uint8Array([137, 80, 78, 71]), {
           headers: { "content-type": "image/png", "content-length": "4" },
         });
@@ -32,6 +34,7 @@ describe("public profile avatars", () => {
     );
 
     expect(remoteUrl).toBe("https://images.usevellum.xyz/avatar.png");
+    expect(remoteAddress).toBe("93.184.216.34");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("image/png");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
@@ -85,17 +88,29 @@ describe("public profile avatars", () => {
 
   test("blocks hostnames that resolve to private addresses", async () => {
     let requested = false;
-    const response = await handleAvatarRequest(
-      new Request(
-        "https://usevellum.xyz/api/avatar?url=https%3A%2F%2Fimages.usevellum.xyz%2Favatar.png",
-      ),
-      async () => {
-        requested = true;
-        return new Response();
-      },
-      async () => [{ address: "10.0.0.2", family: 4 }],
+    const request = new Request(
+      "https://usevellum.xyz/api/avatar?url=https%3A%2F%2Fimages.usevellum.xyz%2Favatar.png",
     );
-    expect(response.status).toBe(400);
+    for (const address of [
+      "10.0.0.2",
+      "::ffff:7f00:1",
+      "64:ff9b::7f00:1",
+      "2002:7f00:1::",
+      "2001:db8::1",
+      "3fff::1",
+      "5f00::1",
+      "fd00::1",
+    ]) {
+      const response = await handleAvatarRequest(
+        request,
+        async () => {
+          requested = true;
+          return new Response();
+        },
+        async () => [{ address, family: address.includes(":") ? 6 : 4 }],
+      );
+      expect(response.status).toBe(400);
+    }
     expect(requested).toBe(false);
   });
 });
