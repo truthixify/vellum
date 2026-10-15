@@ -61,6 +61,35 @@ describe("reputation service", () => {
     });
   });
 
+  test("starts DID resolution and the complete claim scan together", async () => {
+    const calls: string[] = [];
+    let resolveDid!: (value: object) => void;
+    let resolveClaims!: (value: ReadClaimsResult) => void;
+    const pending = scoreSubjectReputation(
+      SUBJECT_DID,
+      {},
+      dependencies({
+        resolveDid: () => {
+          calls.push("identity");
+          return new Promise((resolve) => {
+            resolveDid = resolve;
+          });
+        },
+        readClaims: () => {
+          calls.push("claims");
+          return new Promise((resolve) => {
+            resolveClaims = resolve;
+          });
+        },
+      }),
+    );
+
+    expect(calls).toEqual(["identity", "claims"]);
+    resolveDid({});
+    resolveClaims({ claims: [], invalid: [] });
+    await expect(pending).resolves.toMatchObject({ status: "available" });
+  });
+
   test("rejects malformed and inactive subject identifiers", async () => {
     expect(() => validateReputationSubject("did:ckb:not-valid")).toThrow(
       InvalidReputationSubjectError,

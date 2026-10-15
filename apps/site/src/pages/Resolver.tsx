@@ -1,25 +1,18 @@
 import { ccc } from "@ckb-ccc/core";
 import { isDidCkb, resolveDidCkb } from "@ckb-ccc/did-ckb";
+import { extractProfile, type DidDocument } from "@vellum/schemas";
 import { AlertCircle, Check, ClipboardPaste, Copy, ExternalLink, Search } from "lucide-react";
 import { AvatarMark, Button, NetworkStatus, StatusMark, useCopyFeedback } from "@vellum/ui";
 import { useMemo, useState } from "react";
 import { dashboardUrl } from "../config";
+import { profilePath } from "../lib/profile-route";
 
 type ResolveState = "idle" | "loading" | "resolved" | "invalid" | "not-found" | "error";
 type ResolvedRecord = NonNullable<Awaited<ReturnType<typeof resolveDidCkb>>>;
 
-function documentFrom(record: ResolvedRecord): Record<string, unknown> {
+function documentFrom(record: ResolvedRecord): DidDocument {
   if (record.data.type !== "v1") return {};
-  return record.data.value.document as Record<string, unknown>;
-}
-
-function profileFrom(document: Record<string, unknown>) {
-  const services = document.services as Record<string, Record<string, unknown>> | undefined;
-  const profile = services?.profile;
-  return {
-    displayName: typeof profile?.displayName === "string" ? profile.displayName : undefined,
-    bio: typeof profile?.bio === "string" ? profile.bio : undefined,
-  };
+  return record.data.value.document as DidDocument;
 }
 
 export function Resolver() {
@@ -105,7 +98,7 @@ export function Resolver() {
         </form>
         <div className="resolver-network">
           <NetworkStatus />
-          <span>Identity resolution is live. Reputation is not inferred.</span>
+          <span>Identity resolution is live. Reputation loads on the public profile.</span>
         </div>
         <ResolverResult state={state} record={record} message={message} />
       </div>
@@ -186,7 +179,7 @@ function ResolverResult({
 
 function ResolvedIdentity({ record }: { record: ResolvedRecord }) {
   const document = documentFrom(record);
-  const profile = profileFrom(document);
+  const profile = extractProfile(document);
   const did = record.did;
   const name = profile.displayName ?? "Unnamed identity";
   const initials =
@@ -239,15 +232,20 @@ function ResolvedIdentity({ record }: { record: ResolvedRecord }) {
           <dd className="mono">{services.length}</dd>
         </div>
         <div>
-          <dt>Reputation</dt>
-          <dd>Not calculated</dd>
+          <dt>Public profile</dt>
+          <dd>
+            <a href={profilePath(did)}>View score</a>
+          </dd>
         </div>
       </dl>
       <div className="resolved-record__footer">
         <span>Resolved with @ckb-ccc/did-ckb</span>
-        <a href={dashboardUrl(`/resolve?did=${encodeURIComponent(did)}`)}>
-          Inspect in dashboard <ExternalLink size={13} />
-        </a>
+        <span className="resolved-record__links">
+          <a href={profilePath(did)}>View public profile</a>
+          <a href={dashboardUrl(`/resolve?did=${encodeURIComponent(did)}`)}>
+            Inspect in dashboard <ExternalLink size={13} aria-hidden="true" />
+          </a>
+        </span>
       </div>
     </div>
   );

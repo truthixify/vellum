@@ -103,6 +103,9 @@
       "dependencies": {
         "@ckb-ccc/core": "^1.12.5",
         "@ckb-ccc/did-ckb": "^0.2.9",
+        "@usevellum/sdk": "workspace:*",
+        "@vellum/schemas": "workspace:*",
+        "@vellum/scoring": "workspace:*",
         "@vellum/ui": "workspace:*",
         "lucide-react": "^0.575.0",
         "react": "^19.2.0",
@@ -112,6 +115,7 @@
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
         "@vitejs/plugin-react": "^5.0.4",
+        "bun-types": "1.4.2",
         "typescript": "^5.8.3",
         "vite": "^7.3.1",
       },
@@ -132,6 +136,7 @@
       "dependencies": {
         "@usevellum/sdk": "workspace:*",
         "@vellum/schemas": "workspace:*",
+        "zod": "^3.24.2",
       },
       "devDependencies": {
         "bun-types": "1.4.2",
@@ -140,7 +145,7 @@
     },
     "packages/sdk": {
       "name": "@usevellum/sdk",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
         "@ckb-ccc/core": "1.19.1",
         "@ckb-ccc/did-ckb": "0.2.9",

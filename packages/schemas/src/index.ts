@@ -1,5 +1,19 @@
 export { canonicalizeSchemaManifest, hashSchemaManifest } from "./hash.js";
 export {
+  DEFAULT_AVATAR_BASE,
+  PROFILE_SERVICE_KEY,
+  PROFILE_SERVICE_TYPE,
+  buildDocument,
+  defaultAvatarUrl,
+  extractProfile,
+  isDefaultAvatar,
+  normalizeProfileAvatarUrl,
+  type DidDocument,
+  type Services,
+  type VellumProfile,
+  type VerificationMethods,
+} from "./identity/profile.js";
+export {
   blueskyIdentitySchema,
   discordCommunitySchema,
   discordIdentitySchema,

@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@vellum/schemas": "workspace:*",
-    "@usevellum/sdk": "workspace:*"
+    "@usevellum/sdk": "workspace:*",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "bun-types": "1.4.2",
