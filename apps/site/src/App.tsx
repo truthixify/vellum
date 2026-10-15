@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { SiteShell } from "./components/SiteShell";
+import { profileRouteFromPath } from "./lib/profile-route";
 import { Home } from "./pages/Home";
 
 const Docs = lazy(() => import("./pages/Docs").then(({ Docs }) => ({ default: Docs })));
@@ -30,27 +31,32 @@ function NotFound() {
 
 export function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
+  const profileRoute = profileRouteFromPath(window.location.pathname);
   let page;
 
-  switch (path) {
-    case "/":
-      page = <Home />;
-      break;
-    case "/resolve":
-      page = <Resolver />;
-      break;
-    case "/profile":
-      page = <Profile />;
-      break;
-    case "/docs":
-      page = <Docs />;
-      break;
-    case "/transparency":
-      page = <Transparency />;
-      break;
-    default:
-      page = <NotFound />;
-  }
+  if (profileRoute?.kind === "index") {
+    page = <Profile />;
+  } else if (profileRoute?.kind === "profile") {
+    page = <Profile did={profileRoute.did} />;
+  } else if (profileRoute?.kind === "invalid") {
+    page = <Profile invalidPath />;
+  } else
+    switch (path) {
+      case "/":
+        page = <Home />;
+        break;
+      case "/resolve":
+        page = <Resolver />;
+        break;
+      case "/docs":
+        page = <Docs />;
+        break;
+      case "/transparency":
+        page = <Transparency />;
+        break;
+      default:
+        page = <NotFound />;
+    }
 
   return (
     <SiteShell>
