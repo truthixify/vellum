@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { SiteShell } from "./components/SiteShell";
+import { preloadPublicProfile } from "./lib/public-profile-load";
 import { profileRouteFromPath } from "./lib/profile-route";
 import { Home } from "./pages/Home";
 
@@ -13,6 +14,13 @@ const Transparency = lazy(() =>
     default: Transparency,
   })),
 );
+
+const initialPath = window.location.pathname;
+const initialProfileRoute = profileRouteFromPath(initialPath);
+const initialProfileLoad =
+  initialProfileRoute?.kind === "profile"
+    ? preloadPublicProfile(initialProfileRoute.did)
+    : undefined;
 
 function NotFound() {
   return (
@@ -30,14 +38,14 @@ function NotFound() {
 }
 
 export function App() {
-  const path = window.location.pathname.replace(/\/$/, "") || "/";
-  const profileRoute = profileRouteFromPath(window.location.pathname);
+  const path = initialPath.replace(/\/$/, "") || "/";
+  const profileRoute = initialProfileRoute;
   let page;
 
   if (profileRoute?.kind === "index") {
     page = <Profile />;
   } else if (profileRoute?.kind === "profile") {
-    page = <Profile did={profileRoute.did} />;
+    page = <Profile did={profileRoute.did} initialLoad={initialProfileLoad} />;
   } else if (profileRoute?.kind === "invalid") {
     page = <Profile invalidPath />;
   } else

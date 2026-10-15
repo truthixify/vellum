@@ -150,6 +150,11 @@ describe("public reputation client", () => {
   test("rejects responses that diverge from the active reputation policy", () => {
     expect(() => parsePublicReputationResponse(availableResponse(), `${DID}x`)).toThrow();
 
+    const nonCanonicalSubject = { ...availableResponse(), subject: DID.toUpperCase() };
+    expect(() =>
+      parsePublicReputationResponse(nonCanonicalSubject, nonCanonicalSubject.subject),
+    ).toThrow();
+
     const wrongPolicy = { ...availableResponse(), policyVersion: "vellum.reputation.v4" };
     expect(() => parsePublicReputationResponse(wrongPolicy, DID)).toThrow();
 

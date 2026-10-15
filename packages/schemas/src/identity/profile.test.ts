@@ -6,6 +6,7 @@ import {
   defaultAvatarUrl,
   extractProfile,
   isDefaultAvatar,
+  normalizeProfileAvatarUrl,
 } from "./profile";
 
 describe("Vellum DID profile service", () => {
@@ -74,5 +75,17 @@ describe("Vellum DID profile service", () => {
     expect(isDefaultAvatar(defaultAvatarUrl(did))).toBe(true);
     expect(isDefaultAvatar("https://example.com/avatar.png")).toBe(false);
     expect(isDefaultAvatar(undefined)).toBe(false);
+  });
+
+  test("normalizes public avatar URLs and IPFS references", () => {
+    expect(normalizeProfileAvatarUrl("ipfs://bafybeigdyrzt/avatar.png")).toBe(
+      "https://ipfs.io/ipfs/bafybeigdyrzt/avatar.png",
+    );
+    expect(normalizeProfileAvatarUrl(" https://example.com/avatar.png#preview ")).toBe(
+      "https://example.com/avatar.png",
+    );
+    expect(normalizeProfileAvatarUrl("javascript:alert(1)")).toBeUndefined();
+    expect(normalizeProfileAvatarUrl("https://user:secret@example.com/avatar.png")).toBeUndefined();
+    expect(normalizeProfileAvatarUrl("ipfs://")).toBeUndefined();
   });
 });

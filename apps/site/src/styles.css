@@ -1334,7 +1334,10 @@ button {
 }
 
 .profile-did {
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .profile-bio {
@@ -2310,15 +2313,27 @@ a.profile-account:hover {
 
   .profile-identity__actions {
     grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 40px 40px minmax(0, 1fr);
     width: 100%;
-    justify-content: flex-start;
   }
 
   .profile-identity__actions .v-button {
-    flex: 1 1 140px;
+    min-width: 0;
+    width: 100%;
+    padding-inline: 12px;
+  }
+
+  .profile-action-resolve {
+    grid-column: 3;
+  }
+
+  .profile-action-edit {
+    grid-column: 1 / -1;
   }
 
   .profile-action-feedback {
+    grid-column: 1 / -1;
     text-align: left;
   }
 

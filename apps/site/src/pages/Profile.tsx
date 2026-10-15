@@ -23,9 +23,17 @@ import {
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import { dashboardUrl } from "../config";
-import { profilePath } from "../lib/profile-route";
+import { publicAvatarUrl } from "../lib/avatar";
+import { canonicalProfileDid } from "../lib/profile-metadata";
 import {
-  loadPublicProfile,
+  claimCellCount,
+  claimCellRecords,
+  claimReferenceKey,
+  unreportedDuplicateClaims,
+} from "../lib/profile-records";
+import { profilePath } from "../lib/profile-route";
+import { createPublicProfileLoad, type PublicProfileLoad } from "../lib/public-profile-load";
+import {
   type ProfileSection,
   type PublicProfileResult,
   type PublicProfileUpdate,
@@ -83,16 +91,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function safeImageUrl(value: string | undefined): string | undefined {
-  if (!value || value.length > 2_048) return undefined;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 function formatTimestamp(value: number | bigint): string {
   const milliseconds = Number(value) * 1_000;
   const date = new Date(milliseconds);
@@ -101,21 +99,20 @@ function formatTimestamp(value: number | bigint): string {
     : "Unknown date";
 }
 
-function referenceKey(transactionHash: string, outputIndex: number | bigint): string {
-  return `${transactionHash}:${Number(outputIndex)}`;
-}
-
 function useProfileMetadata(did: string | undefined, displayName: string | undefined) {
   useEffect(() => {
+    const canonicalDid = canonicalProfileDid(did);
     const title = displayName
       ? `${displayName} | Vellum`
-      : did
+      : canonicalDid
         ? "Public profile | Vellum"
         : "Profiles | Vellum";
-    const description = did
-      ? `View the public did:ckb identity, verified accounts, Claim Cells, and reputation for ${displayName ?? shorten(did)}.`
+    const description = canonicalDid
+      ? `View the public did:ckb identity, verified accounts, Claim Cells, and reputation for ${displayName ?? shorten(canonicalDid)}.`
       : "Look up a public did:ckb identity, its verified accounts, Claim Cells, and reputation.";
-    const canonicalUrl = did ? `${PROFILE_ORIGIN}${profilePath(did)}` : `${PROFILE_ORIGIN}/profile`;
+    const canonicalUrl = canonicalDid
+      ? `${PROFILE_ORIGIN}${profilePath(canonicalDid)}`
+      : `${PROFILE_ORIGIN}/profile`;
 
     document.title = title;
     document
@@ -142,7 +139,15 @@ function useProfileMetadata(did: string | undefined, displayName: string | undef
   }, [did, displayName]);
 }
 
-export function Profile({ did, invalidPath = false }: { did?: string; invalidPath?: boolean }) {
+export function Profile({
+  did,
+  invalidPath = false,
+  initialLoad,
+}: {
+  did?: string;
+  invalidPath?: boolean;
+  initialLoad?: PublicProfileLoad;
+}) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<ProfileViewState>(() =>
     invalidPath ? { status: "invalid" } : did ? { status: "loading" } : { status: "index" },
@@ -186,13 +191,16 @@ export function Profile({ did, invalidPath = false }: { did?: string; invalidPat
       );
     };
 
-    void loadPublicProfile(did, {}, applyUpdate).then((result) => {
+    const load = attempt === 0 && initialLoad ? initialLoad : createPublicProfileLoad(did);
+    const unsubscribe = load.subscribe(applyUpdate);
+    void load.result.then((result) => {
       if (current) setState(result);
     });
     return () => {
       current = false;
+      unsubscribe();
     };
-  }, [attempt, did, invalidPath]);
+  }, [attempt, did, initialLoad, invalidPath]);
 
   const displayName =
     state.status === "available" ? boundedText(state.identity.profile.displayName, 80) : undefined;
@@ -361,7 +369,7 @@ function LoadedProfilePage({ profile, onRetry }: { profile: LoadedProfile; onRet
   const did = profile.identity.did;
   const name = boundedText(profile.identity.profile.displayName, 80) ?? shorten(did, 12, 6);
   const bio = boundedText(profile.identity.profile.bio, 320);
-  const avatar = safeImageUrl(profile.identity.profile.avatar);
+  const avatar = publicAvatarUrl(profile.identity.profile.avatar);
   const { copied: didCopied, copy: copyDid } = useCopyFeedback();
   const { copied: linkCopied, copy: copyLink } = useCopyFeedback();
   const [actionMessage, setActionMessage] = useState("");
@@ -448,13 +456,13 @@ function LoadedProfilePage({ profile, onRetry }: { profile: LoadedProfile; onRet
               )}
             </button>
             <a
-              className="v-button v-button--secondary"
+              className="v-button v-button--secondary profile-action-resolve"
               href={`/resolve?did=${encodeURIComponent(did)}`}
             >
               Resolve DID
             </a>
             <a
-              className="v-button v-button--primary"
+              className="v-button v-button--primary profile-action-edit"
               href={dashboardUrl(`/edit?did=${encodeURIComponent(did)}`)}
             >
               Edit in dashboard <ExternalLink size={13} aria-hidden="true" />
@@ -682,11 +690,7 @@ function ClaimsSection({
     reputation.status === "available" && reputation.value.status === "available"
       ? reputation.value
       : undefined;
-  const claimCellTotal =
-    claims.status === "available"
-      ? claims.value.invalid.length +
-        claims.value.claims.reduce((total, claim) => total + 1 + claim.duplicateCells.length, 0)
-      : 0;
+  const claimCellTotal = claims.status === "available" ? claimCellCount(claims.value) : 0;
 
   return (
     <section className="profile-ledger site-content" aria-labelledby="activity-title">
@@ -742,7 +746,7 @@ function ClaimLedger({
     () =>
       new Map(
         reputation?.evidence.map((evidence) => [
-          referenceKey(evidence.claim.transactionHash, evidence.claim.outputIndex),
+          claimReferenceKey(evidence.claim.transactionHash, evidence.claim.outputIndex),
           evidence,
         ]) ?? [],
       ),
@@ -752,7 +756,7 @@ function ClaimLedger({
     () =>
       new Map(
         reputation?.excludedEvidence.map((evidence) => [
-          referenceKey(evidence.claim.transactionHash, evidence.claim.outputIndex),
+          claimReferenceKey(evidence.claim.transactionHash, evidence.claim.outputIndex),
           evidence,
         ]) ?? [],
       ),
@@ -768,11 +772,15 @@ function ClaimLedger({
         <span>Policy state</span>
         <span>Source</span>
       </div>
-      {claims.map((claim) => {
-        const key = referenceKey(claim.cell.outPoint.txHash, claim.cell.outPoint.index);
+      {claimCellRecords(claims).map(({ claim, cell, duplicate, key }) => {
         const acceptedEvidence = accepted.get(key);
         const excludedEvidence = excluded.get(key);
-        const state = claimPolicyState(claim, Boolean(acceptedEvidence), Boolean(excludedEvidence));
+        const state = claimPolicyState(
+          claim,
+          Boolean(acceptedEvidence),
+          Boolean(excludedEvidence),
+          duplicate,
+        );
         const contributionPoints =
           acceptedEvidence?.contributions.reduce(
             (total, contribution) => total + contribution.points,
@@ -804,7 +812,7 @@ function ClaimLedger({
             </span>
             <a
               className="v-icon-button claim-cell__source"
-              href={`${TESTNET_EXPLORER}${claim.cell.outPoint.txHash}`}
+              href={`${TESTNET_EXPLORER}${cell.outPoint.txHash}`}
               target="_blank"
               rel="noreferrer"
               title="View transaction on CKB Testnet explorer"
@@ -823,9 +831,11 @@ function claimPolicyState(
   claim: Claim,
   accepted: boolean,
   excluded: boolean,
+  duplicate: boolean,
 ): { label: string; tone: StatusTone } {
   if (accepted) return { label: "Accepted", tone: "positive" };
   if (excluded) return { label: "Excluded", tone: "warning" };
+  if (duplicate) return { label: "Duplicate", tone: "warning" };
   if (claim.issuerState.status === "active") return { label: "Not scored", tone: "neutral" };
   if (claim.issuerState.status === "deactivated") {
     return { label: "Issuer deactivated", tone: "danger" };
@@ -852,7 +862,14 @@ function ExcludedEvidenceSection({
       ? reputation.value.excludedEvidence
       : [];
   const invalid = claims.status === "available" ? claims.value.invalid : [];
-  const recordCount = excluded.length + invalid.length;
+  const excludedReferences = new Set(
+    excluded.map((item) => claimReferenceKey(item.claim.transactionHash, item.claim.outputIndex)),
+  );
+  const duplicates =
+    claims.status === "available"
+      ? unreportedDuplicateClaims(claims.value, excludedReferences)
+      : [];
+  const recordCount = excluded.length + duplicates.length + invalid.length;
   const unavailableMessages = [
     ...new Set([
       ...(claims.status === "unavailable" ? [claims.message] : []),
@@ -896,7 +913,7 @@ function ExcludedEvidenceSection({
         ) : recordCount > 0 ? (
           <div className="excluded-list">
             {excluded.map((item) => (
-              <div key={referenceKey(item.claim.transactionHash, item.claim.outputIndex)}>
+              <div key={claimReferenceKey(item.claim.transactionHash, item.claim.outputIndex)}>
                 <span>
                   <strong>{item.reason.replaceAll("-", " ")}</strong>
                   <small>{item.message}</small>
@@ -910,8 +927,26 @@ function ExcludedEvidenceSection({
                 </a>
               </div>
             ))}
+            {duplicates.map(({ claim, cell, key }) => (
+              <div key={key}>
+                <span>
+                  <strong>duplicate claim</strong>
+                  <small>
+                    An identical live Claim Cell for {shorten(claim.schemaHash, 12, 8)} was already
+                    counted.
+                  </small>
+                </span>
+                <a
+                  href={`${TESTNET_EXPLORER}${cell.outPoint.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Source <ArrowUpRight size={13} aria-hidden="true" />
+                </a>
+              </div>
+            ))}
             {invalid.map((item) => (
-              <div key={referenceKey(item.cell.outPoint.txHash, item.cell.outPoint.index)}>
+              <div key={claimReferenceKey(item.cell.outPoint.txHash, item.cell.outPoint.index)}>
                 <span>
                   <strong>{item.code.replaceAll("-", " ")}</strong>
                   <small>The live cell could not be decoded as a canonical Vellum claim.</small>

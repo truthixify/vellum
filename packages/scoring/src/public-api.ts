@@ -21,7 +21,7 @@ import {
   discordSnowflakeTimestamp,
 } from "@vellum/schemas";
 
-const DID_CKB_PATTERN = /^did:ckb:[a-z2-7]{32}$/i;
+const DID_CKB_PATTERN = /^did:ckb:[a-zA-Z2-7]{32}$/;
 
 function isDidCkb(value: string): boolean {
   return DID_CKB_PATTERN.test(value);

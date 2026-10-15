@@ -7,6 +7,7 @@ export {
   defaultAvatarUrl,
   extractProfile,
   isDefaultAvatar,
+  normalizeProfileAvatarUrl,
   type DidDocument,
   type Services,
   type VellumProfile,

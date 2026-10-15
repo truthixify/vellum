@@ -4,6 +4,8 @@ import { extractProfile, type DidDocument, type VellumProfile } from "@vellum/sc
 import { readClaims, type ReadClaimsResult } from "@usevellum/sdk";
 
 import { siteClaimScripts } from "./claim-scripts";
+import { CKB_TESTNET_RPC_URL } from "../config";
+import { createPublicTestnetClient } from "./public-rpc";
 import {
   fetchPublicReputation,
   type PublicReputationResponse,
@@ -47,7 +49,7 @@ export type PublicProfileDependencies = {
 };
 
 const defaultDependencies: PublicProfileDependencies = {
-  createClient: () => new ccc.ClientPublicTestnet(),
+  createClient: () => createPublicTestnetClient(CKB_TESTNET_RPC_URL, 8_000),
   resolveDid: resolveDidCkb,
   readClaims,
   fetchReputation: fetchPublicReputation,
