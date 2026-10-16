@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   BLUESKY_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_HASH,
@@ -10,12 +11,19 @@ import {
 } from "@vellum/schemas";
 import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@usevellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V5 } from "./policy";
+import {
+  CKBOOST_QUEST_REGISTRY,
+  CKBOOST_VERIFIED_PARTNER,
+  scoreCkboostQuestHistory,
+  type CkboostEligibleQuest,
+} from "./ckboost";
+import { VELLUM_REPUTATION_POLICY_V6 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V5.github.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V6.github.issuerDids[0];
+const CKBOOST_ISSUER = VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -70,6 +78,13 @@ type GithubContributionClaimOptions = Omit<ClaimOptions, "accountCreatedAt"> & {
     mergedAt?: number;
     occurredAt?: number;
   }>;
+};
+
+type CkboostClaimOptions = Omit<ClaimOptions, "accountCreatedAt" | "login" | "userId"> & {
+  quest?: Readonly<CkboostEligibleQuest>;
+  userTypeId?: string;
+  completedAt?: number;
+  pointsAwarded?: string;
 };
 
 function hash(byte: number): `0x${string}` {
@@ -357,6 +372,43 @@ function blueskyClaim(options: BlueskyClaimOptions = {}): Claim {
   } as unknown as Claim;
 }
 
+function ckboostClaim(options: CkboostClaimOptions = {}): Claim {
+  const id = options.id ?? 80;
+  const issuedAt = options.issuedAt ?? EVALUATED_AT - DAY;
+  const quest =
+    options.quest ??
+    CKBOOST_QUEST_REGISTRY.quests.find((entry) => entry.classification === "contribution")!;
+  const payload = options.payload ?? {
+    campaign_type_id: quest.campaignTypeId,
+    campaign_title: quest.campaignTitle,
+    quest_id: quest.questId,
+    quest_title: quest.questTitle,
+    ckboost_user_type_id: options.userTypeId ?? hash(200),
+    completed_at: options.completedAt ?? issuedAt - 90 * DAY,
+    approval_tx_hash: hash((id + 90) % 255),
+    reward_claim_tx_hash: hash((id + 120) % 255),
+    points_awarded: options.pointsAwarded ?? "100",
+  };
+
+  return {
+    version: "v1",
+    claimId: hash(id),
+    issuerDid: options.issuerDid ?? CKBOOST_ISSUER,
+    issuerState: options.issuerState ?? ({ status: "active" } as ClaimIssuerState),
+    schemaHash: options.schemaHash ?? CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+    issuedAt: BigInt(issuedAt),
+    expiresAt: options.expiresAt === undefined ? undefined : BigInt(options.expiresAt),
+    payload,
+    cell: cell(options.transaction ?? id),
+    duplicateCells: (options.duplicateTransactions ?? []).map((transaction) => cell(transaction)),
+    verification: {
+      inclusion: "live",
+      issuerAuthorization: "accepted-by-configured-claim-type",
+      time: { status: "active", evaluatedAt: BigInt(EVALUATED_AT) },
+    },
+  } as unknown as Claim;
+}
+
 function readResult(claims: Claim[], invalid: ReadClaimsResult["invalid"] = []): ReadClaimsResult {
   return { claims, invalid };
 }
@@ -369,7 +421,7 @@ function categoryScore(
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v5", () => {
+describe("vellum.reputation.v6", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -378,7 +430,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -422,7 +474,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       overall: { score: 355 },
       categories: [
         { id: "technical", score: 75 },
@@ -645,7 +697,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       overall: { score: 360, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0, maximum: 300 },
@@ -719,7 +771,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       overall: { score: 100, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0 },
@@ -773,7 +825,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       overall: { score: 100, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0 },
@@ -850,6 +902,198 @@ describe("vellum.reputation.v5", () => {
     expect(result.excludedEvidence.map(({ reason }) => reason).sort()).toEqual([
       "malformed-payload",
       "superseded",
+    ]);
+  });
+
+  test("implements the published CKBoost depth and breadth examples", () => {
+    expect(scoreCkboostQuestHistory(0, 0)).toBe(0);
+    expect(scoreCkboostQuestHistory(1, 1)).toBe(20);
+    expect(scoreCkboostQuestHistory(3, 1)).toBe(40);
+    expect(scoreCkboostQuestHistory(5, 1)).toBe(60);
+    expect(scoreCkboostQuestHistory(5, 5)).toBe(100);
+    expect(scoreCkboostQuestHistory(6, 3)).toBe(80);
+  });
+
+  test("scores historical and newly completed CKBoost quests under the same rule", () => {
+    const historicalQuest = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) => entry.questId === 2 && entry.classification === "contribution",
+    )!;
+    const recentQuest = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) =>
+        entry.classification === "contribution" &&
+        entry.campaignTypeId !== historicalQuest.campaignTypeId,
+    )!;
+    const result = scoreReputation({
+      claims: readResult([
+        ckboostClaim({
+          id: 80,
+          quest: historicalQuest,
+          completedAt: EVALUATED_AT - 365 * DAY,
+          pointsAwarded: "1000000",
+        }),
+        ckboostClaim({
+          id: 81,
+          quest: recentQuest,
+          completedAt: EVALUATED_AT - 2 * DAY,
+          pointsAwarded: "1",
+        }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v6",
+      overall: { score: 40 },
+      categories: [
+        { id: "technical", score: 0 },
+        { id: "contribution", score: 40 },
+        { id: "community", score: 0 },
+        { id: "tenure", score: 0 },
+        { id: "recency", score: 0 },
+      ],
+    });
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toHaveLength(2);
+    expect(result.evidence.map((item) => item.contributions)).toEqual([
+      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v6" }],
+      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v6" }],
+    ]);
+    expect(result.evidence[0]).toMatchObject({
+      issuerDid: CKBOOST_ISSUER,
+      schemaId: "ckboost.quest.v1",
+      ckboostQuest: {
+        registryVersion: "ckboost.eligible-quests.v1",
+        campaignTypeId: historicalQuest.campaignTypeId,
+        questId: historicalQuest.questId,
+        classification: "contribution",
+        completionUnits: 1,
+        completedAt: EVALUATED_AT - 365 * DAY,
+        pointsAwarded: "1000000",
+      },
+    });
+  });
+
+  test("reaches the CKBoost cap through completion depth and campaign breadth", () => {
+    const quests = CKBOOST_QUEST_REGISTRY.quests
+      .filter((entry) => entry.classification === "contribution")
+      .filter(
+        (entry, index, entries) =>
+          entries.findIndex((candidate) => candidate.campaignTypeId === entry.campaignTypeId) ===
+          index,
+      )
+      .slice(0, 5);
+    const result = scoreReputation({
+      claims: readResult(
+        quests.map((quest, index) =>
+          ckboostClaim({
+            id: 90 + index,
+            quest,
+            userTypeId: hash(210 + index),
+            completedAt: EVALUATED_AT - (10 - index) * DAY,
+          }),
+        ),
+      ),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(quests).toHaveLength(5);
+    expect(categoryScore(result, "contribution")).toBe(100);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(
+      result.evidence
+        .flatMap((item) => item.contributions)
+        .reduce((total, contribution) => total + contribution.points, 0),
+    ).toBe(100);
+  });
+
+  test("applies CKBoost points after GitHub contribution evidence reaches the shared cap", () => {
+    const quest = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) => entry.classification === "contribution",
+    )!;
+    const artifacts = [
+      ...Array.from({ length: 9 }, () => ({
+        classification: "ecosystem" as const,
+        kind: "merged_pull_request" as const,
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        classification: "ecosystem" as const,
+        kind: "pull_request_review" as const,
+      })),
+    ];
+    const result = scoreReputation({
+      claims: readResult([
+        githubClaim(),
+        githubContributionClaim({ artifacts }),
+        ckboostClaim({ id: 99, quest }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(categoryScore(result, "contribution")).toBe(300);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(
+      result.evidence
+        .find((item) => item.schemaId === "vellum.contribution.github.v1")
+        ?.contributions.filter((item) => item.category === "contribution")
+        .reduce((total, item) => total + item.points, 0),
+    ).toBe(290);
+    expect(
+      result.evidence.find((item) => item.schemaId === "ckboost.quest.v1")?.contributions,
+    ).toEqual([{ category: "contribution", points: 10, ruleId: "ckboost-completion-history.v6" }]);
+  });
+
+  test("keeps participation visible and rejects untrusted, duplicate, and ineligible quests", () => {
+    const participationQuest = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) => entry.classification === "participation",
+    )!;
+    const contributionQuest = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) => entry.classification === "contribution",
+    )!;
+    const accepted = ckboostClaim({ id: 100, quest: contributionQuest });
+    const malformedPayload: Record<string, unknown> = {
+      ...(accepted.payload as Record<string, unknown>),
+      ckboost_user_type_id: hash(201),
+    };
+    delete malformedPayload.reward_claim_tx_hash;
+    const result = scoreReputation({
+      claims: readResult([
+        accepted,
+        ckboostClaim({ id: 101, quest: contributionQuest }),
+        ckboostClaim({ id: 102, quest: participationQuest, userTypeId: hash(202) }),
+        ckboostClaim({ id: 103, quest: contributionQuest, issuerDid: "did:ckb:untrusted" }),
+        ckboostClaim({
+          id: 104,
+          payload: {
+            ...(accepted.payload as Record<string, unknown>),
+            campaign_type_id: "0xd045afff6253813950ac9e64086e48743e7257c07eccd819c429ad31236b120a",
+            ckboost_user_type_id: hash(204),
+          },
+        }),
+        ckboostClaim({ id: 105, payload: malformedPayload }),
+        ckboostClaim({
+          id: 106,
+          quest: contributionQuest,
+          userTypeId: hash(206),
+          issuedAt: EVALUATED_AT - 2 * DAY,
+          completedAt: EVALUATED_AT - DAY,
+        }),
+      ]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(categoryScore(result, "contribution")).toBe(20);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toHaveLength(2);
+    expect(
+      result.evidence.find((item) => item.ckboostQuest?.classification === "participation"),
+    ).toMatchObject({ contributions: [] });
+    expect(result.excludedEvidence.map(({ reason }) => reason).sort()).toEqual([
+      "duplicate-completion",
+      "ineligible-quest",
+      "malformed-payload",
+      "timestamp-mismatch",
+      "untrusted-issuer",
     ]);
   });
 
@@ -1109,7 +1353,7 @@ describe("vellum.reputation.v5", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -1151,13 +1395,41 @@ describe("vellum.reputation.v5", () => {
     expect(() => scoreReputation({ claims: readResult([]), evaluatedAt: Number.NaN })).toThrow(
       "evaluatedAt must be a non-negative safe integer",
     );
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.github.artifactRules)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.identity.tenureBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.discord.communityBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.telegram)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V5.bluesky)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.github.artifactRules)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.telegram)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.bluesky)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.ckboost)).toBe(true);
+    expect(Object.isFrozen(CKBOOST_QUEST_REGISTRY.quests)).toBe(true);
+    expect(Object.isFrozen(CKBOOST_VERIFIED_PARTNER)).toBe(true);
+    expect(CKBOOST_VERIFIED_PARTNER).toEqual({
+      id: "ckboost",
+      name: "CKBoost",
+      network: "ckb_testnet",
+      issuerDid: "did:ckb:tlitdhrdn7wdzmktk3kzhfua3ivpgiq2",
+      controllerPolicy: "resolve-live-did",
+      verificationSnapshot: {
+        didOutput: {
+          transactionHash: "0x7b848e46846536c837b9840c52b76de1e5d6cabdd92e59cf0acc21d17fcba2a0",
+          outputIndex: 0,
+        },
+        controllerLock: {
+          codeHash: "0xf329effd1c475a2978453c8600e1eaf0bc2087ee093c3ee64cc96ec6847752cb",
+          hashType: "type",
+          args: "0x12e432ac2d3d5ad95157dca7c85be7865047baa79000",
+        },
+      },
+    });
+    expect(Object.isFrozen(CKBOOST_VERIFIED_PARTNER.verificationSnapshot)).toBe(true);
+    expect(Object.isFrozen(CKBOOST_VERIFIED_PARTNER.verificationSnapshot.controllerLock)).toBe(
+      true,
+    );
+    expect(VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids).toEqual([
+      CKBOOST_VERIFIED_PARTNER.issuerDid,
+    ]);
   });
 });

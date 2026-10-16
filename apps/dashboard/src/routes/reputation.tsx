@@ -17,7 +17,9 @@ type GithubContributionEvidence = Extract<
   { schemaId: "vellum.contribution.github.v1" }
 >;
 
-type ReputationAccount = AvailableReputation["evidence"][number]["account"];
+type ReputationEvidence = AvailableReputation["evidence"][number];
+type AccountEvidence = Extract<ReputationEvidence, { account: unknown }>;
+type ReputationAccount = AccountEvidence["account"];
 type ReputationMembership = Extract<
   AvailableReputation["evidence"][number],
   { community: unknown }
@@ -336,70 +338,10 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
         ) : (
           <div className="reputation-evidence-list">
             {result.evidence.map((evidence) => (
-              <article
-                className={`reputation-evidence${"githubContributions" in evidence ? " reputation-evidence--contributions" : ""}`}
+              <ReputationEvidenceItem
+                evidence={evidence}
                 key={`${evidence.claim.transactionHash}:${evidence.claim.outputIndex}`}
-              >
-                <div className="reputation-evidence__source">
-                  <span>{platformLabel(evidence.account, "githubContributions" in evidence)}</span>
-                  {evidence.account.profileUrl ? (
-                    <a href={evidence.account.profileUrl} target="_blank" rel="noreferrer">
-                      {accountLabel(evidence.account)}
-                      <ArrowUpRight size={13} aria-hidden="true" />
-                    </a>
-                  ) : (
-                    <strong className="reputation-evidence__account">
-                      {accountLabel(evidence.account)}
-                    </strong>
-                  )}
-                </div>
-                <div className="reputation-evidence__facts">
-                  <span>
-                    Issued <strong>{formatDate(evidence.issuedAt)} UTC</strong>
-                  </span>
-                  <span>
-                    Schema <strong>{evidence.schemaId}</strong>
-                  </span>
-                  <span>
-                    Contributions{" "}
-                    <strong>
-                      {evidence.contributions.length > 0
-                        ? evidence.contributions
-                            .map((item) => `${item.category} +${item.points}`)
-                            .join(", ")
-                        : "No direct points"}
-                    </strong>
-                  </span>
-                  {"community" in evidence
-                    ? evidence.community.memberships.map((membership) => (
-                        <CommunityMembership
-                          membership={membership}
-                          key={"guild_id" in membership ? membership.guild_id : membership.chat_id}
-                        />
-                      ))
-                    : null}
-                </div>
-                <details>
-                  <summary>On-chain reference</summary>
-                  <dl>
-                    <div>
-                      <dt>Transaction</dt>
-                      <dd>{evidence.claim.transactionHash}</dd>
-                    </div>
-                    <div>
-                      <dt>Output</dt>
-                      <dd>{evidence.claim.outputIndex}</dd>
-                    </div>
-                    <div>
-                      <dt>Issuer</dt>
-                      <dd>{evidence.issuerDid}</dd>
-                    </div>
-                  </dl>
-                </details>
-                {"githubContributions" in evidence ? (
-                  <GithubContributionArtifacts evidence={evidence} />
-                ) : null}
-              </article>
+              />
             ))}
           </div>
         )}
@@ -437,6 +379,124 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
         ) : null}
       </footer>
     </div>
+  );
+}
+
+export function ReputationEvidenceItem({ evidence }: { evidence: ReputationEvidence }) {
+  const account = "account" in evidence ? evidence.account : undefined;
+  const ckboost = "ckboostQuest" in evidence ? evidence.ckboostQuest : undefined;
+
+  return (
+    <article
+      className={`reputation-evidence${"githubContributions" in evidence ? " reputation-evidence--contributions" : ""}`}
+    >
+      <div className="reputation-evidence__source">
+        <span>
+          {account ? platformLabel(account, "githubContributions" in evidence) : "CKBoost quest"}
+        </span>
+        {account?.profileUrl ? (
+          <a href={account.profileUrl} target="_blank" rel="noreferrer">
+            {accountLabel(account)}
+            <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+        ) : (
+          <strong className="reputation-evidence__account">
+            {account ? accountLabel(account) : ckboost?.questTitle}
+          </strong>
+        )}
+      </div>
+      <div className="reputation-evidence__facts">
+        <span>
+          Issued <strong>{formatDate(evidence.issuedAt)} UTC</strong>
+        </span>
+        <span>
+          Schema <strong>{evidence.schemaId}</strong>
+        </span>
+        <span>
+          Contributions{" "}
+          <strong>
+            {evidence.contributions.length > 0
+              ? evidence.contributions.map((item) => `${item.category} +${item.points}`).join(", ")
+              : "No direct points"}
+          </strong>
+        </span>
+        {ckboost ? (
+          <>
+            <span>
+              Campaign <strong>{ckboost.campaignTitle}</strong>
+            </span>
+            <span>
+              Completed <strong>{formatDate(ckboost.completedAt)} UTC</strong>
+            </span>
+            <span>
+              Classification <strong>{ckboost.classification}</strong>
+            </span>
+            <span>
+              Completion units <strong>{ckboost.completionUnits}</strong>
+            </span>
+            <span>
+              CKBoost reward points <strong>{ckboost.pointsAwarded}</strong>
+            </span>
+          </>
+        ) : null}
+        {"community" in evidence
+          ? evidence.community.memberships.map((membership) => (
+              <CommunityMembership
+                membership={membership}
+                key={"guild_id" in membership ? membership.guild_id : membership.chat_id}
+              />
+            ))
+          : null}
+      </div>
+      <details>
+        <summary>On-chain reference</summary>
+        <dl>
+          <div>
+            <dt>Claim transaction</dt>
+            <dd>{evidence.claim.transactionHash}</dd>
+          </div>
+          <div>
+            <dt>Output</dt>
+            <dd>{evidence.claim.outputIndex}</dd>
+          </div>
+          <div>
+            <dt>Issuer</dt>
+            <dd>{evidence.issuerDid}</dd>
+          </div>
+          {ckboost ? (
+            <>
+              <div>
+                <dt>Approval transaction</dt>
+                <dd>
+                  <a
+                    href={`https://pudge.explorer.nervos.org/transaction/${ckboost.approvalTransactionHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {ckboost.approvalTransactionHash}
+                  </a>
+                </dd>
+              </div>
+              <div>
+                <dt>Reward claim transaction</dt>
+                <dd>
+                  <a
+                    href={`https://pudge.explorer.nervos.org/transaction/${ckboost.rewardClaimTransactionHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {ckboost.rewardClaimTransactionHash}
+                  </a>
+                </dd>
+              </div>
+            </>
+          ) : null}
+        </dl>
+      </details>
+      {"githubContributions" in evidence ? (
+        <GithubContributionArtifacts evidence={evidence} />
+      ) : null}
+    </article>
   );
 }
 

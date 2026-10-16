@@ -5,7 +5,7 @@ public evidence, not a second reputation record: the service keeps no reputation
 not issue a score claim. Given the same accepted claims, policy version, and evaluation time, the
 result is identical.
 
-The active Testnet policy is `vellum.reputation.v5`. Policies v1 through v4 remain exported for
+The active Testnet policy is `vellum.reputation.v6`. Policies v1 through v5 remain exported for
 consumers that need to interpret older results; their meaning has not changed.
 
 ## Score model
@@ -13,17 +13,18 @@ consumers that need to interpret older results; their meaning has not changed.
 The score is an integer from 0 to 1000. Category caps are fixed and missing evidence remains zero;
 the result is never normalized around the categories a subject happens to have.
 
-| Category     |  Maximum | Evidence scored in v5                                                     |
+| Category     |  Maximum | Evidence scored in v6                                                     |
 | ------------ | -------: | ------------------------------------------------------------------------- |
 | Technical    |      300 | Accepted code-bearing GitHub work                                         |
-| Contribution |      300 | Accepted GitHub pull requests and substantive reviews                     |
+| Contribution |      300 | Accepted GitHub work and eligible CKBoost quest completions               |
 | Community    |      200 | Strongest recognized Discord or Telegram community evidence               |
 | Tenure       |      100 | Best verified GitHub or Discord account age                               |
 | Recency      |      100 | Most recent accepted GitHub, Discord, Telegram, or Bluesky identity proof |
 | **Overall**  | **1000** | Sum of category scores                                                    |
 
 Account ownership alone does not prove technical work or ecosystem contribution. Those categories
-stay at zero unless an active GitHub contribution claim contains qualifying artifacts.
+stay at zero unless an active GitHub contribution claim contains qualifying artifacts or an
+eligible CKBoost quest-completion claim is accepted.
 
 ### Identity tenure
 
@@ -129,6 +130,48 @@ classification.
 Only OAuth accounts whose GitHub account type is `User` are accepted; GitHub bot identities are
 rejected before contribution collection.
 
+### CKBoost quest-completion history
+
+`ckboost.quest.v1` records a completed CKBoost quest after its approved reward or points claim is
+confirmed. Policy v6 accepts only the pinned schema hash from the trusted CKBoost issuer and only
+quests in `ckboost.eligible-quests.v1`. The registry is keyed by the stable
+`(campaign_type_id, quest_id)` pair; campaign and quest titles remain display snapshots.
+
+Eligible quests have one of three classifications:
+
+| Classification  | Completion units | Typical evidence                      |
+| --------------- | ---------------: | ------------------------------------- |
+| `participation` |                0 | Registration or social-only activity  |
+| `contribution`  |                1 | Ecosystem, research, or on-chain task |
+| `delivery`      |                2 | Final project or bounty delivery      |
+
+The policy recomputes cumulative CKBoost contribution points from all accepted completions:
+
+```text
+depth   = 10 * min(total completion units, 5)
+breadth = 10 * min(distinct campaigns with a scored completion, 5)
+
+ckboost contribution = depth + breadth
+maximum = 100
+```
+
+Raw `points_awarded` values are displayed as CKBoost platform rewards and never map directly to
+Vellum points. Old and newly issued completions use the same formula, with no age reduction. A
+participation-only quest remains accepted evidence with no direct points. GitHub contribution
+evidence is applied first, so the normal 300-point Contribution category cap can reduce the points
+shown on later CKBoost evidence even though the uncapped CKBoost history formula is bounded at 100.
+
+One completion is counted for each `(campaign_type_id, quest_id, ckboost_user_type_id)` tuple.
+Candidates are ordered by completion time and stable identifiers before scoring; later duplicates
+are excluded. Unknown and test quests are excluded as `ineligible-quest`. Both distinct,
+well-formed `approval_tx_hash` and `reward_claim_tx_hash` values are required, and `completed_at`
+cannot be later than Claim Cell issuance.
+
+The trusted CKBoost issuer is responsible for reconstructing and confirming the approval and final
+reward-claim provenance before issuance. Policy v6 verifies the issuer DID and live controller
+state, validates the required references, and exposes both transaction hashes for audit. It does
+not independently decode CKBoost application transactions while scoring.
+
 ### CKB community history
 
 Discord community evidence lists only the servers configured as recognized CKB communities. The
@@ -158,7 +201,7 @@ valid community claim remains visible accepted evidence with no direct contribut
 
 ## Trust and evidence selection
 
-Policy v5 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
+Policy v6 trusts Vellum issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
 
 | Schema                          | Hash                                                                 |
 | ------------------------------- | -------------------------------------------------------------------- |
@@ -169,6 +212,15 @@ Policy v5 trusts issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these sch
 | `vellum.social.telegram.v1`     | `0xe8b7f0ba94a55a5676ab205d9e1a997e1953d1e5cb6b89fd295ad5d69356467f` |
 | `vellum.community.telegram.v1`  | `0x8f8b0b59997ff96fde030314498c56008cb743006ae53b368339382640f8bd59` |
 | `vellum.social.bluesky.v1`      | `0x60bfe9263501d3d17513463b9a3163793690dcf2b614ecc17d7dd52688a083f6` |
+
+It separately trusts CKBoost issuer `did:ckb:tlitdhrdn7wdzmktk3kzhfua3ivpgiq2` for
+`ckboost.quest.v1` at hash
+`0x6f0fe424320c73627ac544d6666841623c2b15b88ffc93818dc9f78752dd8fae`. The verified-partner
+registry records initial DID output
+`0x7b848e46846536c837b9840c52b76de1e5d6cabdd92e59cf0acc21d17fcba2a0:0` and its observed
+controller lock as verification metadata. Trust is pinned to the issuer DID, not that snapshot:
+readers resolve the live DID Cell and current controller so legitimate key rotation does not change
+the partner identity.
 
 The service scans every live Claim Cell for the subject before applying the trust policy. It does
 not ask the SDK to hide other issuers or schemas, so present but rejected evidence remains visible.
@@ -188,6 +240,10 @@ Selection is deterministic:
 6. GitHub contribution evidence requires the accepted GitHub identity claim for the same user ID.
 7. Only the newest active contribution claim per GitHub user contributes; artifact and pull request
    IDs are unique within that claim.
+8. CKBoost quests must appear in the published eligible-quest registry and carry both final
+   transaction references.
+9. Each CKBoost completion tuple counts once. Participation evidence remains visible without
+   increasing depth or breadth.
 
 Expired claims are inactive when `evaluatedAt >= expiresAt`. Claims issued after the checkpoint,
 malformed payloads, untrusted issuers, unsupported schemas, and claims from missing, ambiguous, or
@@ -210,13 +266,16 @@ wallet. The server selects the current Unix time and returns it as `evaluatedAt`
 the current-live-Cell endpoint to imply a historical chain snapshot.
 
 An available response returns HTTP `200` with the aggregate, all five categories, accepted
-evidence, excluded evidence, and `policyVersion: "vellum.reputation.v5"`. Discord community evidence
+evidence, excluded evidence, and `policyVersion: "vellum.reputation.v6"`. Discord community evidence
 includes the matching identity Claim reference, configured community names, join timestamps, and
 recognized roles. Telegram community evidence includes its matching identity Claim reference,
 configured community names, chat types, and current roles. GitHub contribution evidence includes
 its matching identity Claim reference, the registry version, evidence window, artifact details,
-rule IDs, and points. Bluesky evidence includes the stable AT Protocol DID and current handle. An
-incomplete chain read returns HTTP `503`, `status: "unavailable"`, and no score fields.
+rule IDs, and points. Bluesky evidence includes the stable AT Protocol DID and current handle.
+CKBoost evidence includes the registry version, stable campaign and quest identifiers, display
+snapshots, classification, completion units and time, raw reward points, and both provenance
+transaction hashes. An incomplete chain read returns HTTP `503`, `status: "unavailable"`, and no
+score fields.
 
 ## Interpretation
 
@@ -225,8 +284,11 @@ time. The Bluesky claim binds a current handle to the stable AT Protocol DID ret
 provider. Discord and Telegram community claims additionally record current membership facts returned
 for explicitly configured CKB communities. A GitHub contribution claim records public artifacts
 accepted by maintainers of repositories named by the policy; it does not prove identity uniqueness
-or make a universal judgment about skill. Consumers should inspect the evidence and choose
-thresholds appropriate to their own use; governance eligibility is not defined by this policy.
+or make a universal judgment about skill. A CKBoost claim records a completion attested by the
+trusted CKBoost issuer and preserves inspectable transaction references; it does not make CKBoost's
+raw reward points interchangeable with Vellum score points. Consumers should inspect the evidence
+and choose thresholds appropriate to their own use; governance eligibility is not defined by this
+policy.
 
 ## Verification
 

@@ -55,7 +55,7 @@ describe("reputation service", () => {
     });
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       evaluatedAt: 2_000_000_000,
       overall: { score: 0, maximum: 1_000 },
     });
@@ -122,7 +122,7 @@ describe("reputation service", () => {
     expect(readFailure).toEqual(resolutionFailure);
     expect(readFailure).toEqual({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       evaluatedAt: 2_000_000_000,
       error: {
         code: "claim-read-unavailable",

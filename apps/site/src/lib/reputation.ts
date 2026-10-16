@@ -11,7 +11,9 @@ export type AvailablePublicReputation = AvailableReputation;
 export type UnavailablePublicReputation = UnavailableReputation;
 export type PublicReputationResponse = ReputationResponse;
 
-type PublicReputationAccount = AvailableReputation["evidence"][number]["account"];
+type PublicReputationEvidence = AvailableReputation["evidence"][number];
+type PublicReputationAccountEvidence = Extract<PublicReputationEvidence, { account: unknown }>;
+type PublicReputationAccount = PublicReputationAccountEvidence["account"];
 
 export type PublicVerifiedAccount = {
   platform: PublicReputationAccount["platform"];
@@ -123,6 +125,7 @@ export function verifiedAccounts(
 ): readonly PublicVerifiedAccount[] {
   const accounts = new Map<string, PublicVerifiedAccount>();
   for (const evidence of reputation.evidence) {
+    if (!("account" in evidence)) continue;
     const key = accountKey(evidence.account);
     const current = accounts.get(key);
     if (!current || evidence.account.verifiedAt > current.verifiedAt) {

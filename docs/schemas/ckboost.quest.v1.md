@@ -41,8 +41,10 @@ transaction is the completion event; `completed_at` is Unix seconds derived from
 block timestamp.
 
 The schema describes evidence but does not make an issuer trusted. Readers must independently
-allowlist the CKBoost issuer DID, verify the issuer's current controller policy, and validate the
-transaction provenance before accepting or scoring a claim.
+allowlist the CKBoost issuer DID and verify its live controller policy. CKBoost is responsible for
+confirming the referenced transaction provenance before issuance; readers that require independent
+application-state verification must additionally decode those transactions under CKBoost's
+protocol rules.
 
 This v1 manifest and hash are immutable. Any field or semantic change requires a new schema
 version under the [registry versioning rules](./README.md#versioning).

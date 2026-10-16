@@ -1,4 +1,5 @@
 import {
+  parseCkboostQuestClaimPayload,
   parseBlueskyClaimPayload,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
@@ -13,10 +14,12 @@ import {
   type TelegramClaimPayload,
   type TelegramCommunityClaimPayload,
   type BlueskyClaimPayload,
+  type CkboostQuestClaimPayload,
 } from "@vellum/schemas";
 import type { Claim, ClaimReadFailure } from "@usevellum/sdk";
 
-import { VELLUM_REPUTATION_POLICY_V5 } from "./policy.js";
+import { ckboostQuestKey, scoreCkboostQuestHistory, type CkboostEligibleQuest } from "./ckboost.js";
+import { VELLUM_REPUTATION_POLICY_V6 } from "./policy.js";
 import type {
   AvailableReputationResult,
   ReputationAccount,
@@ -25,7 +28,7 @@ import type {
   ReputationContribution,
   ReputationEvidence,
   ReputationExcludedEvidence,
-  ReputationPolicyV5,
+  ReputationPolicyV6,
   ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
@@ -66,12 +69,22 @@ type BlueskyCandidate = {
   payload: BlueskyClaimPayload;
 };
 
+type CkboostCandidate = {
+  claim: Claim;
+  payload: CkboostQuestClaimPayload;
+  registryEntry: Readonly<CkboostEligibleQuest>;
+};
+
 type MutableEvidence = Omit<ReputationEvidence, "contributions"> & {
   contributions: ReputationContribution[];
 };
 
+type MutableIdentityEvidence = MutableEvidence & {
+  account: ReputationAccount;
+};
+
 type IdentityScoreCandidate = {
-  evidence: MutableEvidence;
+  evidence: MutableIdentityEvidence;
   accountAge?: number;
   verificationAge: number;
   tenurePoints?: number;
@@ -135,7 +148,7 @@ function validateSchema(schema: { id: string; hash: string }, name: string): voi
   }
 }
 
-function validatePolicy(policy: ReputationPolicyV5): void {
+function validatePolicy(policy: ReputationPolicyV6): void {
   if (!policy.version || !Number.isSafeInteger(policy.maximum) || policy.maximum < 0) {
     throw new TypeError("The reputation policy score range is invalid");
   }
@@ -163,6 +176,7 @@ function validatePolicy(policy: ReputationPolicyV5): void {
   validateIssuerDids(policy.discord.issuerDids, "Discord");
   validateIssuerDids(policy.telegram.issuerDids, "Telegram");
   validateIssuerDids(policy.bluesky.issuerDids, "Bluesky");
+  validateIssuerDids(policy.ckboost.issuerDids, "CKBoost");
   validateSchema(policy.github.identitySchema, "GitHub identity");
   validateSchema(policy.github.contributionSchema, "GitHub contribution");
   validateSchema(policy.discord.identitySchema, "Discord identity");
@@ -170,6 +184,7 @@ function validatePolicy(policy: ReputationPolicyV5): void {
   validateSchema(policy.telegram.identitySchema, "Telegram identity");
   validateSchema(policy.telegram.communitySchema, "Telegram community");
   validateSchema(policy.bluesky.identitySchema, "Bluesky identity");
+  validateSchema(policy.ckboost.questSchema, "CKBoost quest");
   if (
     !validateAgeBands(policy.identity.tenureBands, categoryCaps.get("tenure")!) ||
     !validateRecencyBands(policy.identity.recencyBands, categoryCaps.get("recency")!) ||
@@ -208,6 +223,43 @@ function validatePolicy(policy: ReputationPolicyV5): void {
   }
   if (githubRules.size !== 4) {
     throw new TypeError("The reputation policy GitHub artifact rules are incomplete");
+  }
+
+  const ckboostQuests = new Set<string>();
+  for (const quest of policy.ckboost.eligibleQuests) {
+    const key = ckboostQuestKey(quest.campaignTypeId, quest.questId);
+    if (
+      ckboostQuests.has(key) ||
+      !/^0x[0-9a-f]{64}$/.test(quest.campaignTypeId) ||
+      !Number.isInteger(quest.questId) ||
+      quest.questId < 0 ||
+      quest.questId > 4_294_967_295 ||
+      !quest.campaignTitle ||
+      !quest.questTitle ||
+      !(quest.classification in policy.ckboost.completionUnits)
+    ) {
+      throw new TypeError("The reputation policy CKBoost quest registry is invalid");
+    }
+    ckboostQuests.add(key);
+  }
+  const ckboostMaximum =
+    policy.ckboost.depthPointsPerUnit * policy.ckboost.depthUnitCap +
+    policy.ckboost.breadthPointsPerCampaign * policy.ckboost.breadthCampaignCap;
+  if (
+    !policy.ckboost.registryVersion ||
+    !policy.ckboost.contributionRuleId ||
+    ckboostQuests.size === 0 ||
+    policy.ckboost.completionUnits.participation !== 0 ||
+    policy.ckboost.completionUnits.contribution !== 1 ||
+    policy.ckboost.completionUnits.delivery !== 2 ||
+    policy.ckboost.depthPointsPerUnit !== 10 ||
+    policy.ckboost.depthUnitCap !== 5 ||
+    policy.ckboost.breadthPointsPerCampaign !== 10 ||
+    policy.ckboost.breadthCampaignCap !== 5 ||
+    ckboostMaximum !== 100 ||
+    ckboostMaximum > categoryCaps.get("contribution")!
+  ) {
+    throw new TypeError("The reputation policy CKBoost scoring rule is invalid");
   }
 }
 
@@ -340,7 +392,7 @@ function scoreRecency(ageSeconds: number, bands: readonly ReputationRecencyBand[
   return bands.find((band) => ageSeconds < band.maximumAgeSecondsExclusive)?.points ?? 0;
 }
 
-function emptyCategories(policy: ReputationPolicyV5): AvailableReputationResult["categories"] {
+function emptyCategories(policy: ReputationPolicyV6): AvailableReputationResult["categories"] {
   return policy.categories.map((category) => ({ ...category, score: 0 }));
 }
 
@@ -388,7 +440,7 @@ function unavailableResult(
 ): Extract<ReputationResult, { status: "unavailable" }> {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V5.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V6.version,
     evaluatedAt,
     error: {
       code: "issuer-state-unavailable",
@@ -442,11 +494,11 @@ function accountFromBluesky(payload: BlueskyClaimPayload): ReputationAccount {
 }
 
 function identityScoreCandidate(
-  evidence: MutableEvidence,
+  evidence: MutableIdentityEvidence,
   evaluatedAt: number,
   tenureRuleId: string | undefined,
   recencyRuleId: string,
-  policy: ReputationPolicyV5,
+  policy: ReputationPolicyV6,
 ): IdentityScoreCandidate {
   const accountAge =
     "createdAt" in evidence.account ? evaluatedAt - evidence.account.createdAt : undefined;
@@ -484,7 +536,7 @@ function compareRecency(left: IdentityScoreCandidate, right: IdentityScoreCandid
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = VELLUM_REPUTATION_POLICY_V5;
+  const policy = VELLUM_REPUTATION_POLICY_V6;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 
@@ -500,6 +552,13 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   const telegramCandidates: TelegramCandidate[] = [];
   const telegramCommunityCandidates: TelegramCommunityCandidate[] = [];
   const blueskyCandidates: BlueskyCandidate[] = [];
+  const ckboostCandidates: CkboostCandidate[] = [];
+  const eligibleCkboostQuests = new Map(
+    policy.ckboost.eligibleQuests.map((quest) => [
+      ckboostQuestKey(quest.campaignTypeId, quest.questId),
+      quest,
+    ]),
+  );
 
   for (const claim of canonicalClaims(input.claims.claims, excluded)) {
     const kind =
@@ -517,7 +576,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
                   ? "telegram-community"
                   : claim.schemaHash === policy.bluesky.identitySchema.hash
                     ? "bluesky-identity"
-                    : undefined;
+                    : claim.schemaHash === policy.ckboost.questSchema.hash
+                      ? "ckboost-quest"
+                      : undefined;
     if (!kind) {
       excluded.push(
         exclusion(claim, "unsupported-schema", "The claim schema is not scored by this policy."),
@@ -531,7 +592,9 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
         ? policy.discord.issuerDids
         : kind.startsWith("telegram")
           ? policy.telegram.issuerDids
-          : policy.bluesky.issuerDids;
+          : kind === "bluesky-identity"
+            ? policy.bluesky.issuerDids
+            : policy.ckboost.issuerDids;
     if (!(trustedIssuers as readonly string[]).includes(claim.issuerDid)) {
       excluded.push(
         exclusion(claim, "untrusted-issuer", "The claim issuer is not trusted by this policy."),
@@ -556,7 +619,8 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       | DiscordCommunityClaimPayload
       | TelegramClaimPayload
       | TelegramCommunityClaimPayload
-      | BlueskyClaimPayload;
+      | BlueskyClaimPayload
+      | CkboostQuestClaimPayload;
     try {
       payload =
         kind === "github-identity"
@@ -571,20 +635,53 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
                   ? parseTelegramClaimPayload(claim.payload)
                   : kind === "telegram-community"
                     ? parseTelegramCommunityClaimPayload(claim.payload)
-                    : parseBlueskyClaimPayload(claim.payload);
+                    : kind === "bluesky-identity"
+                      ? parseBlueskyClaimPayload(claim.payload)
+                      : parseCkboostQuestClaimPayload(claim.payload);
     } catch {
       excluded.push(exclusion(claim, "malformed-payload", "The claim payload is malformed."));
       continue;
     }
-    if (BigInt(payload.verified_at) !== claim.issuedAt) {
+    const payloadTime =
+      kind === "ckboost-quest"
+        ? (payload as CkboostQuestClaimPayload).completed_at
+        : (
+            payload as
+              | GithubClaimPayload
+              | GithubContributionClaimPayload
+              | DiscordClaimPayload
+              | DiscordCommunityClaimPayload
+              | TelegramClaimPayload
+              | TelegramCommunityClaimPayload
+              | BlueskyClaimPayload
+          ).verified_at;
+    if (
+      (kind === "ckboost-quest" && BigInt(payloadTime) > claim.issuedAt) ||
+      (kind !== "ckboost-quest" && BigInt(payloadTime) !== claim.issuedAt)
+    ) {
       excluded.push(
         exclusion(
           claim,
           "timestamp-mismatch",
-          "The verification time does not match the claim issuance time.",
+          kind === "ckboost-quest"
+            ? "The CKBoost completion time is later than the claim issuance time."
+            : "The verification time does not match the claim issuance time.",
         ),
       );
       continue;
+    }
+    let ckboostRegistryEntry: Readonly<CkboostEligibleQuest> | undefined;
+    if (kind === "ckboost-quest") {
+      const quest = payload as CkboostQuestClaimPayload;
+      ckboostRegistryEntry = eligibleCkboostQuests.get(
+        ckboostQuestKey(quest.campaign_type_id, quest.quest_id),
+      );
+      if (!ckboostRegistryEntry) {
+        excluded.push(
+          exclusion(claim, "ineligible-quest", "The CKBoost quest is not eligible in this policy."),
+        );
+        continue;
+      }
     }
     if (
       (kind === "github-contribution" &&
@@ -636,8 +733,14 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
         claim,
         payload: payload as TelegramCommunityClaimPayload,
       });
-    } else {
+    } else if (kind === "bluesky-identity") {
       blueskyCandidates.push({ claim, payload: payload as BlueskyClaimPayload });
+    } else {
+      ckboostCandidates.push({
+        claim,
+        payload: payload as CkboostQuestClaimPayload,
+        registryEntry: ckboostRegistryEntry!,
+      });
     }
   }
 
@@ -787,7 +890,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   const evidence: MutableEvidence[] = [];
   const identityScores: IdentityScoreCandidate[] = [];
 
-  let githubEvidence: MutableEvidence | undefined;
+  let githubEvidence: MutableIdentityEvidence | undefined;
   if (github) {
     githubEvidence = {
       claim: claimReference(github.claim),
@@ -862,7 +965,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     });
   }
 
-  let discordEvidence: MutableEvidence | undefined;
+  let discordEvidence: MutableIdentityEvidence | undefined;
   if (discord) {
     discordEvidence = {
       claim: claimReference(discord.claim),
@@ -885,7 +988,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
     );
   }
 
-  let telegramEvidence: MutableEvidence | undefined;
+  let telegramEvidence: MutableIdentityEvidence | undefined;
   if (telegram) {
     telegramEvidence = {
       claim: claimReference(telegram.claim),
@@ -909,7 +1012,7 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
   }
 
   if (bluesky) {
-    const blueskyEvidence: MutableEvidence = {
+    const blueskyEvidence: MutableIdentityEvidence = {
       claim: claimReference(bluesky.claim),
       issuerDid: bluesky.claim.issuerDid,
       schemaId: policy.bluesky.identitySchema.id,
@@ -1029,6 +1132,76 @@ export function scoreReputation(input: ScoreReputationInput): ReputationResult {
       ruleId: communityWinner.ruleId,
     });
     categories.find((category) => category.id === "community")!.score = communityWinner.points;
+  }
+
+  ckboostCandidates.sort(
+    (left, right) =>
+      left.payload.completed_at - right.payload.completed_at ||
+      compareText(left.payload.campaign_type_id, right.payload.campaign_type_id) ||
+      left.payload.quest_id - right.payload.quest_id ||
+      compareText(left.payload.ckboost_user_type_id, right.payload.ckboost_user_type_id) ||
+      compareClaims(left.claim, right.claim),
+  );
+  const countedCompletions = new Set<string>();
+  const scoredCampaigns = new Set<string>();
+  let completionUnits = 0;
+  const contributionCategory = categories.find((category) => category.id === "contribution")!;
+  for (const candidate of ckboostCandidates) {
+    const completionKey = `${candidate.payload.campaign_type_id}:${candidate.payload.quest_id}:${candidate.payload.ckboost_user_type_id}`;
+    if (countedCompletions.has(completionKey)) {
+      excluded.push(
+        exclusion(
+          candidate.claim,
+          "duplicate-completion",
+          "This CKBoost campaign, quest, and user completion was already counted.",
+        ),
+      );
+      continue;
+    }
+    countedCompletions.add(completionKey);
+
+    const scoreBefore = scoreCkboostQuestHistory(completionUnits, scoredCampaigns.size);
+    const units = policy.ckboost.completionUnits[candidate.registryEntry.classification];
+    completionUnits += units;
+    if (units > 0) scoredCampaigns.add(candidate.payload.campaign_type_id);
+    const scoreAfter = scoreCkboostQuestHistory(completionUnits, scoredCampaigns.size);
+    const points = Math.min(
+      scoreAfter - scoreBefore,
+      contributionCategory.maximum - contributionCategory.score,
+    );
+    const contributions: ReputationContribution[] =
+      points > 0
+        ? [
+            {
+              category: "contribution",
+              points,
+              ruleId: policy.ckboost.contributionRuleId,
+            },
+          ]
+        : [];
+    contributionCategory.score += points;
+    evidence.push({
+      claim: claimReference(candidate.claim),
+      issuerDid: candidate.claim.issuerDid,
+      schemaId: policy.ckboost.questSchema.id,
+      schemaHash: candidate.claim.schemaHash,
+      issuedAt: Number(candidate.claim.issuedAt),
+      ckboostQuest: {
+        registryVersion: policy.ckboost.registryVersion,
+        campaignTypeId: candidate.payload.campaign_type_id,
+        campaignTitle: candidate.payload.campaign_title,
+        questId: candidate.payload.quest_id,
+        questTitle: candidate.payload.quest_title,
+        ckboostUserTypeId: candidate.payload.ckboost_user_type_id,
+        classification: candidate.registryEntry.classification,
+        completionUnits: units,
+        completedAt: candidate.payload.completed_at,
+        approvalTransactionHash: candidate.payload.approval_tx_hash,
+        rewardClaimTransactionHash: candidate.payload.reward_claim_tx_hash,
+        pointsAwarded: candidate.payload.points_awarded,
+      },
+      contributions,
+    });
   }
 
   return {

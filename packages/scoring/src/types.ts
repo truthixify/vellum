@@ -1,4 +1,5 @@
 import type {
+  CkboostQuestClaimPayload,
   DiscordCommunityMembership,
   GithubContributionArtifact,
   GithubContributionArtifactKind,
@@ -6,6 +7,8 @@ import type {
   TelegramCommunityMembership,
 } from "@vellum/schemas";
 import type { ReadClaimsResult } from "@usevellum/sdk";
+
+import type { CkboostEligibleQuest } from "./ckboost.js";
 
 export type ReputationCategoryId =
   | "technical"
@@ -125,6 +128,21 @@ export type ReputationPolicyV5 = ReputationPolicyV4 & {
   };
 };
 
+export type ReputationPolicyV6 = ReputationPolicyV5 & {
+  ckboost: {
+    issuerDids: readonly string[];
+    questSchema: { id: string; hash: string };
+    registryVersion: string;
+    eligibleQuests: readonly Readonly<CkboostEligibleQuest>[];
+    completionUnits: Readonly<Record<CkboostEligibleQuest["classification"], number>>;
+    depthPointsPerUnit: number;
+    depthUnitCap: number;
+    breadthPointsPerCampaign: number;
+    breadthCampaignCap: number;
+    contributionRuleId: string;
+  };
+};
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
@@ -181,7 +199,7 @@ export type ReputationEvidence = {
   schemaId: string;
   schemaHash: string;
   issuedAt: number;
-  account: ReputationAccount;
+  account?: ReputationAccount;
   community?: {
     memberships: readonly (DiscordCommunityMembership | TelegramCommunityMembership)[];
   };
@@ -191,12 +209,27 @@ export type ReputationEvidence = {
     eligibleArtifactCount: number;
     artifacts: readonly ReputationGithubArtifact[];
   };
+  ckboostQuest?: {
+    registryVersion: string;
+    campaignTypeId: string;
+    campaignTitle: string;
+    questId: number;
+    questTitle: string;
+    ckboostUserTypeId: string;
+    classification: CkboostEligibleQuest["classification"];
+    completionUnits: number;
+    completedAt: number;
+    approvalTransactionHash: string;
+    rewardClaimTransactionHash: string;
+    pointsAwarded: CkboostQuestClaimPayload["points_awarded"];
+  };
   contributions: readonly ReputationContribution[];
 };
 
 export type ReputationExclusionReason =
   | "additional-account"
   | "duplicate-claim"
+  | "duplicate-completion"
   | "expired"
   | "invalid-claim"
   | "identity-missing"
@@ -207,6 +240,7 @@ export type ReputationExclusionReason =
   | "not-yet-active"
   | "superseded"
   | "timestamp-mismatch"
+  | "ineligible-quest"
   | "unsupported-schema"
   | "untrusted-issuer";
 

@@ -4,7 +4,16 @@ export {
   VELLUM_REPUTATION_POLICY_V3,
   VELLUM_REPUTATION_POLICY_V4,
   VELLUM_REPUTATION_POLICY_V5,
+  VELLUM_REPUTATION_POLICY_V6,
 } from "./policy.js";
+export {
+  CKBOOST_QUEST_REGISTRY,
+  CKBOOST_VERIFIED_PARTNER,
+  VERIFIED_REPUTATION_PARTNERS,
+  ckboostQuestKey,
+  scoreCkboostQuestHistory,
+} from "./ckboost.js";
+export type { CkboostEligibleQuest, CkboostQuestClassification } from "./ckboost.js";
 export { scoreReputation } from "./score.js";
 export { parseReputationApiBody } from "./public-api.js";
 export type {
@@ -32,6 +41,7 @@ export type {
   ReputationPolicyV3,
   ReputationPolicyV4,
   ReputationPolicyV5,
+  ReputationPolicyV6,
   ReputationGithubArtifact,
   GithubArtifactScoreRule,
   ReputationRecencyBand,

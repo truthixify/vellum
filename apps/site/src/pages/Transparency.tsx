@@ -22,7 +22,7 @@ export function Transparency() {
               <span>Change</span>
             </div>
             <div>
-              <span className="mono">vellum.reputation.v5</span>
+              <span className="mono">vellum.reputation.v6</span>
               <span>Live on Testnet</span>
               <span>
                 Scores accepted work in curated CKB repositories, verified account age, verification

@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
   TELEGRAM_CLAIM_SCHEMA_HASH,
@@ -34,7 +36,7 @@ function availableResponse(): AvailablePublicReputation {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v5",
+    policyVersion: "vellum.reputation.v6",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -114,6 +116,28 @@ describe("public reputation client", () => {
         },
         contributions: [],
       },
+      {
+        claim: reference("5"),
+        issuerDid: "did:ckb:tlitdhrdn7wdzmktk3kzhfua3ivpgiq2",
+        schemaId: CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+        schemaHash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+        issuedAt: 1_799_500_000,
+        ckboostQuest: {
+          registryVersion: "ckboost.eligible-quests.v1",
+          campaignTypeId: "0x775802a38a6d67ab1351ae5d676adeb6e72e041d39c041dff4e901d0ae27f0bc",
+          campaignTitle: "Claw & Order: CKB AI Agent Hackathon",
+          questId: 1,
+          questTitle: "Register",
+          ckboostUserTypeId: `0x${"6".repeat(64)}`,
+          classification: "participation",
+          completionUnits: 0,
+          completedAt: 1_700_000_000,
+          approvalTransactionHash: `0x${"7".repeat(64)}`,
+          rewardClaimTransactionHash: `0x${"8".repeat(64)}`,
+          pointsAwarded: "25",
+        },
+        contributions: [],
+      },
     );
 
     const parsed = parsePublicReputationResponse(response, DID);
@@ -163,8 +187,11 @@ describe("public reputation client", () => {
     expect(() => parsePublicReputationResponse(wrongMaximum, DID)).toThrow();
 
     const wrongAccountUrl = availableResponse();
-    const account = wrongAccountUrl.evidence[0].account;
-    if (account.platform !== "github") throw new Error("Expected a GitHub account");
+    const evidence = wrongAccountUrl.evidence[0];
+    if (evidence.schemaId !== GITHUB_CLAIM_SCHEMA_ID) {
+      throw new Error("Expected GitHub evidence");
+    }
+    const account = evidence.account;
     account.profileUrl = "https://example.com/builder";
     expect(() => parsePublicReputationResponse(wrongAccountUrl, DID)).toThrow();
   });
@@ -176,7 +203,7 @@ describe("public reputation client", () => {
       network: "ckb_testnet",
       subject: DID,
       status: "unavailable",
-      policyVersion: "vellum.reputation.v5",
+      policyVersion: "vellum.reputation.v6",
       evaluatedAt: 1_800_000_000,
       error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
     };

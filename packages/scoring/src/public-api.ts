@@ -4,6 +4,8 @@ import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
   BLUESKY_HANDLE_PATTERN,
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
@@ -20,6 +22,9 @@ import {
   TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   discordSnowflakeTimestamp,
 } from "@vellum/schemas";
+
+import { ckboostQuestKey, scoreCkboostQuestHistory } from "./ckboost.js";
+import { VELLUM_REPUTATION_POLICY_V6 } from "./policy.js";
 
 const DID_CKB_PATTERN = /^did:ckb:[a-zA-Z2-7]{32}$/;
 
@@ -145,6 +150,34 @@ const blueskyAccountSchema = z
   })
   .strict()
   .refine((account) => account.profileUrl === `https://bsky.app/profile/${account.id}`);
+
+const ckboostPointsSchema = z
+  .string()
+  .regex(/^(0|[1-9][0-9]{0,38})$/)
+  .refine((value) => BigInt(value) <= 340_282_366_920_938_463_463_374_607_431_768_211_455n);
+
+const ckboostQuestEvidenceSchema = z
+  .object({
+    registryVersion: z.literal(VELLUM_REPUTATION_POLICY_V6.ckboost.registryVersion),
+    campaignTypeId: ckbHashSchema,
+    campaignTitle: z.string().min(1).max(160).refine(hasOnlyLabelCharacters),
+    questId: z.number().int().min(0).max(4_294_967_295),
+    questTitle: z.string().min(1).max(160).refine(hasOnlyLabelCharacters),
+    ckboostUserTypeId: ckbHashSchema,
+    classification: z.enum(["participation", "contribution", "delivery"]),
+    completionUnits: z.number().int().min(0).max(2),
+    completedAt: z.number().int().positive(),
+    approvalTransactionHash: ckbHashSchema,
+    rewardClaimTransactionHash: ckbHashSchema,
+    pointsAwarded: ckboostPointsSchema,
+  })
+  .strict()
+  .refine(
+    (quest) =>
+      quest.campaignTitle.trim() === quest.campaignTitle &&
+      quest.questTitle.trim() === quest.questTitle &&
+      quest.approvalTransactionHash !== quest.rewardClaimTransactionHash,
+  );
 
 const discordRoleSchema = z
   .object({
@@ -380,6 +413,14 @@ const evidenceSchema = z.discriminatedUnion("schemaId", [
       account: blueskyAccountSchema,
     })
     .strict(),
+  z
+    .object({
+      ...evidenceFields,
+      schemaId: z.literal(CKBOOST_QUEST_CLAIM_SCHEMA_ID),
+      schemaHash: z.literal(CKBOOST_QUEST_CLAIM_SCHEMA_HASH),
+      ckboostQuest: ckboostQuestEvidenceSchema,
+    })
+    .strict(),
 ]);
 
 const availableReputationSchema = z
@@ -389,7 +430,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v5"),
+    policyVersion: z.literal("vellum.reputation.v6"),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -411,9 +452,11 @@ const availableReputationSchema = z
         reason: z.enum([
           "additional-account",
           "duplicate-claim",
+          "duplicate-completion",
           "expired",
           "identity-missing",
           "invalid-claim",
+          "ineligible-quest",
           "issuer-ambiguous",
           "issuer-deactivated",
           "issuer-missing",
@@ -547,6 +590,78 @@ const availableReputationSchema = z
         [...evidenceTotals].every(([key, points]) => artifactTotals.get(key) === points)
       );
     });
+    const ckboostEvidence = value.evidence
+      .filter(
+        (
+          evidence,
+        ): evidence is Extract<
+          (typeof value.evidence)[number],
+          { schemaId: typeof CKBOOST_QUEST_CLAIM_SCHEMA_ID }
+        > => evidence.schemaId === CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+      )
+      .sort(
+        (left, right) =>
+          left.ckboostQuest.completedAt - right.ckboostQuest.completedAt ||
+          left.ckboostQuest.campaignTypeId.localeCompare(right.ckboostQuest.campaignTypeId) ||
+          left.ckboostQuest.questId - right.ckboostQuest.questId ||
+          left.ckboostQuest.ckboostUserTypeId.localeCompare(right.ckboostQuest.ckboostUserTypeId) ||
+          left.claim.claimId.localeCompare(right.claim.claimId) ||
+          left.claim.transactionHash.localeCompare(right.claim.transactionHash) ||
+          left.claim.outputIndex - right.claim.outputIndex,
+      );
+    const ckboostRegistry = new Map(
+      VELLUM_REPUTATION_POLICY_V6.ckboost.eligibleQuests.map((quest) => [
+        ckboostQuestKey(quest.campaignTypeId, quest.questId),
+        quest,
+      ]),
+    );
+    const completionKeys = new Set<string>();
+    const scoredCampaigns = new Set<string>();
+    const nonCkboostContributionPoints = value.evidence
+      .filter((evidence) => evidence.schemaId !== CKBOOST_QUEST_CLAIM_SCHEMA_ID)
+      .flatMap((evidence) => evidence.contributions)
+      .filter((contribution) => contribution.category === "contribution")
+      .reduce((total, contribution) => total + contribution.points, 0);
+    let availableContributionPoints = categoryMaximums.contribution - nonCkboostContributionPoints;
+    let completionUnits = 0;
+    const ckboostEvidenceIsConsistent = ckboostEvidence.every((evidence) => {
+      const quest = evidence.ckboostQuest;
+      const registryEntry = ckboostRegistry.get(
+        ckboostQuestKey(quest.campaignTypeId, quest.questId),
+      );
+      const completionKey = `${quest.campaignTypeId}:${quest.questId}:${quest.ckboostUserTypeId}`;
+      const scoreBefore = scoreCkboostQuestHistory(completionUnits, scoredCampaigns.size);
+      const units = registryEntry
+        ? VELLUM_REPUTATION_POLICY_V6.ckboost.completionUnits[registryEntry.classification]
+        : -1;
+      completionUnits += Math.max(units, 0);
+      if (units > 0) scoredCampaigns.add(quest.campaignTypeId);
+      const scoreAfter = scoreCkboostQuestHistory(completionUnits, scoredCampaigns.size);
+      const expectedPoints = Math.min(
+        scoreAfter - scoreBefore,
+        Math.max(availableContributionPoints, 0),
+      );
+      availableContributionPoints -= expectedPoints;
+      const contribution = evidence.contributions[0];
+      const contributionsMatch =
+        expectedPoints === 0
+          ? evidence.contributions.length === 0
+          : evidence.contributions.length === 1 &&
+            contribution.category === "contribution" &&
+            contribution.points === expectedPoints &&
+            contribution.ruleId === VELLUM_REPUTATION_POLICY_V6.ckboost.contributionRuleId;
+      const unique = !completionKeys.has(completionKey);
+      completionKeys.add(completionKey);
+      return (
+        evidence.issuerDid === VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids[0] &&
+        registryEntry !== undefined &&
+        quest.classification === registryEntry.classification &&
+        quest.completionUnits === units &&
+        quest.completedAt <= evidence.issuedAt &&
+        unique &&
+        contributionsMatch
+      );
+    });
     if (
       value.overall.score > value.overall.maximum ||
       value.categories.some((category) => category.score > category.maximum) ||
@@ -560,9 +675,11 @@ const availableReputationSchema = z
       evidenceByReference.size !== value.evidence.length ||
       !communityEvidenceIsConsistent ||
       !githubEvidenceIsConsistent ||
+      !ckboostEvidenceIsConsistent ||
       value.evidence.some(
         (evidence) =>
-          evidence.issuedAt > value.evaluatedAt || evidence.account.verifiedAt > value.evaluatedAt,
+          evidence.issuedAt > value.evaluatedAt ||
+          ("account" in evidence && evidence.account.verifiedAt > value.evaluatedAt),
       )
     ) {
       context.addIssue({
@@ -578,7 +695,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v5"),
+  policyVersion: z.literal("vellum.reputation.v6"),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),
