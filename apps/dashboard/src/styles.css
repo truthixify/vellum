@@ -542,6 +542,16 @@
   margin-top: 20px;
 }
 
+.dashboard-page-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .dashboard-state {
   width: min(100%, 760px);
   min-height: calc(100dvh - 190px);
@@ -3039,6 +3049,11 @@
   }
 
   .dashboard-page-header > .v-status {
+    margin-top: 16px;
+  }
+
+  .dashboard-page-header__actions {
+    justify-content: flex-start;
     margin-top: 16px;
   }
 

@@ -2,7 +2,7 @@ import { ccc, useCcc } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { StatusMark } from "@vellum/ui";
-import { AlertCircle, ShieldCheck, WalletCards } from "lucide-react";
+import { AlertCircle, Plus, ShieldCheck, WalletCards } from "lucide-react";
 
 import { Manifest, IdTab, Brackets, MetaStrip, FieldRow, Tag } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
@@ -104,7 +104,13 @@ function MyDid() {
           <h1>Your did:ckb</h1>
           <p>Inspect the live document and manage the identity controlled by your wallet.</p>
         </div>
-        <StatusMark tone="positive">{networkLabel}</StatusMark>
+        <div className="dashboard-page-header__actions">
+          <StatusMark tone="positive">{networkLabel}</StatusMark>
+          <Link to="/claim" className="v-button v-button--primary">
+            <Plus size={14} aria-hidden="true" />
+            Claim another DID
+          </Link>
+        </div>
       </header>
 
       {records.length > 1 && (
