@@ -906,12 +906,112 @@ describe("vellum.reputation.v6", () => {
   });
 
   test("implements the published CKBoost depth and breadth examples", () => {
-    expect(scoreCkboostQuestHistory(0, 0)).toBe(0);
-    expect(scoreCkboostQuestHistory(1, 1)).toBe(20);
-    expect(scoreCkboostQuestHistory(3, 1)).toBe(40);
-    expect(scoreCkboostQuestHistory(5, 1)).toBe(60);
-    expect(scoreCkboostQuestHistory(5, 5)).toBe(100);
-    expect(scoreCkboostQuestHistory(6, 3)).toBe(80);
+    const examples = [
+      { completionUnits: 0, distinctCampaigns: 0, expected: 0 },
+      { completionUnits: 1, distinctCampaigns: 1, expected: 20 },
+      { completionUnits: 3, distinctCampaigns: 1, expected: 40 },
+      { completionUnits: 5, distinctCampaigns: 1, expected: 60 },
+      { completionUnits: 5, distinctCampaigns: 5, expected: 100 },
+      { completionUnits: 6, distinctCampaigns: 3, expected: 80 },
+    ] as const;
+
+    for (const example of examples) {
+      expect(scoreCkboostQuestHistory(example.completionUnits, example.distinctCampaigns)).toBe(
+        example.expected,
+      );
+    }
+  });
+
+  test("derives CKBoost depth and breadth boundaries from registered claim evidence", () => {
+    const participation = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) => entry.classification === "participation",
+    )!;
+    const contribution = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) =>
+        entry.campaignTypeId === participation.campaignTypeId &&
+        entry.classification === "contribution",
+    )!;
+    const delivery = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) =>
+        entry.campaignTypeId === participation.campaignTypeId &&
+        entry.classification === "delivery",
+    )!;
+    const otherDelivery = CKBOOST_QUEST_REGISTRY.quests.find(
+      (entry) =>
+        entry.campaignTypeId !== participation.campaignTypeId &&
+        entry.classification === "delivery",
+    )!;
+    const contributionsByCampaign = CKBOOST_QUEST_REGISTRY.quests
+      .filter((entry) => entry.classification === "contribution")
+      .filter(
+        (entry, index, entries) =>
+          entries.findIndex((candidate) => candidate.campaignTypeId === entry.campaignTypeId) ===
+          index,
+      );
+    const thirdCampaignContribution = contributionsByCampaign.find(
+      (entry) =>
+        entry.campaignTypeId !== delivery.campaignTypeId &&
+        entry.campaignTypeId !== otherDelivery.campaignTypeId,
+    )!;
+    expect(contributionsByCampaign.length).toBeGreaterThanOrEqual(5);
+
+    const cases = [
+      {
+        name: "participation only",
+        expected: 0,
+        claims: [ckboostClaim({ id: 110, quest: participation })],
+      },
+      {
+        name: "one contribution in one campaign",
+        expected: 20,
+        claims: [ckboostClaim({ id: 111, quest: contribution })],
+      },
+      {
+        name: "participation, contribution, and delivery in one campaign",
+        expected: 40,
+        claims: [
+          ckboostClaim({ id: 112, quest: participation }),
+          ckboostClaim({ id: 113, quest: contribution }),
+          ckboostClaim({ id: 114, quest: delivery }),
+        ],
+      },
+      {
+        name: "five completion units in one campaign",
+        expected: 60,
+        claims: [
+          ckboostClaim({ id: 115, quest: contribution, userTypeId: hash(211) }),
+          ckboostClaim({ id: 116, quest: delivery, userTypeId: hash(212) }),
+          ckboostClaim({ id: 117, quest: delivery, userTypeId: hash(213) }),
+        ],
+      },
+      {
+        name: "five contributions across five campaigns",
+        expected: 100,
+        claims: contributionsByCampaign
+          .slice(0, 5)
+          .map((quest, index) => ckboostClaim({ id: 120 + index, quest })),
+      },
+      {
+        name: "the depth cap across three scored campaigns",
+        expected: 80,
+        claims: [
+          ckboostClaim({ id: 130, quest: delivery }),
+          ckboostClaim({ id: 131, quest: otherDelivery }),
+          ckboostClaim({ id: 132, quest: thirdCampaignContribution }),
+        ],
+      },
+    ] as const;
+
+    for (const example of cases) {
+      const result = scoreReputation({
+        claims: readResult([...example.claims]),
+        evaluatedAt: EVALUATED_AT,
+      });
+      expect(categoryScore(result, "contribution"), example.name).toBe(example.expected);
+      if (result.status !== "available") throw new Error("Expected an available score");
+      expect(result.excludedEvidence, example.name).toEqual([]);
+      expect(result.evidence, example.name).toHaveLength(example.claims.length);
+    }
   });
 
   test("scores historical and newly completed CKBoost quests under the same rule", () => {

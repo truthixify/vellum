@@ -22,10 +22,10 @@ Records a completed CKBoost quest after the contributor claims the approved rewa
 
 ```json
 {
-  "campaign_type_id": "0x1111111111111111111111111111111111111111111111111111111111111111",
-  "campaign_title": "Build on CKB",
-  "quest_id": 7,
-  "quest_title": "Ship a CKB integration",
+  "campaign_type_id": "0x775802a38a6d67ab1351ae5d676adeb6e72e041d39c041dff4e901d0ae27f0bc",
+  "campaign_title": "Claw & Order: CKB AI Agent Hackathon",
+  "quest_id": 2,
+  "quest_title": "Share project details",
   "ckboost_user_type_id": "0x2222222222222222222222222222222222222222222222222222222222222222",
   "completed_at": 2000000000,
   "approval_tx_hash": "0x3333333333333333333333333333333333333333333333333333333333333333",
