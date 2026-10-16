@@ -1,14 +1,15 @@
 # Claim schema registry
 
-This directory publishes the immutable v1 payload specifications used by Vellum's account
-verifiers. A schema defines the meaning and validation of the DAG-CBOR payload inside a Claim
-Cell. It does not establish issuer trust: readers must still choose trusted issuer DIDs and verify
-the Claim Cell's inclusion and current issuer authorization.
+This directory publishes the immutable v1 payload specifications used by Vellum and integrated
+issuers. A schema defines the meaning and validation of the DAG-CBOR payload inside a Claim Cell.
+It does not establish issuer trust: readers must still choose trusted issuer DIDs and verify the
+Claim Cell's inclusion and current issuer authorization.
 
 ## Published schemas
 
 | Schema ID                       | Schema hash                                                          | Specification                                       | Canonical manifest                                     |
 | ------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------ |
+| `ckboost.quest.v1`              | `0x6f0fe424320c73627ac544d6666841623c2b15b88ffc93818dc9f78752dd8fae` | [CKBoost quests](./ckboost.quest.v1.md)             | [JSON](./manifests/ckboost.quest.v1.json)              |
 | `vellum.social.github.v1`       | `0x25980dec7f198c7b228a621c61b911b8a20c55b340f398e495c4be65aa399f3c` | [GitHub identity](./social.github.v1.md)            | [JSON](./manifests/vellum.social.github.v1.json)       |
 | `vellum.contribution.github.v1` | `0xa08a1f034af0f1ebc75a6847dde6a90ee0c3dde63f3ffe4eaed248ea9e7730a1` | [GitHub contributions](./contribution.github.v1.md) | [JSON](./manifests/vellum.contribution.github.v1.json) |
 | `vellum.social.discord.v1`      | `0x1d0169167b6c34b7818ba6932974679f8fd5284e4d5d79319da12f7d79df8b69` | [Discord identity](./social.discord.v1.md)          | [JSON](./manifests/vellum.social.discord.v1.json)      |

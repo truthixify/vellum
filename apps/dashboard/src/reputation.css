@@ -732,6 +732,10 @@
   font-size: 10px;
 }
 
+.reputation-evidence dd a {
+  color: var(--primary);
+}
+
 .reputation-evidence-empty {
   padding: 36px;
   border: 1px solid var(--line);

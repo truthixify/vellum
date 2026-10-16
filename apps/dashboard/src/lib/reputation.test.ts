@@ -1,10 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
-import { discordSnowflakeTimestamp } from "@vellum/schemas";
+import {
+  CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+  discordSnowflakeTimestamp,
+} from "@vellum/schemas";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { fetchReputation, ReputationRequestError } from "./reputation";
-import { GithubContributionArtifacts } from "../routes/reputation";
+import { GithubContributionArtifacts, ReputationEvidenceItem } from "../routes/reputation";
 
 const DID = "did:ckb:fn7u37m7vwerr4ojysgdwwp4mescjtrp";
 
@@ -15,7 +19,7 @@ function availableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v5",
+    policyVersion: "vellum.reputation.v6",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -67,7 +71,7 @@ function discordAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v5",
+    policyVersion: "vellum.reputation.v6",
     evaluatedAt: 1_800_000_000,
     overall: { score: 360, maximum: 1_000 },
     categories: [
@@ -155,7 +159,7 @@ function telegramAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v5",
+    policyVersion: "vellum.reputation.v6",
     evaluatedAt: 1_800_000_000,
     overall: { score: 140, maximum: 1_000 },
     categories: [
@@ -216,7 +220,7 @@ function blueskyAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v5",
+    policyVersion: "vellum.reputation.v6",
     evaluatedAt: 1_800_000_000,
     overall: { score: 100, maximum: 1_000 },
     categories: [
@@ -303,6 +307,50 @@ function githubContributionResponse() {
     ],
   };
   return { ...body, evidence: [...body.evidence, contributionEvidence] };
+}
+
+function ckboostAvailableResponse() {
+  const body = availableResponse();
+  body.overall.score = 220;
+  body.categories[1].score = 20;
+  return {
+    ...body,
+    evidence: [
+      ...body.evidence,
+      {
+        claim: {
+          claimId: `0x${"c".repeat(64)}`,
+          transactionHash: `0x${"c".repeat(64)}`,
+          outputIndex: 0,
+        },
+        issuerDid: "did:ckb:tlitdhrdn7wdzmktk3kzhfua3ivpgiq2",
+        schemaId: CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+        schemaHash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
+        issuedAt: 1_799_600_000,
+        ckboostQuest: {
+          registryVersion: "ckboost.eligible-quests.v1",
+          campaignTypeId: "0x8d559528984762ea54f7b6f7286921399d71e63f71d9d32847d5a59b17f5c6ab",
+          campaignTitle: "Build on CKB: Campaign #01",
+          questId: 1,
+          questTitle: "Campaign submission",
+          ckboostUserTypeId: `0x${"f".repeat(64)}`,
+          classification: "contribution",
+          completionUnits: 1,
+          completedAt: 1_700_000_000,
+          approvalTransactionHash: `0x${"d".repeat(64)}`,
+          rewardClaimTransactionHash: `0x${"e".repeat(64)}`,
+          pointsAwarded: "250",
+        },
+        contributions: [
+          {
+            category: "contribution",
+            points: 20,
+            ruleId: "ckboost-completion-history.v6",
+          },
+        ],
+      },
+    ],
+  };
 }
 
 describe("reputation API client", () => {
@@ -419,6 +467,61 @@ describe("reputation API client", () => {
     });
   });
 
+  test("accepts and renders scored CKBoost completion evidence", async () => {
+    const result = await fetchReputation(
+      DID,
+      mock(async () => Response.json(ckboostAvailableResponse())),
+    );
+    if (result.status !== "available") throw new Error("Expected an available score");
+    const evidence = result.evidence.find(
+      (item) => item.schemaId === CKBOOST_QUEST_CLAIM_SCHEMA_ID,
+    );
+    if (!evidence || !("ckboostQuest" in evidence)) {
+      throw new Error("Expected CKBoost evidence");
+    }
+
+    expect(result.categories[1]).toMatchObject({ id: "contribution", score: 20 });
+    const markup = renderToStaticMarkup(createElement(ReputationEvidenceItem, { evidence }));
+    expect(markup).toContain("Campaign submission");
+    expect(markup).toContain("Build on CKB: Campaign #01");
+    expect(markup).toContain("CKBoost reward points");
+    expect(markup).toContain(evidence.ckboostQuest.approvalTransactionHash);
+    expect(markup).toContain(evidence.ckboostQuest.rewardClaimTransactionHash);
+  });
+
+  test("rejects CKBoost evidence without a distinct final reward transaction", async () => {
+    const missingFinal = ckboostAvailableResponse();
+    const missingFinalEvidence = missingFinal.evidence.find(
+      (evidence) => "ckboostQuest" in evidence,
+    );
+    if (!missingFinalEvidence || !("ckboostQuest" in missingFinalEvidence)) {
+      throw new Error("Expected CKBoost evidence");
+    }
+    Reflect.deleteProperty(missingFinalEvidence.ckboostQuest, "rewardClaimTransactionHash");
+    const duplicateReference = ckboostAvailableResponse();
+    const duplicateEvidence = duplicateReference.evidence.find(
+      (evidence) => "ckboostQuest" in evidence,
+    );
+    if (!duplicateEvidence || !("ckboostQuest" in duplicateEvidence)) {
+      throw new Error("Expected CKBoost evidence");
+    }
+    duplicateEvidence.ckboostQuest.rewardClaimTransactionHash =
+      duplicateEvidence.ckboostQuest.approvalTransactionHash;
+
+    await expect(
+      fetchReputation(
+        DID,
+        mock(async () => Response.json(missingFinal)),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+    await expect(
+      fetchReputation(
+        DID,
+        mock(async () => Response.json(duplicateReference)),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_response" });
+  });
+
   test("accepts active contribution evidence linked to a newer GitHub identity claim", async () => {
     const body = githubContributionResponse();
     const identity = body.evidence[0];
@@ -524,7 +627,7 @@ describe("reputation API client", () => {
           network: "ckb_testnet",
           subject: DID,
           status: "unavailable",
-          policyVersion: "vellum.reputation.v5",
+          policyVersion: "vellum.reputation.v6",
           evaluatedAt: 1_800_000_000,
           error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
         },
@@ -584,7 +687,7 @@ describe("reputation API client", () => {
         network: "ckb_testnet",
         subject: DID,
         status: "unavailable",
-        policyVersion: "vellum.reputation.v5",
+        policyVersion: "vellum.reputation.v6",
         evaluatedAt: 1_800_000_000,
         error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
       }),

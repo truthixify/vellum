@@ -1,0 +1,78 @@
+{
+  "encoding": "dag-cbor",
+  "name": "ckboost.quest.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "campaign_type_id, quest_id, and ckboost_user_type_id identify one non-repeatable completion",
+      "approval_tx_hash and reward_claim_tx_hash identify distinct confirmed CKB transactions",
+      "points_awarded is a canonical unsigned Uint128 decimal string"
+    ],
+    "properties": {
+      "approval_tx_hash": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "campaign_title": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "campaign_type_id": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "ckboost_user_type_id": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "completed_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "points_awarded": {
+        "maxLength": 39,
+        "minLength": 1,
+        "pattern": "^(0|[1-9][0-9]{0,38})$",
+        "type": "string"
+      },
+      "quest_id": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "quest_title": {
+        "maxLength": 160,
+        "minLength": 1,
+        "type": "string"
+      },
+      "reward_claim_tx_hash": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "campaign_type_id",
+      "campaign_title",
+      "quest_id",
+      "quest_title",
+      "ckboost_user_type_id",
+      "completed_at",
+      "approval_tx_hash",
+      "reward_claim_tx_hash",
+      "points_awarded"
+    ],
+    "type": "object"
+  },
+  "version": 1
+}

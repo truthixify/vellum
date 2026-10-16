@@ -1,11 +1,13 @@
 import type { Claim } from "@usevellum/sdk";
 import {
   blueskyIdentitySchema,
+  ckboostQuestSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   githubContributionSchema,
   githubIdentitySchema,
   parseBlueskyClaimPayload,
+  parseCkboostQuestClaimPayload,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
@@ -17,7 +19,7 @@ import {
   type GithubContributionArtifact,
 } from "@vellum/schemas";
 import { ProviderMark, type VerificationProvider } from "@vellum/ui";
-import { AlertCircle, ArrowUpRight, Braces } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Braces, Trophy } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
 type ClaimRendererProps = { claim: Claim };
@@ -59,6 +61,7 @@ const RAW_MAX_STRING_LENGTH = 256;
 const RAW_MAX_KEY_LENGTH = 96;
 const RAW_MAX_OUTPUT_LENGTH = 12_000;
 const RAW_MAX_BYTES = 64;
+const TESTNET_TRANSACTION_EXPLORER = "https://pudge.explorer.nervos.org/transaction/";
 
 function truncate(value: string, maximum: number): string {
   if (value.length <= maximum) return value;
@@ -204,27 +207,33 @@ function ClaimFacts({ facts }: { facts: readonly { label: string; value: ReactNo
   );
 }
 
-function ClaimFrame({
-  provider,
-  schemaId,
-  title,
-  description,
-  profileUrl,
-  profileLabel,
-  children,
-}: {
-  provider: VerificationProvider;
+type ClaimFrameMark =
+  | { mark: ReactElement; provider?: never }
+  | { mark?: never; provider: VerificationProvider };
+
+type ClaimFrameProps = ClaimFrameMark & {
   schemaId: string;
   title: string;
   description: string;
   profileUrl?: string;
   profileLabel?: string;
   children?: ReactNode;
-}) {
+};
+
+function ClaimFrame({
+  provider,
+  mark,
+  schemaId,
+  title,
+  description,
+  profileUrl,
+  profileLabel,
+  children,
+}: ClaimFrameProps) {
   return (
     <div className="claim-renderer">
       <span className="claim-renderer__mark">
-        <ProviderMark provider={provider} size={18} />
+        {mark ?? (provider ? <ProviderMark provider={provider} size={18} /> : null)}
       </span>
       <div className="claim-renderer__content">
         <div className="claim-renderer__header">
@@ -385,6 +394,42 @@ function renderBlueskyIdentityClaim(payload: ReturnType<typeof parseBlueskyClaim
   );
 }
 
+function renderCkboostQuestClaim(payload: ReturnType<typeof parseCkboostQuestClaimPayload>) {
+  return (
+    <ClaimFrame
+      mark={<Trophy size={18} aria-hidden="true" />}
+      schemaId={ckboostQuestSchema.id}
+      title={payload.quest_title}
+      description={`Reward claimed for ${payload.campaign_title}.`}
+      profileUrl={`${TESTNET_TRANSACTION_EXPLORER}${payload.reward_claim_tx_hash}`}
+      profileLabel="Reward claim"
+    >
+      <ClaimFacts
+        facts={[
+          { label: "Completed", value: formatTimestamp(payload.completed_at) },
+          { label: "Points", value: payload.points_awarded },
+          { label: "Quest ID", value: payload.quest_id },
+        ]}
+      />
+      <ul className="claim-renderer__records">
+        <li>
+          <span>
+            <strong>{payload.campaign_title}</strong>
+            <small>Campaign Type ID {payload.campaign_type_id}</small>
+          </span>
+          <a
+            href={`${TESTNET_TRANSACTION_EXPLORER}${payload.approval_tx_hash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Approval <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+        </li>
+      </ul>
+    </ClaimFrame>
+  );
+}
+
 function ArtifactRow({ artifact }: { artifact: GithubContributionArtifact }) {
   return (
     <li>
@@ -538,6 +583,7 @@ function defineClaimRenderer<TPayload>(
 }
 
 const registrations = [
+  defineClaimRenderer(ckboostQuestSchema, parseCkboostQuestClaimPayload, renderCkboostQuestClaim),
   defineClaimRenderer(githubIdentitySchema, parseGithubClaimPayload, renderGithubIdentityClaim),
   defineClaimRenderer(discordIdentitySchema, parseDiscordClaimPayload, renderDiscordIdentityClaim),
   defineClaimRenderer(

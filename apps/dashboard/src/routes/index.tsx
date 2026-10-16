@@ -1,6 +1,7 @@
 import { useCcc } from "@ckb-ccc/connector-react";
 import {
   BLUESKY_CLAIM_SCHEMA_ID,
+  CKBOOST_QUEST_CLAIM_SCHEMA_ID,
   DISCORD_CLAIM_SCHEMA_ID,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   GITHUB_CLAIM_SCHEMA_ID,
@@ -19,6 +20,14 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useReputation } from "@/hooks/use-reputation";
 import { useActiveIdentity } from "@/lib/active-identity-context";
 import type { AvailableReputation, ReputationResponse } from "@/lib/reputation";
+
+type ReputationEvidence = AvailableReputation["evidence"][number];
+type AccountEvidence = Extract<ReputationEvidence, { account: unknown }>;
+type ReputationAccount = AccountEvidence["account"];
+type CkboostEvidence = Extract<
+  ReputationEvidence,
+  { schemaId: typeof CKBOOST_QUEST_CLAIM_SCHEMA_ID }
+>;
 
 export const Route = createFileRoute("/")({ component: Overview });
 
@@ -42,16 +51,14 @@ function shorten(value: string, head = 18, tail = 8): string {
   return `${value.slice(0, head)}…${value.slice(-tail)}`;
 }
 
-function accountLabel(account: AvailableReputation["evidence"][number]["account"]): string {
+function accountLabel(account: ReputationAccount): string {
   if (account.platform === "telegram") {
     return account.handle ? `@${account.handle}` : account.displayName;
   }
   return `@${account.handle}`;
 }
 
-function platformLabel(
-  platform: AvailableReputation["evidence"][number]["account"]["platform"],
-): string {
+function platformLabel(platform: ReputationAccount["platform"]): string {
   return platform === "github"
     ? "GitHub"
     : platform === "discord"
@@ -59,6 +66,20 @@ function platformLabel(
       : platform === "telegram"
         ? "Telegram"
         : "Bluesky";
+}
+
+function accountEvidence<SchemaId extends AccountEvidence["schemaId"]>(
+  evidence: readonly ReputationEvidence[] | undefined,
+  schemaId: SchemaId,
+): Extract<AccountEvidence, { schemaId: SchemaId }> | undefined {
+  return evidence?.find(
+    (item): item is Extract<AccountEvidence, { schemaId: SchemaId }> =>
+      "account" in item && item.schemaId === schemaId,
+  );
+}
+
+function ckboostEvidenceLabel(evidence: CkboostEvidence): string {
+  return `CKBoost · ${evidence.ckboostQuest.questTitle}`;
 }
 
 function Overview() {
@@ -337,22 +358,20 @@ function EvidenceCoverage({
   failed: boolean;
 }) {
   const available = result?.status === "available" ? result : undefined;
-  const githubIdentity = available?.evidence.find(
-    (item) => item.schemaId === GITHUB_CLAIM_SCHEMA_ID,
-  );
-  const githubContribution = available?.evidence.find(
-    (item) => item.schemaId === GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
+  const githubIdentity = accountEvidence(available?.evidence, GITHUB_CLAIM_SCHEMA_ID);
+  const githubContribution = accountEvidence(
+    available?.evidence,
+    GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   );
   const github = githubIdentity ?? githubContribution;
-  const discord = available?.evidence.find((item) => item.schemaId === DISCORD_CLAIM_SCHEMA_ID);
-  const discordCommunity = available?.evidence.find(
-    (item) => item.schemaId === DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
+  const discord = accountEvidence(available?.evidence, DISCORD_CLAIM_SCHEMA_ID);
+  const discordCommunity = accountEvidence(available?.evidence, DISCORD_COMMUNITY_CLAIM_SCHEMA_ID);
+  const telegram = accountEvidence(available?.evidence, TELEGRAM_CLAIM_SCHEMA_ID);
+  const telegramCommunity = accountEvidence(
+    available?.evidence,
+    TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   );
-  const telegram = available?.evidence.find((item) => item.schemaId === TELEGRAM_CLAIM_SCHEMA_ID);
-  const telegramCommunity = available?.evidence.find(
-    (item) => item.schemaId === TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
-  );
-  const bluesky = available?.evidence.find((item) => item.schemaId === BLUESKY_CLAIM_SCHEMA_ID);
+  const bluesky = accountEvidence(available?.evidence, BLUESKY_CLAIM_SCHEMA_ID);
   const scoredCategories =
     available?.categories.filter((category) => category.score > 0).length ?? 0;
   const checking = loading && !mainnet;
@@ -557,14 +576,18 @@ function EvidenceLedger({ result }: { result: ReputationResponse | undefined }) 
             >
               <span>
                 <strong>
-                  {platformLabel(evidence.account.platform)} · {accountLabel(evidence.account)}
+                  {"ckboostQuest" in evidence
+                    ? ckboostEvidenceLabel(evidence)
+                    : `${platformLabel(evidence.account.platform)} · ${accountLabel(evidence.account)}`}
                 </strong>
                 <small>
-                  {"community" in evidence
-                    ? evidence.community.memberships
-                        .map((membership) => membership.community_name)
-                        .join(", ")
-                    : evidence.schemaId}
+                  {"ckboostQuest" in evidence
+                    ? `${evidence.ckboostQuest.campaignTitle} · completed ${formatDate(evidence.ckboostQuest.completedAt)}`
+                    : "community" in evidence
+                      ? evidence.community.memberships
+                          .map((membership) => membership.community_name)
+                          .join(", ")
+                      : evidence.schemaId}
                 </small>
               </span>
               <span className="mono" title={evidence.issuerDid}>

@@ -588,7 +588,7 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v5</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v6</strong>
             </div>
             <div>
               <small>Scored in v5</small>
