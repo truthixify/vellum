@@ -1,4 +1,4 @@
-import { applyProfileMetadata, profileMetadataFromPath } from "./src/lib/profile-metadata";
+import { applyProfileMetadata, profileMetadataFromPath } from "./src/lib/profile-metadata.js";
 
 type FetchImplementation = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
