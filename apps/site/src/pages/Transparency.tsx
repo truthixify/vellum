@@ -22,12 +22,12 @@ export function Transparency() {
               <span>Change</span>
             </div>
             <div>
-              <span className="mono">vellum.reputation.v6</span>
+              <span className="mono">vellum.reputation.v7</span>
               <span>Live on Testnet</span>
               <span>
-                Scores accepted work in curated CKB repositories, verified account age, verification
-                recency across four account providers, and recognized Discord or Telegram CKB
-                community evidence.
+                Scores accepted work in curated CKB repositories, eligible CKBoost completions,
+                verified account age, verification recency across four account providers, and
+                recognized Discord or Telegram CKB community evidence.
               </span>
             </div>
           </div>
@@ -54,7 +54,7 @@ export function Transparency() {
           <div>
             <small>Score range</small>
             <strong>0 to 1000</strong>
-            <span>Five fixed categories with published maxima; v5 scores all five.</span>
+            <span>Five fixed categories with published maxima; v7 scores all five.</span>
           </div>
           <div>
             <small>Failure behavior</small>
@@ -72,8 +72,9 @@ export function Transparency() {
             <ul>
               <li>The current policy and service operate on CKB Testnet.</li>
               <li>
-                Version 5 recognizes GitHub contribution evidence, verified GitHub, Discord,
-                Telegram, and Bluesky identities, and CKB community schemas from the trusted issuer.
+                Version 7 recognizes GitHub contribution evidence, eligible CKBoost completions,
+                verified GitHub, Discord, Telegram, and Bluesky identities, and CKB community
+                schemas from trusted issuers.
               </li>
               <li>GitHub activity counts only in the published CKB repository registry.</li>
               <li>A score does not prove uniqueness, humanity, honesty, or intent.</li>

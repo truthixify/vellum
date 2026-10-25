@@ -35,7 +35,7 @@ function quest(entry: CkboostEligibleQuest): Readonly<CkboostEligibleQuest> {
   return Object.freeze(entry);
 }
 
-export const CKBOOST_QUEST_REGISTRY = Object.freeze({
+export const CKBOOST_QUEST_REGISTRY_V1 = Object.freeze({
   version: "ckboost.eligible-quests.v1",
   quests: Object.freeze([
     quest({
@@ -124,6 +124,22 @@ export const CKBOOST_QUEST_REGISTRY = Object.freeze({
     }),
   ]),
 });
+
+export const CKBOOST_QUEST_REGISTRY_V2 = Object.freeze({
+  version: "ckboost.eligible-quests.v2",
+  quests: Object.freeze([
+    ...CKBOOST_QUEST_REGISTRY_V1.quests,
+    quest({
+      campaignTypeId: "0x3aee953b010d5861b521017839e9f137047756b81bbc1ac78d13d5c6e9f5c9ad",
+      campaignTitle: "Vellum Test Campaign",
+      questId: 1,
+      questTitle: "Send the Vellum Dashboard Link",
+      classification: "contribution",
+    }),
+  ]),
+});
+
+export const CKBOOST_QUEST_REGISTRY = CKBOOST_QUEST_REGISTRY_V2;
 
 export const CKBOOST_HISTORY_SCORING = Object.freeze({
   completionUnits: Object.freeze({

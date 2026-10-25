@@ -24,7 +24,7 @@ import {
 } from "@vellum/schemas";
 
 import { ckboostQuestKey, scoreCkboostQuestHistory } from "./ckboost.js";
-import { VELLUM_REPUTATION_POLICY_V6 } from "./policy.js";
+import { VELLUM_REPUTATION_POLICY_V7 } from "./policy.js";
 
 const DID_CKB_PATTERN = /^did:ckb:[a-zA-Z2-7]{32}$/;
 
@@ -158,7 +158,7 @@ const ckboostPointsSchema = z
 
 const ckboostQuestEvidenceSchema = z
   .object({
-    registryVersion: z.literal(VELLUM_REPUTATION_POLICY_V6.ckboost.registryVersion),
+    registryVersion: z.literal(VELLUM_REPUTATION_POLICY_V7.ckboost.registryVersion),
     campaignTypeId: ckbHashSchema,
     campaignTitle: z.string().min(1).max(160).refine(hasOnlyLabelCharacters),
     questId: z.number().int().min(0).max(4_294_967_295),
@@ -430,7 +430,7 @@ const availableReputationSchema = z
     network: z.literal("ckb_testnet"),
     subject: z.string().refine(isDidCkb),
     status: z.literal("available"),
-    policyVersion: z.literal("vellum.reputation.v6"),
+    policyVersion: z.literal(VELLUM_REPUTATION_POLICY_V7.version),
     evaluatedAt: z.number().int().nonnegative(),
     overall: z.object({
       score: z.number().int().nonnegative(),
@@ -610,7 +610,7 @@ const availableReputationSchema = z
           left.claim.outputIndex - right.claim.outputIndex,
       );
     const ckboostRegistry = new Map(
-      VELLUM_REPUTATION_POLICY_V6.ckboost.eligibleQuests.map((quest) => [
+      VELLUM_REPUTATION_POLICY_V7.ckboost.eligibleQuests.map((quest) => [
         ckboostQuestKey(quest.campaignTypeId, quest.questId),
         quest,
       ]),
@@ -632,7 +632,7 @@ const availableReputationSchema = z
       const completionKey = `${quest.campaignTypeId}:${quest.questId}:${quest.ckboostUserTypeId}`;
       const scoreBefore = scoreCkboostQuestHistory(completionUnits, scoredCampaigns.size);
       const units = registryEntry
-        ? VELLUM_REPUTATION_POLICY_V6.ckboost.completionUnits[registryEntry.classification]
+        ? VELLUM_REPUTATION_POLICY_V7.ckboost.completionUnits[registryEntry.classification]
         : -1;
       completionUnits += Math.max(units, 0);
       if (units > 0) scoredCampaigns.add(quest.campaignTypeId);
@@ -649,11 +649,11 @@ const availableReputationSchema = z
           : evidence.contributions.length === 1 &&
             contribution.category === "contribution" &&
             contribution.points === expectedPoints &&
-            contribution.ruleId === VELLUM_REPUTATION_POLICY_V6.ckboost.contributionRuleId;
+            contribution.ruleId === VELLUM_REPUTATION_POLICY_V7.ckboost.contributionRuleId;
       const unique = !completionKeys.has(completionKey);
       completionKeys.add(completionKey);
       return (
-        evidence.issuerDid === VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids[0] &&
+        evidence.issuerDid === VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids[0] &&
         registryEntry !== undefined &&
         quest.classification === registryEntry.classification &&
         quest.completionUnits === units &&
@@ -695,7 +695,7 @@ const unavailableReputationSchema = z.object({
   network: z.literal("ckb_testnet"),
   subject: z.string().refine(isDidCkb),
   status: z.literal("unavailable"),
-  policyVersion: z.literal("vellum.reputation.v6"),
+  policyVersion: z.literal(VELLUM_REPUTATION_POLICY_V7.version),
   evaluatedAt: z.number().int().nonnegative(),
   error: z.object({
     code: z.enum(["issuer-state-unavailable", "claim-read-unavailable"]),

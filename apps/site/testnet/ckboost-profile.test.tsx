@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
 import { ckboostQuestSchema, parseCkboostQuestClaimPayload } from "@vellum/schemas";
-import { CKBOOST_VERIFIED_PARTNER } from "@vellum/scoring";
+import {
+  CKBOOST_VERIFIED_PARTNER,
+  scoreReputation,
+  VELLUM_REPUTATION_POLICY_V7,
+} from "@vellum/scoring";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ClaimPayloadRenderer } from "../src/components/ClaimRenderer";
@@ -56,7 +60,7 @@ test("serves the confirmed CKBoost subject through a direct profile load", async
   expect(html).toContain(`<link rel="canonical" href="https://usevellum.xyz${path}" />`);
 }, 30_000);
 
-test("reads and renders the confirmed CKBoost Claim Cell without scoring the test quest", async () => {
+test("reads, renders, and scores the confirmed CKBoost Claim Cell exactly once", async () => {
   const client = new ccc.ClientPublicTestnet({
     url: CKB_RPC_URL,
     fallbacks: [],
@@ -157,13 +161,15 @@ test("reads and renders the confirmed CKBoost Claim Cell without scoring the tes
   expect(rendered).toContain(FIXTURE.payload.approval_tx_hash);
   expect(rendered).toContain(FIXTURE.payload.reward_claim_tx_hash);
 
-  expect(profile.reputation.status).toBe("available");
-  if (profile.reputation.status !== "available") throw new Error(profile.reputation.message);
-  expect(profile.reputation.value).toMatchObject({
+  const reputation = scoreReputation({
+    claims: profile.claims.value,
+    evaluatedAt: Math.floor(Date.now() / 1_000),
+  });
+  expect(reputation).toMatchObject({
     status: "available",
-    overall: { score: 0 },
-    evidence: [],
-    excludedEvidence: [
+    policyVersion: VELLUM_REPUTATION_POLICY_V7.version,
+    overall: { score: 20 },
+    evidence: [
       {
         claim: {
           claimId: FIXTURE.claimId,
@@ -172,8 +178,33 @@ test("reads and renders the confirmed CKBoost Claim Cell without scoring the tes
         },
         issuerDid: FIXTURE.issuerDid,
         schemaHash: FIXTURE.schemaHash,
-        reason: "ineligible-quest",
+        ckboostQuest: {
+          registryVersion: "ckboost.eligible-quests.v2",
+          campaignTypeId: FIXTURE.payload.campaign_type_id,
+          campaignTitle: FIXTURE.payload.campaign_title,
+          questId: FIXTURE.payload.quest_id,
+          questTitle: FIXTURE.payload.quest_title,
+          ckboostUserTypeId: FIXTURE.payload.ckboost_user_type_id,
+          classification: "contribution",
+          completionUnits: 1,
+          completedAt: FIXTURE.payload.completed_at,
+          approvalTransactionHash: FIXTURE.payload.approval_tx_hash,
+          rewardClaimTransactionHash: FIXTURE.payload.reward_claim_tx_hash,
+          pointsAwarded: FIXTURE.payload.points_awarded,
+        },
+        contributions: [
+          {
+            category: "contribution",
+            points: 20,
+            ruleId: "ckboost-completion-history.v7",
+          },
+        ],
       },
     ],
+    excludedEvidence: [],
   });
+  expect(reputation.status).toBe("available");
+  if (reputation.status !== "available") throw new Error(reputation.error.message);
+  expect(reputation.categories.find(({ id }) => id === "contribution")?.score).toBe(20);
+  expect(reputation.evidence).toHaveLength(1);
 }, 60_000);

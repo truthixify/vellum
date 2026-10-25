@@ -19,7 +19,7 @@ function availableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v6",
+    policyVersion: "vellum.reputation.v7",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -71,7 +71,7 @@ function discordAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v6",
+    policyVersion: "vellum.reputation.v7",
     evaluatedAt: 1_800_000_000,
     overall: { score: 360, maximum: 1_000 },
     categories: [
@@ -159,7 +159,7 @@ function telegramAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v6",
+    policyVersion: "vellum.reputation.v7",
     evaluatedAt: 1_800_000_000,
     overall: { score: 140, maximum: 1_000 },
     categories: [
@@ -220,7 +220,7 @@ function blueskyAvailableResponse() {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v6",
+    policyVersion: "vellum.reputation.v7",
     evaluatedAt: 1_800_000_000,
     overall: { score: 100, maximum: 1_000 },
     categories: [
@@ -328,7 +328,7 @@ function ckboostAvailableResponse() {
         schemaHash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
         issuedAt: 1_799_600_000,
         ckboostQuest: {
-          registryVersion: "ckboost.eligible-quests.v1",
+          registryVersion: "ckboost.eligible-quests.v2",
           campaignTypeId: "0x8d559528984762ea54f7b6f7286921399d71e63f71d9d32847d5a59b17f5c6ab",
           campaignTitle: "Build on CKB: Campaign #01",
           questId: 1,
@@ -345,7 +345,7 @@ function ckboostAvailableResponse() {
           {
             category: "contribution",
             points: 20,
-            ruleId: "ckboost-completion-history.v6",
+            ruleId: "ckboost-completion-history.v7",
           },
         ],
       },
@@ -627,7 +627,7 @@ describe("reputation API client", () => {
           network: "ckb_testnet",
           subject: DID,
           status: "unavailable",
-          policyVersion: "vellum.reputation.v6",
+          policyVersion: "vellum.reputation.v7",
           evaluatedAt: 1_800_000_000,
           error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
         },
@@ -687,7 +687,7 @@ describe("reputation API client", () => {
         network: "ckb_testnet",
         subject: DID,
         status: "unavailable",
-        policyVersion: "vellum.reputation.v6",
+        policyVersion: "vellum.reputation.v7",
         evaluatedAt: 1_800_000_000,
         error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
       }),

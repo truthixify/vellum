@@ -19,7 +19,7 @@ import {
 import type { Claim, ClaimReadFailure } from "@usevellum/sdk";
 
 import { ckboostQuestKey, scoreCkboostQuestHistory, type CkboostEligibleQuest } from "./ckboost.js";
-import { VELLUM_REPUTATION_POLICY_V6 } from "./policy.js";
+import { VELLUM_REPUTATION_POLICY_V7 } from "./policy.js";
 import type {
   AvailableReputationResult,
   ReputationAccount,
@@ -28,7 +28,7 @@ import type {
   ReputationContribution,
   ReputationEvidence,
   ReputationExcludedEvidence,
-  ReputationPolicyV6,
+  ReputationPolicyV7,
   ReputationRecencyBand,
   ReputationResult,
   ScoreReputationInput,
@@ -148,7 +148,7 @@ function validateSchema(schema: { id: string; hash: string }, name: string): voi
   }
 }
 
-function validatePolicy(policy: ReputationPolicyV6): void {
+function validatePolicy(policy: ReputationPolicyV7): void {
   if (!policy.version || !Number.isSafeInteger(policy.maximum) || policy.maximum < 0) {
     throw new TypeError("The reputation policy score range is invalid");
   }
@@ -392,7 +392,7 @@ function scoreRecency(ageSeconds: number, bands: readonly ReputationRecencyBand[
   return bands.find((band) => ageSeconds < band.maximumAgeSecondsExclusive)?.points ?? 0;
 }
 
-function emptyCategories(policy: ReputationPolicyV6): AvailableReputationResult["categories"] {
+function emptyCategories(policy: ReputationPolicyV7): AvailableReputationResult["categories"] {
   return policy.categories.map((category) => ({ ...category, score: 0 }));
 }
 
@@ -440,7 +440,7 @@ function unavailableResult(
 ): Extract<ReputationResult, { status: "unavailable" }> {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V6.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V7.version,
     evaluatedAt,
     error: {
       code: "issuer-state-unavailable",
@@ -498,7 +498,7 @@ function identityScoreCandidate(
   evaluatedAt: number,
   tenureRuleId: string | undefined,
   recencyRuleId: string,
-  policy: ReputationPolicyV6,
+  policy: ReputationPolicyV7,
 ): IdentityScoreCandidate {
   const accountAge =
     "createdAt" in evidence.account ? evaluatedAt - evidence.account.createdAt : undefined;
@@ -536,7 +536,7 @@ function compareRecency(left: IdentityScoreCandidate, right: IdentityScoreCandid
 }
 
 export function scoreReputation(input: ScoreReputationInput): ReputationResult {
-  const policy = VELLUM_REPUTATION_POLICY_V6;
+  const policy = VELLUM_REPUTATION_POLICY_V7;
   const evaluatedAt = validateEvaluationTime(input.evaluatedAt);
   validatePolicy(policy);
 

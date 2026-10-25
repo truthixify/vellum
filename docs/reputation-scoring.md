@@ -5,7 +5,7 @@ public evidence, not a second reputation record: the service keeps no reputation
 not issue a score claim. Given the same accepted claims, policy version, and evaluation time, the
 result is identical.
 
-The active Testnet policy is `vellum.reputation.v6`. Policies v1 through v5 remain exported for
+The active Testnet policy is `vellum.reputation.v7`. Policies v1 through v6 remain exported for
 consumers that need to interpret older results; their meaning has not changed.
 
 ## Score model
@@ -13,7 +13,7 @@ consumers that need to interpret older results; their meaning has not changed.
 The score is an integer from 0 to 1000. Category caps are fixed and missing evidence remains zero;
 the result is never normalized around the categories a subject happens to have.
 
-| Category     |  Maximum | Evidence scored in v6                                                     |
+| Category     |  Maximum | Evidence scored in v7                                                     |
 | ------------ | -------: | ------------------------------------------------------------------------- |
 | Technical    |      300 | Accepted code-bearing GitHub work                                         |
 | Contribution |      300 | Accepted GitHub work and eligible CKBoost quest completions               |
@@ -133,9 +133,12 @@ rejected before contribution collection.
 ### CKBoost quest-completion history
 
 `ckboost.quest.v1` records a completed CKBoost quest after its approved reward or points claim is
-confirmed. Policy v6 accepts only the pinned schema hash from the trusted CKBoost issuer and only
-quests in `ckboost.eligible-quests.v1`. The registry is keyed by the stable
+confirmed. Policy v7 accepts only the pinned schema hash from the trusted CKBoost issuer and only
+quests in `ckboost.eligible-quests.v2`. The registry is keyed by the stable
 `(campaign_type_id, quest_id)` pair; campaign and quest titles remain display snapshots.
+
+Registry v2 adds quest 1 of `Vellum Test Campaign`, `Send the Vellum Dashboard Link`, as a
+`contribution` completion. Registry v1 remains exported so policy v6 results remain reproducible.
 
 Eligible quests have one of three classifications:
 
@@ -163,12 +166,12 @@ shown on later CKBoost evidence even though the uncapped CKBoost history formula
 
 One completion is counted for each `(campaign_type_id, quest_id, ckboost_user_type_id)` tuple.
 Candidates are ordered by completion time and stable identifiers before scoring; later duplicates
-are excluded. Unknown and test quests are excluded as `ineligible-quest`. Both distinct,
+are excluded. Unknown quests are excluded as `ineligible-quest`. Both distinct,
 well-formed `approval_tx_hash` and `reward_claim_tx_hash` values are required, and `completed_at`
 cannot be later than Claim Cell issuance.
 
 The trusted CKBoost issuer is responsible for reconstructing and confirming the approval and final
-reward-claim provenance before issuance. Policy v6 verifies the issuer DID and live controller
+reward-claim provenance before issuance. Policy v7 verifies the issuer DID and live controller
 state, validates the required references, and exposes both transaction hashes for audit. It does
 not independently decode CKBoost application transactions while scoring.
 
@@ -201,7 +204,7 @@ valid community claim remains visible accepted evidence with no direct contribut
 
 ## Trust and evidence selection
 
-Policy v6 trusts Vellum issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
+Policy v7 trusts Vellum issuer `did:ckb:hlvxrdt3e7iwvuxdmbvejp6hc4yoo3no` for these schemas:
 
 | Schema                          | Hash                                                                 |
 | ------------------------------- | -------------------------------------------------------------------- |
@@ -266,7 +269,7 @@ wallet. The server selects the current Unix time and returns it as `evaluatedAt`
 the current-live-Cell endpoint to imply a historical chain snapshot.
 
 An available response returns HTTP `200` with the aggregate, all five categories, accepted
-evidence, excluded evidence, and `policyVersion: "vellum.reputation.v6"`. Discord community evidence
+evidence, excluded evidence, and `policyVersion: "vellum.reputation.v7"`. Discord community evidence
 includes the matching identity Claim reference, configured community names, join timestamps, and
 recognized roles. Telegram community evidence includes its matching identity Claim reference,
 configured community names, chat types, and current roles. GitHub contribution evidence includes

@@ -143,6 +143,8 @@ export type ReputationPolicyV6 = ReputationPolicyV5 & {
   };
 };
 
+export type ReputationPolicyV7 = ReputationPolicyV6;
+
 export type ReputationClaimReference = {
   claimId?: string;
   transactionHash: string;
