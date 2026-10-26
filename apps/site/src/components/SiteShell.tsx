@@ -10,6 +10,17 @@ const NAVIGATION = [
   { label: "Transparency", href: "/transparency" },
 ];
 
+const FOOTER_NAVIGATION = [
+  { label: "Docs", href: "/docs" },
+  { label: "GitHub", href: "https://github.com/truthixify/vellum" },
+  {
+    label: "CFDAO forum",
+    href: "https://talk.nervos.org/t/vellum-extended-from-identity-to-reputation-on-did-ckb/10406",
+  },
+  { label: "Roadmap", href: "https://github.com/users/truthixify/projects/2" },
+  { label: "Contact", href: "https://github.com/truthixify/vellum/issues/new" },
+];
+
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
     <div className="site-shell">
@@ -38,7 +49,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
         <div className="site-content site-footer__inner">
           <Wordmark compact />
           <nav aria-label="Footer navigation">
-            {NAVIGATION.map((item) => (
+            {FOOTER_NAVIGATION.map((item) => (
               <a key={item.href} href={item.href}>
                 {item.label}
               </a>

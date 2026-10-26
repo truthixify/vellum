@@ -1,512 +1,330 @@
-import { ArrowRight, Check, Copy, ShieldCheck } from "lucide-react";
-import { AvatarMark, SignalRail, StatusMark, useCopyFeedback } from "@vellum/ui";
-import { useState } from "react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Copy,
+  FileCheck2,
+  Fingerprint,
+  Gauge,
+  ShieldCheck,
+} from "lucide-react";
+import { StatusMark, useCopyFeedback } from "@vellum/ui";
+
 import { dashboardUrl } from "../config";
+import { profilePath } from "../lib/profile-route";
 
-type RecordNode = {
-  key: string;
-  id: string;
-  title: string;
-  source: string;
-  issuer: string;
-  time: string;
-};
+const PUBLIC_PROFILE_DID = "did:ckb:omdrzidnxy3lrdrwc6bo4sll6zljhuar";
+const CKBOOST_CLAIM_TX = "0x83f547f606bce2d6163e997eff45463f09956725e9217c88c1e97a52e7c3e1f2";
+const PUBLIC_PROFILE_PATH = profilePath(PUBLIC_PROFILE_DID);
+const REPUTATION_PATH = dashboardUrl(`/reputation?did=${encodeURIComponent(PUBLIC_PROFILE_DID)}`);
+const TESTNET_EXPLORER = "https://pudge.explorer.nervos.org/transaction/";
+const REPOSITORY_URL = "https://github.com/truthixify/vellum";
+const SCHEMAS_URL = `${REPOSITORY_URL}/tree/main/docs/schemas`;
+const SDK_URL = `${REPOSITORY_URL}/tree/main/packages/sdk#read-claims`;
+const ROADMAP_URL = "https://github.com/users/truthixify/projects/2";
+const CFDAO_PROPOSAL_URL =
+  "https://talk.nervos.org/t/vellum-extended-from-identity-to-reputation-on-did-ckb/10406";
 
-const RECORDS: RecordNode[] = [
+const AUDIENCES = [
   {
-    key: "identity",
-    id: "did:ckb:0x8f2a\u2026c41d",
-    title: "Identity record",
-    source: "CKB Testnet cell",
-    issuer: "Self-controlled",
-    time: "2025-11-04 09:12 UTC",
+    label: "Builders",
+    title: "Create and manage your DID",
+    body: "Claim a did:ckb identity, publish a profile, and manage its controller from the dashboard.",
+    href: dashboardUrl("/claim"),
+    action: "Get your DID",
   },
   {
-    key: "github",
-    id: "github.com/rmaddox",
-    title: "GitHub account",
-    source: "OAuth-backed Claim Cell",
-    issuer: "Vellum verifier",
-    time: "2026-02-11 16:40 UTC",
+    label: "Projects and issuers",
+    title: "Issue evidence people can carry",
+    body: "Use public schemas and issuer-bound Claim Cells to make achievements independently readable.",
+    href: SCHEMAS_URL,
+    action: "Review claim schemas",
   },
   {
-    key: "discord",
-    id: "discord.com/users/80351110224678912",
-    title: "Discord community membership",
-    source: "OAuth-backed Claim Cells",
-    issuer: "Vellum verifier",
-    time: "2026-02-11 16:42 UTC",
+    label: "Integrators",
+    title: "Read claims in your application",
+    body: "Resolve identities and inspect valid, invalid, accepted, and excluded evidence with the SDK.",
+    href: SDK_URL,
+    action: "Read the SDK guide",
   },
   {
-    key: "telegram",
-    id: "t.me/rmaddox",
-    title: "Telegram community membership",
-    source: "OIDC-backed Claim Cells",
-    issuer: "Vellum verifier",
-    time: "2026-02-11 16:44 UTC",
+    label: "CFDAO and community",
+    title: "Follow delivery in public",
+    body: "Track grant milestones, implementation issues, reviews, and the evidence behind completed work.",
+    href: ROADMAP_URL,
+    action: "See the roadmap",
   },
-  {
-    key: "bluesky",
-    id: "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
-    title: "Bluesky account",
-    source: "Verified through Bluesky",
-    issuer: "Vellum verifier",
-    time: "2026-02-11 16:46 UTC",
-  },
-  {
-    key: "address",
-    id: "ckb1qzda\u20264mns9f0",
-    title: "Linked address",
-    source: "Signature control proof",
-    issuer: "Wallet",
-    time: "2025-11-04 09:20 UTC",
-  },
-  {
-    key: "ckboost",
-    id: "ckboost.io/rae.boost",
-    title: "Linked profile",
-    source: "Self-declared link",
-    issuer: "None",
-    time: "2026-03-02 11:05 UTC",
-  },
-  {
-    key: "contribution",
-    id: "vellum.contribution/1",
-    title: "Protocol contribution",
-    source: "Claim cell 0x91c4\u20267ab2",
-    issuer: "CKBoost \u00b7 listed",
-    time: "2026-06-02 08:31 UTC",
-  },
-  {
-    key: "education",
-    id: "vellum.credential.education/1",
-    title: "Course credential",
-    source: "Claim cell 0x4f08\u202611de",
-    issuer: "Nervos Academy \u00b7 listed",
-    time: "2025-09-18 12:00 UTC",
-  },
-  {
-    key: "attestation",
-    id: "vellum.attestation.review/2",
-    title: "Peer review attestation",
-    source: "Claim cell 0x3d1b\u2026c0a7",
-    issuer: "Not in registry",
-    time: "2026-08-21 19:44 UTC",
-  },
-  {
-    key: "policy",
-    id: "policy:grants-council/v3",
-    title: "Eligibility evaluation",
-    source: "Published policy document",
-    issuer: "Grants council",
-    time: "2026-09-05 14:02 UTC",
-  },
-];
+] as const;
 
-function NodeButton({
-  record,
-  selected,
-  children,
-  onSelect,
-}: {
-  record: RecordNode;
-  selected: boolean;
-  children: React.ReactNode;
-  onSelect: (record: RecordNode) => void;
-}) {
-  return (
-    <button
-      className={`registry-node${selected ? " registry-node--selected" : ""}`}
-      type="button"
-      onClick={() => onSelect(record)}
-      aria-pressed={selected}
-    >
-      {children}
-    </button>
-  );
+function shortDid(did: string): string {
+  return `${did.slice(0, 16)}...${did.slice(-8)}`;
 }
 
-function RegistryScene() {
-  const [selected, setSelected] = useState(RECORDS[4]);
-  const byKey = (key: string) => RECORDS.find((record) => record.key === key)!;
-
+function LiveEvidence() {
   return (
-    <div className="registry-scene">
-      <div className="site-content registry-scene__body">
-        <div className="registry-scene__heading">
-          <h2>Registry scene &mdash; deterministic example record</h2>
-          <span>Select a node to inspect its source, issuer, and time.</span>
+    <section className="live-evidence" aria-labelledby="live-evidence-title">
+      <div className="site-content">
+        <div className="home-section-heading home-section-heading--split">
+          <div>
+            <span className="eyebrow">Confirmed on CKB Testnet</span>
+            <h2 id="live-evidence-title">One completion, readable all the way through.</h2>
+          </div>
+          <p>
+            This is a live CKBoost quest claim, its public Vellum profile, and the score produced by
+            the current policy. The links resolve the record directly.
+          </p>
         </div>
-        <div className="registry-grid" role="list">
-          <div className="registry-track" aria-hidden="true" />
-          <div className="registry-column" role="listitem">
-            <div className="registry-label registry-label--primary">
-              <span />
-              Identity
-            </div>
-            <NodeButton
-              record={byKey("identity")}
-              selected={selected.key === "identity"}
-              onSelect={setSelected}
-            >
-              <strong className="mono">{byKey("identity").id}</strong>
-              <small>Rae Maddox &middot; active</small>
-            </NodeButton>
-          </div>
-          <div className="registry-column" role="listitem">
-            <div className="registry-label">
-              <span />
-              Linked accounts
-            </div>
-            <div className="registry-stack">
-              <NodeButton
-                record={byKey("github")}
-                selected={selected.key === "github"}
-                onSelect={setSelected}
-              >
-                <strong>GitHub &middot; @rmaddox</strong>
-                <small className="positive">Verified &middot; issuer-backed claim</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("discord")}
-                selected={selected.key === "discord"}
-                onSelect={setSelected}
-              >
-                <strong>Discord &middot; @rmaddox</strong>
-                <small className="positive">Verified &middot; CKB community member</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("telegram")}
-                selected={selected.key === "telegram"}
-                onSelect={setSelected}
-              >
-                <strong>Telegram &middot; @rmaddox</strong>
-                <small className="positive">Verified &middot; current CKB membership</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("bluesky")}
-                selected={selected.key === "bluesky"}
-                onSelect={setSelected}
-              >
-                <strong>Bluesky &middot; @rmaddox.bsky.social</strong>
-                <small className="positive">Verified &middot; stable AT Protocol identity</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("address")}
-                selected={selected.key === "address"}
-                onSelect={setSelected}
-              >
-                <strong>CKB address &middot; ckb1q&hellip;s9f0</strong>
-                <small className="positive">Verified &middot; control proof</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("ckboost")}
-                selected={selected.key === "ckboost"}
-                onSelect={setSelected}
-              >
-                <strong>CKBoost &middot; rae.boost</strong>
-                <small>Self-declared link</small>
-              </NodeButton>
-            </div>
-          </div>
-          <div className="registry-column" role="listitem">
-            <div className="registry-label">
-              <span />
-              Issued claims
-            </div>
-            <div className="registry-stack">
-              <NodeButton
-                record={byKey("contribution")}
-                selected={selected.key === "contribution"}
-                onSelect={setSelected}
-              >
-                <strong>Contribution &middot; CKBoost</strong>
-                <small className="mono">vellum.contribution/1</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("education")}
-                selected={selected.key === "education"}
-                onSelect={setSelected}
-              >
-                <strong>Credential &middot; Nervos Academy</strong>
-                <small className="mono">vellum.credential.education/1</small>
-              </NodeButton>
-              <NodeButton
-                record={byKey("attestation")}
-                selected={selected.key === "attestation"}
-                onSelect={setSelected}
-              >
-                <strong>Attestation &middot; 0x3d1b&hellip;</strong>
-                <small>Unknown issuer</small>
-              </NodeButton>
-            </div>
-          </div>
-          <div className="registry-column" role="listitem">
-            <div className="registry-label">
-              <span />
-              Downstream use
-            </div>
-            <NodeButton
-              record={byKey("policy")}
-              selected={selected.key === "policy"}
-              onSelect={setSelected}
-            >
-              <strong>Grants council v3</strong>
-              <small className="positive registry-node__result">
-                <Check size={12} />
-                Eligible under published policy
-              </small>
-            </NodeButton>
+
+        <div className="evidence-flow" aria-label="Live CKBoost claim flow">
+          <a className="evidence-step" href={PUBLIC_PROFILE_PATH}>
+            <span className="evidence-step__topline">
+              <span className="evidence-step__number">01</span>
+              <Fingerprint size={18} aria-hidden="true" />
+            </span>
+            <small>Builder identity</small>
+            <strong className="mono">{shortDid(PUBLIC_PROFILE_DID)}</strong>
+            <span>Public profile on did:ckb</span>
+          </a>
+          <ArrowRight className="evidence-flow__arrow" size={20} aria-hidden="true" />
+          <a className="evidence-step" href={`${TESTNET_EXPLORER}${CKBOOST_CLAIM_TX}`}>
+            <span className="evidence-step__topline">
+              <span className="evidence-step__number">02</span>
+              <FileCheck2 size={18} aria-hidden="true" />
+            </span>
+            <small>Issuer-backed evidence</small>
+            <strong>Send the Vellum Dashboard Link</strong>
+            <span className="mono">ckboost.quest.v1</span>
+          </a>
+          <ArrowRight className="evidence-flow__arrow" size={20} aria-hidden="true" />
+          <a className="evidence-step evidence-step--score" href={REPUTATION_PATH}>
+            <span className="evidence-step__topline">
+              <span className="evidence-step__number">03</span>
+              <Gauge size={18} aria-hidden="true" />
+            </span>
+            <small>Transparent interpretation</small>
+            <strong>
+              20 <span>/ 1000</span>
+            </strong>
+            <span className="mono">vellum.reputation.v7</span>
+          </a>
+        </div>
+
+        <div className="evidence-meta">
+          <span>
+            <Check size={14} aria-hidden="true" /> Claim transaction committed and issuer verified
+          </span>
+          <div>
+            <a href={PUBLIC_PROFILE_PATH}>
+              Open public profile <ArrowUpRight size={13} aria-hidden="true" />
+            </a>
+            <a href={`${TESTNET_EXPLORER}${CKBOOST_CLAIM_TX}`}>
+              Inspect transaction <ArrowUpRight size={13} aria-hidden="true" />
+            </a>
           </div>
         </div>
       </div>
-      <div className="registry-inspector" aria-live="polite">
-        <div className="site-content registry-inspector__inner">
-          <span>Inspecting</span>
-          <strong className="mono">{selected.id}</strong>
-          <strong>{selected.title}</strong>
-          <span>Source {selected.source}</span>
-          <span>Issuer {selected.issuer}</span>
-          <span className="mono">{selected.time}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RegistryLegend() {
-  return (
-    <section className="site-content registry-legend">
-      {[
-        ["did:ckb:0x8f2a\u2026c41d", "One resolvable identifier, owned by a person"],
-        [
-          "Six linked services",
-          "GitHub, Discord, Telegram, Bluesky, CKB address, CKBoost \u2014 each with its own method",
-        ],
-        ["Independently sourced claims", "Issuer, schema, and timestamp visible on every record"],
-        [
-          "One transparent eligibility result",
-          "Every contributing rule is shown, not just the outcome",
-        ],
-      ].map(([title, body], index) => (
-        <div className={index === 0 ? "registry-legend__primary" : ""} key={title}>
-          <span className="registry-legend__node" />
-          <strong className={index === 0 ? "mono" : ""}>{title}</strong>
-          <p>{body}</p>
-        </div>
-      ))}
     </section>
   );
 }
 
-function IdentitySpecimen() {
+function ProductModel() {
+  const capabilities = [
+    {
+      icon: Fingerprint,
+      number: "01",
+      title: "Identity",
+      body: "A wallet-controlled did:ckb record that can be created, updated, rotated, resolved, and deactivated.",
+      fact: "Live on CKB Testnet and Mainnet",
+    },
+    {
+      icon: FileCheck2,
+      number: "02",
+      title: "Evidence",
+      body: "Claim Cells keep the subject, issuer, schema, dates, and public payload available to independent readers.",
+      fact: "Live on CKB Testnet",
+    },
+    {
+      icon: Gauge,
+      number: "03",
+      title: "Reputation",
+      body: "A versioned policy explains which evidence counted, which evidence was excluded, and why the score changed.",
+      fact: "Policy v7 is live on Testnet",
+    },
+  ] as const;
+
   return (
-    <div className="specimen">
-      <div className="specimen__bar">
-        <strong>Identity</strong>
-        <span>
-          <Check size={12} />
-          You control this identity
-        </span>
+    <section className="product-model" aria-labelledby="product-model-title">
+      <div className="site-content">
+        <div className="home-section-heading">
+          <span className="eyebrow">How Vellum works</span>
+          <h2 id="product-model-title">
+            The identity stays yours. The evidence stays inspectable.
+          </h2>
+          <p>
+            Vellum does not declare someone universally trustworthy. It gives people and
+            applications a shared record, then shows the rules used to interpret it.
+          </p>
+        </div>
+        <div className="capability-grid">
+          {capabilities.map(({ icon: Icon, number, title, body, fact }) => (
+            <article className="capability" key={title}>
+              <div className="capability__topline">
+                <span className="capability__icon">
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <span className="mono">{number}</span>
+              </div>
+              <h3>{title}</h3>
+              <p>{body}</p>
+              <small>
+                <Check size={13} aria-hidden="true" /> {fact}
+              </small>
+            </article>
+          ))}
+        </div>
       </div>
-      <div className="specimen__person">
-        <AvatarMark>RM</AvatarMark>
-        <span>
-          <strong>Rae Maddox</strong>
-          <small className="mono">did:ckb:0x8f2a\u2026c41d</small>
-        </span>
-        <StatusMark tone="positive">Active</StatusMark>
-      </div>
-      <dl className="specimen__rows">
-        <div>
-          <dt>Controller</dt>
-          <dd className="mono">ckb1qzda\u20264mns9f0</dd>
-        </div>
-        <div>
-          <dt>Network</dt>
-          <dd>CKB Testnet</dd>
-        </div>
-        <div>
-          <dt>Last updated</dt>
-          <dd className="mono">2026-04-02 17:20 UTC</dd>
-        </div>
-      </dl>
-    </div>
+    </section>
   );
 }
 
-function ClaimsLedger() {
+function AudiencePaths() {
   return (
-    <div className="ledger">
-      <div className="ledger__bar">
-        <strong>Attached evidence</strong>
-        <span>7 accepted Claim Cells</span>
-      </div>
-      {[
-        [
-          "GitHub account",
-          "vellum.social.github.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "GitHub CKB contribution",
-          "vellum.contribution.github.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "Discord account",
-          "vellum.social.discord.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "Nervos Nation membership",
-          "vellum.community.discord.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "Telegram account",
-          "vellum.social.telegram.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "Nervos Network membership",
-          "vellum.community.telegram.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-        [
-          "Bluesky account",
-          "vellum.social.bluesky.v1",
-          "Vellum Testnet issuer",
-          "Example checkpoint",
-          "Verified",
-        ],
-      ].map(([title, schema, issuer, date, state]) => (
-        <div className="ledger__row" key={schema}>
-          <span>
-            <strong>{title}</strong>
-            <small className="mono">{schema}</small>
-          </span>
-          <span>
-            <small>{issuer}</small>
-          </span>
-          <span className="mono">{date}</span>
-          <StatusMark
-            tone={state === "Verified" ? "positive" : "neutral"}
-            icon={state === "Verified"}
-          >
-            {state}
-          </StatusMark>
+    <section className="audience-band" aria-labelledby="audience-title">
+      <div className="site-content">
+        <div className="home-section-heading home-section-heading--split">
+          <div>
+            <span className="eyebrow">Start here</span>
+            <h2 id="audience-title">A clear path for every participant.</h2>
+          </div>
+          <p>
+            Manage your own identity, issue useful evidence, integrate the protocol, or follow the
+            grant work from its public record.
+          </p>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function PolicyExamples() {
-  return (
-    <div className="policy-examples">
-      <div className="policy-card">
-        <div className="policy-card__bar">Vellum reputation v5 - evaluation</div>
-        <div className="policy-card__result">
-          <StatusMark tone="positive">Available</StatusMark>
-          <span>Deterministic Testnet result</span>
-        </div>
-        <dl>
-          <div>
-            <dt>Aggregate score</dt>
-            <dd>450 of 1000</dd>
-          </div>
-          <div>
-            <dt>Technical work</dt>
-            <dd>60 of 300</dd>
-          </div>
-          <div>
-            <dt>Ecosystem contribution</dt>
-            <dd>30 of 300</dd>
-          </div>
-          <div>
-            <dt>Identity tenure</dt>
-            <dd>100 of 100</dd>
-          </div>
-          <div>
-            <dt>CKB community history</dt>
-            <dd>160 of 200</dd>
-          </div>
-          <div>
-            <dt>Verification recency</dt>
-            <dd>100 of 100</dd>
-          </div>
-        </dl>
-      </div>
-      <div className="policy-card">
-        <div className="policy-card__bar">
-          <span>CKBoost profile embed</span>
-          <small>via Vellum</small>
-        </div>
-        <div className="embed-person">
-          <AvatarMark size="small">RM</AvatarMark>
-          <span>
-            <strong>Rae Maddox</strong>
-            <small className="mono">did:ckb:0x8f2a\u2026c41d</small>
-          </span>
-          <strong className="embed-score">
-            450<small>/1000</small>
-          </strong>
-        </div>
-        <div className="embed-rails">
-          <span>
-            Technical <b className="mono">60/300</b>
-          </span>
-          <SignalRail value={60} max={300} label="Technical 60 of 300" />
-          <span>
-            Contribution <b className="mono">30/300</b>
-          </span>
-          <SignalRail value={30} max={300} label="Contribution 30 of 300" />
-          <span>
-            Community <b className="mono">160/200</b>
-          </span>
-          <SignalRail value={160} max={200} label="Community 160 of 200" />
-          <span>
-            Tenure <b className="mono">100/100</b>
-          </span>
-          <SignalRail value={100} max={100} label="Tenure 100 of 100" />
-          <span>
-            Recency <b className="mono">100/100</b>
-          </span>
-          <SignalRail value={100} max={100} label="Recency 100 of 100" />
-          <small>4 accepted Claim Cells {"\u00b7"} evaluated on request</small>
+        <div className="audience-grid">
+          {AUDIENCES.map((audience) => (
+            <a href={audience.href} key={audience.label}>
+              <span>{audience.label}</span>
+              <h3>{audience.title}</h3>
+              <p>{audience.body}</p>
+              <strong>
+                {audience.action} <ArrowUpRight size={14} aria-hidden="true" />
+              </strong>
+            </a>
+          ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
 function CodeExample() {
-  const code = `import { ccc } from '@ckb-ccc/core'\nimport { resolveDidCkb } from '@ckb-ccc/did-ckb'\n\nconst client = new ccc.ClientPublicTestnet()\nconst record = await resolveDidCkb({ client, did })`;
+  const code = `import { ccc } from "@ckb-ccc/core";
+import { readClaims } from "@usevellum/sdk";
+
+const client = new ccc.ClientPublicTestnet();
+const { claims, invalid } = await readClaims({
+  client,
+  scripts,
+  filter: {
+    subject: { did },
+    evaluationTime: checkpoint,
+  },
+});`;
   const { copied, copy } = useCopyFeedback();
+
   return (
     <div className="code-sample">
       <div className="code-sample__bar">
-        <span className="mono">resolve.ts</span>
+        <span className="mono">read-claims.ts</span>
         <button onClick={() => void copy(code)} title="Copy code" aria-label="Copy code">
-          <Copy size={14} />
+          <Copy size={14} aria-hidden="true" />
           {copied && <span>Copied</span>}
         </button>
       </div>
       <pre>{code}</pre>
     </div>
+  );
+}
+
+function DeveloperPath() {
+  return (
+    <section className="developer-band" aria-labelledby="developer-title">
+      <div className="site-content developer-band__inner">
+        <div className="developer-band__copy">
+          <span className="eyebrow">For integrators</span>
+          <h2 id="developer-title">Read the record, not a black-box verdict.</h2>
+          <p>
+            The SDK returns every valid claim and reports malformed cells separately. Your
+            application chooses its issuers, schemas, evaluation time, and policy.
+          </p>
+          <div className="button-row">
+            <a className="v-button v-button--primary" href={SDK_URL}>
+              Read SDK documentation <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+            <a className="v-button v-button--secondary" href="/resolve">
+              Open DID resolver
+            </a>
+          </div>
+          <div className="trust-note">
+            <ShieldCheck size={15} aria-hidden="true" />
+            <span>OAuth tokens and private verifier data never enter public claims.</span>
+          </div>
+        </div>
+        <CodeExample />
+      </div>
+    </section>
+  );
+}
+
+function PublicWork() {
+  const links = [
+    {
+      label: "CFDAO proposal",
+      detail: "Funding scope and public discussion",
+      href: CFDAO_PROPOSAL_URL,
+    },
+    {
+      label: "Delivery roadmap",
+      detail: "Milestones, issues, and current status",
+      href: ROADMAP_URL,
+    },
+    {
+      label: "Source code",
+      detail: "Protocol, SDK, dashboard, and website",
+      href: REPOSITORY_URL,
+    },
+    {
+      label: "Scoring method",
+      detail: "Policy, trust boundaries, and exclusions",
+      href: "/transparency",
+    },
+  ] as const;
+
+  return (
+    <section className="public-work" aria-labelledby="public-work-title">
+      <div className="site-content public-work__inner">
+        <div className="home-section-heading">
+          <span className="eyebrow">CFDAO-backed, built in public</span>
+          <h2 id="public-work-title">Follow the work and verify the outcome.</h2>
+          <p>
+            Vellum's reputation extension is funded through a Nervos Community Fund DAO proposal.
+            The scope, implementation, reviews, and milestone progress remain public.
+          </p>
+        </div>
+        <div className="public-work__links">
+          {links.map((link) => (
+            <a href={link.href} key={link.label}>
+              <span>
+                <strong>{link.label}</strong>
+                <small>{link.detail}</small>
+              </span>
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -517,123 +335,44 @@ export function Home() {
         <div className="site-content">
           <div className="home-hero__inner">
             <div>
+              <StatusMark tone="positive">Live on CKB</StatusMark>
               <h1>Vellum</h1>
-              <p>Portable identity and reputation on CKB.</p>
+              <p>
+                Portable identity and verifiable reputation on CKB. Create a did:ckb identity,
+                attach issuer-backed evidence, and share a public profile other applications can
+                inspect.
+              </p>
             </div>
             <div className="home-hero__actions">
               <a className="v-button v-button--primary" href={dashboardUrl()}>
-                Open dashboard
+                Manage your identity <ArrowUpRight size={14} aria-hidden="true" />
               </a>
-              <a className="v-button v-button--secondary" href="/resolve">
-                Resolve a DID
-              </a>
-            </div>
-          </div>
-        </div>
-        <RegistryScene />
-      </section>
-      <RegistryLegend />
-      <section className="feature-band">
-        <div className="site-content feature-split">
-          <div className="feature-copy">
-            <span className="section-number">01</span>
-            <h2>Own the identifier</h2>
-            <p>
-              One DID, controlled by your keys and resolvable by anyone. Rotate the controller or
-              migrate it without losing the record.
-            </p>
-          </div>
-          <IdentitySpecimen />
-        </div>
-      </section>
-      <section className="feature-band">
-        <div className="site-content feature-split feature-split--reverse">
-          <ClaimsLedger />
-          <div className="feature-copy">
-            <span className="section-number">02</span>
-            <h2>Attach evidence</h2>
-            <p>
-              Issuers write claims against published schemas. Every record keeps its issuer, dates,
-              and trust boundary in view.
-            </p>
-            <StatusMark tone="positive">Live on Testnet</StatusMark>
-          </div>
-        </div>
-      </section>
-      <section className="feature-band">
-        <div className="site-content feature-split">
-          <div className="feature-copy">
-            <span className="section-number">03</span>
-            <h2>Use it elsewhere</h2>
-            <p>
-              Applications can read a score together with its accepted and excluded evidence. Vellum
-              publishes the policy; each application still chooses how to use the result.
-            </p>
-            <a className="v-button v-button--secondary" href={dashboardUrl("/reputation")}>
-              Inspect a reputation score
-            </a>
-          </div>
-          <PolicyExamples />
-        </div>
-      </section>
-      <section className="method-band">
-        <div className="site-content">
-          <StatusMark tone="positive">Live Testnet policy</StatusMark>
-          <h2>Portable evidence. Transparent interpretation.</h2>
-          <p>
-            A Vellum score is one reading of the evidence attached to an identity. The method is
-            versioned, the inputs are inspectable, and the result never asserts that a person is
-            unique or honest.
-          </p>
-          <div className="method-grid">
-            <div>
-              <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v7</strong>
-            </div>
-            <div>
-              <small>Scored in v7</small>
-              <strong>
-                Accepted CKB work, eligible CKBoost quests, community history, tenure, and recency
-              </strong>
-            </div>
-            <div>
-              <small>Issuer visibility</small>
-              <strong>Every input names its issuer and registry state</strong>
-            </div>
-            <div>
-              <small>Scope</small>
-              <strong className="positive">Live on CKB Testnet</strong>
-            </div>
-          </div>
-          <a className="v-button v-button--secondary method-band__link" href="/transparency">
-            How this is calculated <ArrowRight size={14} />
-          </a>
-        </div>
-      </section>
-      <section className="feature-band resolve-band">
-        <div className="site-content feature-split resolve-band__inner">
-          <div className="feature-copy">
-            <h2>Resolve any identity</h2>
-            <p>
-              Read a DID document directly from CKB, then inspect the claims recognized by the
-              current reputation policy. Identity resolution and scoring are live on Testnet.
-            </p>
-            <div className="button-row">
-              <a className="v-button v-button--primary" href="/docs">
-                Read the docs
-              </a>
-              <a className="v-button v-button--secondary" href="/resolve">
-                Open resolver
+              <a className="v-button v-button--secondary" href={PUBLIC_PROFILE_PATH}>
+                View a live profile
               </a>
             </div>
-            <div className="trust-note">
-              <ShieldCheck size={15} />
-              <span>No private verifier data is exposed.</span>
+          </div>
+          <div className="home-status-grid" aria-label="Vellum network availability">
+            <div>
+              <small>did:ckb identity</small>
+              <strong>Testnet and Mainnet</strong>
+            </div>
+            <div>
+              <small>Claims and reputation</small>
+              <strong>CKB Testnet</strong>
+            </div>
+            <div>
+              <small>Public profiles</small>
+              <strong>Wallet-free viewing</strong>
             </div>
           </div>
-          <CodeExample />
         </div>
       </section>
+      <LiveEvidence />
+      <ProductModel />
+      <AudiencePaths />
+      <DeveloperPath />
+      <PublicWork />
     </>
   );
 }
