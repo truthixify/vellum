@@ -1,4 +1,5 @@
 import { ccc } from "@ckb-ccc/core";
+import { resolveDidCkb } from "@ckb-ccc/did-ckb";
 import {
   ClaimData,
   ClaimDataV1,
@@ -12,6 +13,7 @@ import type { Claim, ClaimSchema, ClaimScriptConfigLike, WriteClaimInput } from 
 if (
   typeof ClaimData !== "function" ||
   typeof ClaimDataV1 !== "function" ||
+  typeof resolveDidCkb !== "function" ||
   typeof parseClaimPayload !== "function" ||
   typeof readClaims !== "function" ||
   typeof writeClaim !== "function" ||
@@ -53,6 +55,10 @@ export const testnetScripts = {
   },
 } satisfies ClaimScriptConfigLike;
 
+export function resolveIdentity(client: ccc.Client, did: string) {
+  return resolveDidCkb({ client, did });
+}
+
 export function findClaims(client: ccc.Client, subjectDid: string, evaluationTime: ccc.NumLike) {
   return readClaims({
     client,
@@ -63,6 +69,20 @@ export function findClaims(client: ccc.Client, subjectDid: string, evaluationTim
 
 export function prepareClaim<TPayload>(issuerSigner: ccc.Signer, input: WriteClaimInput<TPayload>) {
   return writeClaim({ issuerSigner, scripts: testnetScripts, input });
+}
+
+export async function issueClaim<TPayload>(
+  issuerSigner: ccc.Signer,
+  input: WriteClaimInput<TPayload>,
+) {
+  const built = await prepareClaim(issuerSigner, input);
+  const preparedHash = built.tx.hash();
+  const signed = await issuerSigner.signOnlyTransaction(built.tx);
+  if (signed.hash() !== preparedHash) {
+    throw new Error("Signer changed the prepared transaction");
+  }
+  const txHash = await issuerSigner.client.sendTransaction(signed);
+  return { txHash, claimId: built.claimId, outputIndex: built.outputIndex };
 }
 
 export function prepareClaims<TPayload>(

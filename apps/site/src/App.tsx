@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { SiteShell } from "./components/SiteShell";
+import { docsRouteFromPath } from "./lib/docs-route";
 import { preloadPublicProfile } from "./lib/public-profile-load";
 import { profileRouteFromPath } from "./lib/profile-route";
 import { Home } from "./pages/Home";
@@ -16,6 +17,7 @@ const Transparency = lazy(() =>
 );
 
 const initialPath = window.location.pathname;
+const initialDocsRoute = docsRouteFromPath(initialPath, window.location.hash);
 const initialProfileRoute = profileRouteFromPath(initialPath);
 const initialProfileLoad =
   initialProfileRoute?.kind === "profile"
@@ -39,10 +41,15 @@ function NotFound() {
 
 export function App() {
   const path = initialPath.replace(/\/$/, "") || "/";
+  const docsRoute = initialDocsRoute;
   const profileRoute = initialProfileRoute;
   let page;
 
-  if (profileRoute?.kind === "index") {
+  if (docsRoute?.kind === "page") {
+    page = <Docs page={docsRoute.page} />;
+  } else if (docsRoute?.kind === "invalid") {
+    page = <NotFound />;
+  } else if (profileRoute?.kind === "index") {
     page = <Profile />;
   } else if (profileRoute?.kind === "profile") {
     page = <Profile did={profileRoute.did} initialLoad={initialProfileLoad} />;
@@ -55,9 +62,6 @@ export function App() {
         break;
       case "/resolve":
         page = <Resolver />;
-        break;
-      case "/docs":
-        page = <Docs />;
         break;
       case "/transparency":
         page = <Transparency />;
