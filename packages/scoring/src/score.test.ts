@@ -13,17 +13,19 @@ import type { Claim, ClaimIssuerState, ReadClaimsResult } from "@usevellum/sdk";
 
 import {
   CKBOOST_QUEST_REGISTRY,
+  CKBOOST_QUEST_REGISTRY_V1,
+  CKBOOST_QUEST_REGISTRY_V2,
   CKBOOST_VERIFIED_PARTNER,
   scoreCkboostQuestHistory,
   type CkboostEligibleQuest,
 } from "./ckboost";
-import { VELLUM_REPUTATION_POLICY_V6 } from "./policy";
+import { VELLUM_REPUTATION_POLICY_V6, VELLUM_REPUTATION_POLICY_V7 } from "./policy";
 import { scoreReputation } from "./score";
 
 const DAY = 86_400;
 const EVALUATED_AT = 2_000_000_000;
-const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V6.github.issuerDids[0];
-const CKBOOST_ISSUER = VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids[0];
+const TRUSTED_ISSUER = VELLUM_REPUTATION_POLICY_V7.github.issuerDids[0];
+const CKBOOST_ISSUER = VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids[0];
 
 type ClaimOptions = {
   id?: number;
@@ -421,7 +423,7 @@ function categoryScore(
   return result.categories.find((entry) => entry.id === category)!.score;
 }
 
-describe("vellum.reputation.v6", () => {
+describe("vellum.reputation.v7", () => {
   test("scores GitHub evidence only for tenure and recency", () => {
     const result = scoreReputation({
       claims: readResult([githubClaim()]),
@@ -430,7 +432,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       evaluatedAt: EVALUATED_AT,
       overall: { score: 200, maximum: 1_000 },
       categories: [
@@ -474,7 +476,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       overall: { score: 355 },
       categories: [
         { id: "technical", score: 75 },
@@ -697,7 +699,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       overall: { score: 360, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0, maximum: 300 },
@@ -771,7 +773,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       overall: { score: 100, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0 },
@@ -825,7 +827,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       overall: { score: 100, maximum: 1_000 },
       categories: [
         { id: "technical", score: 0 },
@@ -920,6 +922,64 @@ describe("vellum.reputation.v6", () => {
         example.expected,
       );
     }
+  });
+
+  test("admits the Vellum Test Campaign only through registry v2 and policy v7", () => {
+    const campaignTypeId = "0x3aee953b010d5861b521017839e9f137047756b81bbc1ac78d13d5c6e9f5c9ad";
+    expect(
+      CKBOOST_QUEST_REGISTRY_V1.quests.find(
+        (entry) => entry.campaignTypeId === campaignTypeId && entry.questId === 1,
+      ),
+    ).toBeUndefined();
+    const quest = CKBOOST_QUEST_REGISTRY_V2.quests.find(
+      (entry) => entry.campaignTypeId === campaignTypeId && entry.questId === 1,
+    );
+    expect(quest).toEqual({
+      campaignTypeId,
+      campaignTitle: "Vellum Test Campaign",
+      questId: 1,
+      questTitle: "Send the Vellum Dashboard Link",
+      classification: "contribution",
+    });
+    if (!quest) throw new Error("Expected the Vellum Test Campaign quest in registry v2");
+    expect(CKBOOST_QUEST_REGISTRY).toBe(CKBOOST_QUEST_REGISTRY_V2);
+    expect(VELLUM_REPUTATION_POLICY_V6.ckboost.registryVersion).toBe(
+      CKBOOST_QUEST_REGISTRY_V1.version,
+    );
+    expect(VELLUM_REPUTATION_POLICY_V7.ckboost.registryVersion).toBe(
+      CKBOOST_QUEST_REGISTRY_V2.version,
+    );
+
+    const result = scoreReputation({
+      claims: readResult([ckboostClaim({ id: 107, quest })]),
+      evaluatedAt: EVALUATED_AT,
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      policyVersion: "vellum.reputation.v7",
+      overall: { score: 20 },
+      excludedEvidence: [],
+    });
+    expect(categoryScore(result, "contribution")).toBe(20);
+    if (result.status !== "available") throw new Error("Expected an available score");
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0]).toMatchObject({
+      ckboostQuest: {
+        registryVersion: "ckboost.eligible-quests.v2",
+        campaignTypeId,
+        questId: 1,
+        classification: "contribution",
+        completionUnits: 1,
+      },
+      contributions: [
+        {
+          category: "contribution",
+          points: 20,
+          ruleId: "ckboost-completion-history.v7",
+        },
+      ],
+    });
   });
 
   test("derives CKBoost depth and breadth boundaries from registered claim evidence", () => {
@@ -1043,7 +1103,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "available",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       overall: { score: 40 },
       categories: [
         { id: "technical", score: 0 },
@@ -1056,14 +1116,14 @@ describe("vellum.reputation.v6", () => {
     if (result.status !== "available") throw new Error("Expected an available score");
     expect(result.evidence).toHaveLength(2);
     expect(result.evidence.map((item) => item.contributions)).toEqual([
-      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v6" }],
-      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v6" }],
+      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v7" }],
+      [{ category: "contribution", points: 20, ruleId: "ckboost-completion-history.v7" }],
     ]);
     expect(result.evidence[0]).toMatchObject({
       issuerDid: CKBOOST_ISSUER,
       schemaId: "ckboost.quest.v1",
       ckboostQuest: {
-        registryVersion: "ckboost.eligible-quests.v1",
+        registryVersion: "ckboost.eligible-quests.v2",
         campaignTypeId: historicalQuest.campaignTypeId,
         questId: historicalQuest.questId,
         classification: "contribution",
@@ -1140,7 +1200,7 @@ describe("vellum.reputation.v6", () => {
     ).toBe(290);
     expect(
       result.evidence.find((item) => item.schemaId === "ckboost.quest.v1")?.contributions,
-    ).toEqual([{ category: "contribution", points: 10, ruleId: "ckboost-completion-history.v6" }]);
+    ).toEqual([{ category: "contribution", points: 10, ruleId: "ckboost-completion-history.v7" }]);
   });
 
   test("keeps participation visible and rejects untrusted, duplicate, and ineligible quests", () => {
@@ -1453,7 +1513,7 @@ describe("vellum.reputation.v6", () => {
 
     expect(result).toMatchObject({
       status: "unavailable",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       evaluatedAt: EVALUATED_AT,
       error: { code: "issuer-state-unavailable" },
     });
@@ -1496,14 +1556,16 @@ describe("vellum.reputation.v6", () => {
       "evaluatedAt must be a non-negative safe integer",
     );
     expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.categories)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.github)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.github.artifactRules)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.identity.tenureBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.discord.communityBands)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.telegram)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.bluesky)).toBe(true);
-    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V6.ckboost)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.categories)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.github)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.github.artifactRules)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.identity.tenureBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.discord.communityBands)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.telegram)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.bluesky)).toBe(true);
+    expect(Object.isFrozen(VELLUM_REPUTATION_POLICY_V7.ckboost)).toBe(true);
+    expect(Object.isFrozen(CKBOOST_QUEST_REGISTRY_V1.quests)).toBe(true);
     expect(Object.isFrozen(CKBOOST_QUEST_REGISTRY.quests)).toBe(true);
     expect(Object.isFrozen(CKBOOST_VERIFIED_PARTNER)).toBe(true);
     expect(CKBOOST_VERIFIED_PARTNER).toEqual({
@@ -1528,7 +1590,7 @@ describe("vellum.reputation.v6", () => {
     expect(Object.isFrozen(CKBOOST_VERIFIED_PARTNER.verificationSnapshot.controllerLock)).toBe(
       true,
     );
-    expect(VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids).toEqual([
+    expect(VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids).toEqual([
       CKBOOST_VERIFIED_PARTNER.issuerDid,
     ]);
   });

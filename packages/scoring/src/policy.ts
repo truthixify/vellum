@@ -27,10 +27,12 @@ import type {
   ReputationPolicyV4,
   ReputationPolicyV5,
   ReputationPolicyV6,
+  ReputationPolicyV7,
 } from "./types.js";
 import {
   CKBOOST_HISTORY_SCORING,
   CKBOOST_QUEST_REGISTRY,
+  CKBOOST_QUEST_REGISTRY_V1,
   CKBOOST_VERIFIED_PARTNER,
 } from "./ckboost.js";
 
@@ -412,8 +414,8 @@ export const VELLUM_REPUTATION_POLICY_V6 = freezePolicyV6({
       id: CKBOOST_QUEST_CLAIM_SCHEMA_ID,
       hash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
     },
-    registryVersion: CKBOOST_QUEST_REGISTRY.version,
-    eligibleQuests: CKBOOST_QUEST_REGISTRY.quests,
+    registryVersion: CKBOOST_QUEST_REGISTRY_V1.version,
+    eligibleQuests: CKBOOST_QUEST_REGISTRY_V1.quests,
     completionUnits: CKBOOST_HISTORY_SCORING.completionUnits,
     depthPointsPerUnit: CKBOOST_HISTORY_SCORING.depthPointsPerUnit,
     depthUnitCap: CKBOOST_HISTORY_SCORING.depthUnitCap,
@@ -422,3 +424,41 @@ export const VELLUM_REPUTATION_POLICY_V6 = freezePolicyV6({
     contributionRuleId: "ckboost-completion-history.v6",
   },
 } as const satisfies ReputationPolicyV6);
+
+export const VELLUM_REPUTATION_POLICY_V7 = freezePolicyV6({
+  ...VELLUM_REPUTATION_POLICY_V6,
+  version: "vellum.reputation.v7",
+  github: {
+    ...VELLUM_REPUTATION_POLICY_V6.github,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V6.github.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V6.github.identitySchema },
+    contributionSchema: { ...VELLUM_REPUTATION_POLICY_V6.github.contributionSchema },
+    artifactRules: VELLUM_REPUTATION_POLICY_V6.github.artifactRules.map((rule) => ({ ...rule })),
+  },
+  discord: {
+    ...VELLUM_REPUTATION_POLICY_V6.discord,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V6.discord.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V6.discord.identitySchema },
+    communitySchema: { ...VELLUM_REPUTATION_POLICY_V6.discord.communitySchema },
+  },
+  telegram: {
+    ...VELLUM_REPUTATION_POLICY_V6.telegram,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V6.telegram.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V6.telegram.identitySchema },
+    communitySchema: { ...VELLUM_REPUTATION_POLICY_V6.telegram.communitySchema },
+  },
+  bluesky: {
+    ...VELLUM_REPUTATION_POLICY_V6.bluesky,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V6.bluesky.issuerDids],
+    identitySchema: { ...VELLUM_REPUTATION_POLICY_V6.bluesky.identitySchema },
+  },
+  ckboost: {
+    ...VELLUM_REPUTATION_POLICY_V6.ckboost,
+    issuerDids: [...VELLUM_REPUTATION_POLICY_V6.ckboost.issuerDids],
+    questSchema: { ...VELLUM_REPUTATION_POLICY_V6.ckboost.questSchema },
+    registryVersion: CKBOOST_QUEST_REGISTRY.version,
+    eligibleQuests: CKBOOST_QUEST_REGISTRY.quests,
+    completionUnits: { ...VELLUM_REPUTATION_POLICY_V6.ckboost.completionUnits },
+    contributionRuleId: "ckboost-completion-history.v7",
+  },
+} as const satisfies ReputationPolicyV7);

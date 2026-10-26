@@ -39,7 +39,7 @@ function dependencies(
         network: "ckb_testnet",
         subject: DID,
         status: "available",
-        policyVersion: "vellum.reputation.v6",
+        policyVersion: "vellum.reputation.v7",
         evaluatedAt: 1_800_000_000,
         overall: { score: 0, maximum: 1_000 },
         categories: [],

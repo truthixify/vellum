@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:ckboost:testnet": "bun test testnet/ckboost-profile.test.tsx"
   },
   "dependencies": {
     "@ckb-ccc/core": "^1.12.5",

@@ -588,11 +588,13 @@ export function Home() {
           <div className="method-grid">
             <div>
               <small>Range and method</small>
-              <strong className="mono">0-1000 / vellum.reputation.v6</strong>
+              <strong className="mono">0-1000 / vellum.reputation.v7</strong>
             </div>
             <div>
-              <small>Scored in v5</small>
-              <strong>Accepted CKB work, community history, tenure, and recency</strong>
+              <small>Scored in v7</small>
+              <strong>
+                Accepted CKB work, eligible CKBoost quests, community history, tenure, and recency
+              </strong>
             </div>
             <div>
               <small>Issuer visibility</small>

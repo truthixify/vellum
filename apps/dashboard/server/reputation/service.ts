@@ -2,7 +2,7 @@ import { ccc } from "@ckb-ccc/core";
 import { argsToDid, didToArgs, resolveDidCkb } from "@ckb-ccc/did-ckb";
 import {
   scoreReputation,
-  VELLUM_REPUTATION_POLICY_V6,
+  VELLUM_REPUTATION_POLICY_V7,
   type ReputationResult,
 } from "@vellum/scoring";
 import { readClaims, type ReadClaimsProps, type ReadClaimsResult } from "@usevellum/sdk";
@@ -43,7 +43,7 @@ const defaultDependencies: ReputationServiceDependencies = {
 function unavailable(evaluatedAt: number): ReputationResult {
   return {
     status: "unavailable",
-    policyVersion: VELLUM_REPUTATION_POLICY_V6.version,
+    policyVersion: VELLUM_REPUTATION_POLICY_V7.version,
     evaluatedAt,
     error: {
       code: "claim-read-unavailable",
@@ -73,10 +73,10 @@ export async function scoreSubjectReputation(
     throw new Error("The reputation service clock is invalid.");
   }
   if (
-    !VELLUM_REPUTATION_POLICY_V6.github.issuerDids.includes(issuerMetadata.did) ||
-    !VELLUM_REPUTATION_POLICY_V6.discord.issuerDids.includes(issuerMetadata.did) ||
-    !VELLUM_REPUTATION_POLICY_V6.telegram.issuerDids.includes(issuerMetadata.did) ||
-    !VELLUM_REPUTATION_POLICY_V6.bluesky.issuerDids.includes(issuerMetadata.did)
+    !VELLUM_REPUTATION_POLICY_V7.github.issuerDids.includes(issuerMetadata.did) ||
+    !VELLUM_REPUTATION_POLICY_V7.discord.issuerDids.includes(issuerMetadata.did) ||
+    !VELLUM_REPUTATION_POLICY_V7.telegram.issuerDids.includes(issuerMetadata.did) ||
+    !VELLUM_REPUTATION_POLICY_V7.bluesky.issuerDids.includes(issuerMetadata.did)
   ) {
     throw new Error("The configured issuer is not part of the active reputation policy.");
   }

@@ -36,7 +36,7 @@ function availableResponse(): AvailablePublicReputation {
     network: "ckb_testnet",
     subject: DID,
     status: "available",
-    policyVersion: "vellum.reputation.v6",
+    policyVersion: "vellum.reputation.v7",
     evaluatedAt: 1_800_000_000,
     overall: { score: 200, maximum: 1_000 },
     categories: [
@@ -123,7 +123,7 @@ describe("public reputation client", () => {
         schemaHash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
         issuedAt: 1_799_500_000,
         ckboostQuest: {
-          registryVersion: "ckboost.eligible-quests.v1",
+          registryVersion: "ckboost.eligible-quests.v2",
           campaignTypeId: "0x775802a38a6d67ab1351ae5d676adeb6e72e041d39c041dff4e901d0ae27f0bc",
           campaignTitle: "Claw & Order: CKB AI Agent Hackathon",
           questId: 1,
@@ -203,7 +203,7 @@ describe("public reputation client", () => {
       network: "ckb_testnet",
       subject: DID,
       status: "unavailable",
-      policyVersion: "vellum.reputation.v6",
+      policyVersion: "vellum.reputation.v7",
       evaluatedAt: 1_800_000_000,
       error: { code: "claim-read-unavailable", message: "Indexer unavailable." },
     };
