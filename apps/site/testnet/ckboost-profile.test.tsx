@@ -56,6 +56,7 @@ test("serves the confirmed CKBoost subject through a direct profile load", async
 
   expect(response.status).toBe(200);
   const html = await response.text();
+  expect(html).toContain('<div id="root"></div>');
   expect(html).toContain("<title>Public did:ckb profile | Vellum</title>");
   expect(html).toContain(`<link rel="canonical" href="https://usevellum.xyz${path}" />`);
 }, 30_000);

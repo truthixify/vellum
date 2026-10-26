@@ -11,7 +11,17 @@ export async function renderProfileShell(
   }
 
   const requestUrl = new URL(request.url);
-  const shellResponse = await fetchImplementation(new URL("/index.html", requestUrl));
+  const shellHeaders = new Headers();
+  for (const name of ["cookie", "x-vercel-protection-bypass"] as const) {
+    const value = request.headers.get(name);
+    if (value) shellHeaders.set(name, value);
+  }
+  const shellResponse = await fetchImplementation(
+    new Request(new URL("/index.html", requestUrl), {
+      headers: shellHeaders,
+      redirect: "manual",
+    }),
+  );
   if (!shellResponse.ok) return shellResponse;
 
   const html = applyProfileMetadata(

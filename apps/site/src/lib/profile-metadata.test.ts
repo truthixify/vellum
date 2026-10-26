@@ -42,11 +42,17 @@ describe("public profile metadata", () => {
 
   test("returns rewritten metadata in the initial HTML response", async () => {
     const path = profilePath(DID);
-    let requestedUrl = "";
+    let shellRequest: Request | undefined;
     const response = await renderProfileShell(
-      new Request(`https://usevellum.xyz${path}`),
+      new Request(`https://usevellum.xyz${path}`, {
+        headers: {
+          authorization: "Bearer unrelated",
+          cookie: "_vercel_jwt=preview-session",
+          "x-vercel-protection-bypass": "preview-token",
+        },
+      }),
       async (input) => {
-        requestedUrl = String(input);
+        shellRequest = input instanceof Request ? input : new Request(input);
         return new Response(SHELL, {
           headers: {
             "content-encoding": "gzip",
@@ -60,7 +66,11 @@ describe("public profile metadata", () => {
       },
     );
 
-    expect(requestedUrl).toBe("https://usevellum.xyz/index.html");
+    expect(shellRequest?.url).toBe("https://usevellum.xyz/index.html");
+    expect(shellRequest?.redirect).toBe("manual");
+    expect(shellRequest?.headers.get("cookie")).toBe("_vercel_jwt=preview-session");
+    expect(shellRequest?.headers.get("x-vercel-protection-bypass")).toBe("preview-token");
+    expect(shellRequest?.headers.get("authorization")).toBeNull();
     expect(response.headers.get("x-shell")).toBe("static");
     expect(response.headers.get("content-encoding")).toBeNull();
     expect(response.headers.get("content-length")).toBeNull();
