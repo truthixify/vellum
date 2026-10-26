@@ -1,13 +1,18 @@
 import { ArrowRight, ArrowUpRight, Check, Copy, FileCheck2, Fingerprint } from "lucide-react";
 import { useCopyFeedback } from "@vellum/ui";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { dashboardUrl } from "../config";
 import type { DocsPage } from "../lib/docs-route";
-import { ISSUE_CLAIM_EXAMPLE, READ_CLAIMS_EXAMPLE } from "./docs-examples";
+import {
+  ISSUE_CLAIM_EXAMPLE,
+  READ_CLAIMS_EXAMPLE,
+  RESOLVE_IDENTITY_EXAMPLE,
+} from "./docs-examples";
 
 const REPOSITORY_URL = "https://github.com/truthixify/vellum";
 const SDK_URL = `${REPOSITORY_URL}/tree/main/packages/sdk`;
+const SDK_WRITE_URL = `${SDK_URL}#write-claims`;
 const SDK_EXAMPLE_URL = `${REPOSITORY_URL}/blob/main/packages/sdk/examples/api.ts`;
 const SCHEMAS_URL = `${REPOSITORY_URL}/tree/main/docs/schemas`;
 const CLAIM_CELL_URL = `${REPOSITORY_URL}/blob/main/docs/claim-cell.md`;
@@ -39,7 +44,7 @@ const PAGE_SECTIONS: Record<DocsPage, readonly { id: string; label: string }[]> 
     { id: "issuer-identity", label: "Issuer identity" },
     { id: "schema", label: "Publish a schema" },
     { id: "capacity", label: "Fund the claim" },
-    { id: "issue", label: "Prepare issuance" },
+    { id: "issue", label: "Issue a claim" },
     { id: "signer", label: "Protect the signer" },
   ],
   integrators: [
@@ -49,6 +54,12 @@ const PAGE_SECTIONS: Record<DocsPage, readonly { id: string; label: string }[]> 
     { id: "schemas", label: "Resolve schemas" },
     { id: "renderers", label: "Render safely" },
     { id: "trust", label: "Choose trust policy" },
+  ],
+  identity: [
+    { id: "install", label: "Install" },
+    { id: "resolve", label: "Resolve" },
+    { id: "states", label: "Result states" },
+    { id: "profile", label: "Profile fields" },
   ],
 };
 
@@ -75,9 +86,17 @@ function DocsNavigation({ page }: { page: DocsPage }) {
         </a>
       ))}
       <span>Reference</span>
+      <a
+        className={page === "identity" ? "active" : undefined}
+        href="/docs/identity"
+        aria-current={page === "identity" ? "page" : undefined}
+      >
+        Identity resolution
+      </a>
       <a href={SCHEMAS_URL}>Schema registry</a>
       <a href={CLAIM_CELL_URL}>Claim Cell protocol</a>
       <a href="/transparency">Reputation policy</a>
+      <a href={SDK_URL}>Vellum SDK</a>
       <a href={DID_PACKAGE_URL}>did:ckb package</a>
     </nav>
   );
@@ -101,6 +120,17 @@ function TableOfContents({ page, mobile = false }: { page: DocsPage; mobile?: bo
 
 function DocsCode({ code }: { code: string }) {
   const { copied, copy } = useCopyFeedback();
+  const [copyError, setCopyError] = useState(false);
+  const copyLabel = copyError ? "Copy failed" : copied ? "Code copied" : "Copy code";
+
+  async function copyCode() {
+    setCopyError(false);
+    try {
+      await copy(code);
+    } catch {
+      setCopyError(true);
+    }
+  }
 
   return (
     <div className="docs-code">
@@ -108,14 +138,24 @@ function DocsCode({ code }: { code: string }) {
         <span className="mono">TypeScript</span>
         <button
           type="button"
-          title="Copy code"
-          aria-label="Copy code"
-          onClick={() => void copy(code)}
+          title={copyLabel}
+          aria-label={copyLabel}
+          onClick={() => void copyCode()}
         >
           <Copy size={13} aria-hidden="true" />
-          {copied && <span>Copied</span>}
+          {copied && !copyError && <span aria-hidden="true">Copied</span>}
         </button>
       </div>
+      <span className="sr-only" role="status">
+        {copyError
+          ? "Copy failed. Select the code and copy it manually."
+          : copied
+            ? "Code copied."
+            : ""}
+      </span>
+      {copyError && (
+        <p className="docs-code__error">Copy unavailable. Select the code and copy it manually.</p>
+      )}
       <pre>{code}</pre>
     </div>
   );
@@ -239,6 +279,7 @@ function DocsIndex() {
           <ExternalLink href={CLAIM_CELL_URL}>Claim Cell format and authorization</ExternalLink>
           <ExternalLink href={SCHEMAS_URL}>Published schemas and pinned hashes</ExternalLink>
           <ExternalLink href={SDK_URL}>SDK API and deployment configuration</ExternalLink>
+          <a href="/docs/identity">Resolve did:ckb identities</a>
           <a href="/transparency">Versioned reputation policy</a>
         </div>
       </section>
@@ -274,7 +315,7 @@ function BuilderDocs() {
       <section id="profile" className="docs-section">
         <h2>2. Edit your profile</h2>
         <p>
-          The dashboard reads display name, avatar, and bio from the DID document's
+          The dashboard reads display name, avatar, and bio from the DID document's{" "}
           <code>services.profile</code> entry. Editing the document creates a new on-chain state;
           changing its controller later does not change the DID.
         </p>
@@ -310,7 +351,7 @@ function BuilderDocs() {
       <section id="share" className="docs-section">
         <h2>5. Share the record</h2>
         <p>
-          Public profiles work without a connected wallet. Open
+          Public profiles work without a connected wallet. Open{" "}
           <code>/profile/&lt;encoded-did&gt;</code> to share identity, readable claims, policy
           output, and source transactions from one URL.
         </p>
@@ -368,14 +409,17 @@ function IssuerDocs() {
       </section>
 
       <section id="issue" className="docs-section">
-        <h2>4. Prepare issuance with the SDK</h2>
+        <h2>4. Build, sign, and submit with the SDK</h2>
         <p>
           Load the published Testnet script configuration, then provide the subject, issuer DID,
-          schema hash, payload, and issuance time. The helper returns an unsigned, balanced
-          transaction so the application can inspect it before collecting signatures.
+          schema hash, payload, and issuance time. This default path uses the issuer as the capacity
+          payer, verifies that signing preserved the prepared transaction hash, and submits the
+          signed transaction.
         </p>
         <DocsCode code={ISSUE_CLAIM_EXAMPLE} />
-        <ExternalLink href={SDK_EXAMPLE_URL}>Open the complete executable example</ExternalLink>
+        <ExternalLink href={SDK_WRITE_URL}>
+          Review batch and separate-payer signing details
+        </ExternalLink>
       </section>
 
       <section id="signer" className="docs-section">
@@ -485,6 +529,68 @@ function IntegratorDocs() {
   );
 }
 
+function IdentityDocs() {
+  return (
+    <DocsLayout
+      page="identity"
+      eyebrow="Identity reference"
+      title="Resolve a did:ckb identity"
+      description="Read the canonical live DID Metadata Cell and decoded document without inferring reputation or issuer trust from the identity itself."
+    >
+      <section id="install" className="docs-section">
+        <h2>1. Install the identity packages</h2>
+        <p>
+          Add <code>@ckb-ccc/core</code> and <code>@ckb-ccc/did-ckb</code> to an ESM browser or
+          server application. Select the CKB client for the network you intend to resolve.
+        </p>
+        <ExternalLink href={DID_PACKAGE_URL}>Open the did:ckb package reference</ExternalLink>
+      </section>
+
+      <section id="resolve" className="docs-section">
+        <h2>2. Resolve the live identity</h2>
+        <p>
+          Pass the identifier and an explicit network client. Invalid identifiers fail before an
+          indexer request is made.
+        </p>
+        <DocsCode code={RESOLVE_IDENTITY_EXAMPLE} />
+        <ExternalLink href={SDK_EXAMPLE_URL}>Open the executable example</ExternalLink>
+      </section>
+
+      <section id="states" className="docs-section">
+        <h2>3. Handle every result state</h2>
+        <dl className="docs-definition-list">
+          <div>
+            <dt>Record</dt>
+            <dd>A live DID Cell and its decoded document were returned.</dd>
+          </div>
+          <div>
+            <dt>Undefined</dt>
+            <dd>No live Cell exists for the identifier on that network.</dd>
+          </div>
+          <div>
+            <dt>Error</dt>
+            <dd>The identifier is invalid or the RPC or indexer request failed.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section id="profile" className="docs-section">
+        <h2>4. Read optional profile fields</h2>
+        <p>
+          Vellum stores its human-readable profile in the optional <code>services.profile</code>{" "}
+          entry with type <code>VellumProfile</code>. Consumers may ignore that service and still
+          read a valid did:ckb document.
+        </p>
+      </section>
+
+      <div className="docs-pagination">
+        <a href="/docs">Documentation overview</a>
+        <a href="/resolve">Open the live resolver</a>
+      </div>
+    </DocsLayout>
+  );
+}
+
 export function Docs({ page = "index" }: { page?: DocsPage }) {
   switch (page) {
     case "builders":
@@ -493,6 +599,8 @@ export function Docs({ page = "index" }: { page?: DocsPage }) {
       return <IssuerDocs />;
     case "integrators":
       return <IntegratorDocs />;
+    case "identity":
+      return <IdentityDocs />;
     default:
       return <DocsIndex />;
   }

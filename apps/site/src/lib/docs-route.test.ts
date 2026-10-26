@@ -11,6 +11,14 @@ describe("documentation routes", () => {
       kind: "page",
       page: "integrators",
     });
+    expect(docsRouteFromPath("/docs/identity")).toEqual({ kind: "page", page: "identity" });
+  });
+
+  test("preserves the original identity guide fragments", () => {
+    for (const hash of ["#install", "#resolve", "#states", "#profile"]) {
+      expect(docsRouteFromPath("/docs", hash)).toEqual({ kind: "page", page: "identity" });
+    }
+    expect(docsRouteFromPath("/docs", "#choose-path")).toEqual({ kind: "page", page: "index" });
   });
 
   test("distinguishes unknown documentation paths from other routes", () => {

@@ -1975,6 +1975,16 @@ a.profile-account:hover {
   font-size: 11px;
 }
 
+.docs-code__error {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--danger-soft);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .docs-code pre {
   margin: 0;
   padding: 16px;

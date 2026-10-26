@@ -17,7 +17,7 @@ const Transparency = lazy(() =>
 );
 
 const initialPath = window.location.pathname;
-const initialDocsRoute = docsRouteFromPath(initialPath);
+const initialDocsRoute = docsRouteFromPath(initialPath, window.location.hash);
 const initialProfileRoute = profileRouteFromPath(initialPath);
 const initialProfileLoad =
   initialProfileRoute?.kind === "profile"
