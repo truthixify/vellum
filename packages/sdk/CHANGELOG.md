@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- d759217: Expand the executable SDK examples with did:ckb identity resolution and a complete claim issuance
+  flow that prepares, signs, integrity-checks, and submits the transaction.
+
 ## 0.1.0
 
 ### Minor Changes
