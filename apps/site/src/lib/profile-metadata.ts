@@ -1,4 +1,4 @@
-import { profilePath, profileRouteFromPath } from "./profile-route";
+import { profilePath, profileRouteFromPath } from "./profile-route.js";
 
 const PROFILE_ORIGIN = "https://usevellum.xyz";
 const DID_CKB_PATTERN = /^did:ckb:[a-zA-Z2-7]{32}$/;
