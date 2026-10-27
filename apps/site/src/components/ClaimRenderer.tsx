@@ -6,12 +6,14 @@ import {
   discordIdentitySchema,
   githubContributionSchema,
   githubIdentitySchema,
+  klaveroqMilestoneSettlementSchema,
   parseBlueskyClaimPayload,
   parseCkboostQuestClaimPayload,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
   parseGithubContributionClaimPayload,
+  parseKlaveroqMilestoneSettlementClaimPayload,
   parseTelegramClaimPayload,
   parseTelegramCommunityClaimPayload,
   telegramCommunitySchema,
@@ -19,7 +21,7 @@ import {
   type GithubContributionArtifact,
 } from "@vellum/schemas";
 import { ProviderMark, type VerificationProvider } from "@vellum/ui";
-import { AlertCircle, ArrowUpRight, Braces, Trophy } from "lucide-react";
+import { AlertCircle, ArrowUpRight, Braces, Handshake, Trophy } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
 type ClaimRendererProps = { claim: Claim };
@@ -430,6 +432,40 @@ function renderCkboostQuestClaim(payload: ReturnType<typeof parseCkboostQuestCla
   );
 }
 
+function renderKlaveroqMilestoneSettlementClaim(
+  payload: ReturnType<typeof parseKlaveroqMilestoneSettlementClaimPayload>,
+) {
+  const approval = payload.approval_method === "client" ? "Client approval" : "Review timeout";
+  return (
+    <ClaimFrame
+      mark={<Handshake size={18} aria-hidden="true" />}
+      schemaId={klaveroqMilestoneSettlementSchema.id}
+      title={`Milestone ${payload.milestone_sequence} settled`}
+      description="Delivered work approved on Klaveroq and settled on CKB."
+      profileUrl={`${TESTNET_TRANSACTION_EXPLORER}${payload.settlement_tx_hash}`}
+      profileLabel="Settlement"
+    >
+      <ClaimFacts
+        facts={[
+          { label: "Settled", value: formatTimestamp(payload.settled_at) },
+          { label: "Approval", value: approval },
+          { label: "Sequence", value: payload.milestone_sequence },
+        ]}
+      />
+      <ul className="claim-renderer__records">
+        <li>
+          <span>
+            <strong>Opaque provenance references</strong>
+            <small>Engagement {payload.engagement_id}</small>
+            <small>Milestone {payload.milestone_id}</small>
+            <small>Delivery {payload.delivery_id}</small>
+          </span>
+        </li>
+      </ul>
+    </ClaimFrame>
+  );
+}
+
 function ArtifactRow({ artifact }: { artifact: GithubContributionArtifact }) {
   return (
     <li>
@@ -584,6 +620,11 @@ function defineClaimRenderer<TPayload>(
 
 const registrations = [
   defineClaimRenderer(ckboostQuestSchema, parseCkboostQuestClaimPayload, renderCkboostQuestClaim),
+  defineClaimRenderer(
+    klaveroqMilestoneSettlementSchema,
+    parseKlaveroqMilestoneSettlementClaimPayload,
+    renderKlaveroqMilestoneSettlementClaim,
+  ),
   defineClaimRenderer(githubIdentitySchema, parseGithubClaimPayload, renderGithubIdentityClaim),
   defineClaimRenderer(discordIdentitySchema, parseDiscordClaimPayload, renderDiscordIdentityClaim),
   defineClaimRenderer(

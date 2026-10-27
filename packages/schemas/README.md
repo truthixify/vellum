@@ -3,7 +3,8 @@
 Canonical claim payload schemas for Vellum, plus TypeScript types and schema-hash helpers.
 
 The package currently includes GitHub identity and contribution, Discord identity and CKB
-community, Telegram identity and community, Bluesky identity, and CKBoost quest-completion schemas.
+community, Telegram identity and community, Bluesky identity, CKBoost quest-completion, and
+Klaveroq milestone-settlement schemas.
 Each manifest is serialized with RFC 8785 JSON Canonicalization Scheme and identified by
 `CKB_HASH(JCS(manifest))`. Runtime parsers reject unknown fields and keep provider credentials out
 of payloads.
@@ -72,6 +73,13 @@ campaign-scoped quest ID, and contributor's CKBoost user Type ID. It preserves s
 and final reward-claim transaction references, plus the awarded `Uint128` points as a decimal
 string. Human-readable campaign and quest titles are display snapshots; their on-chain IDs remain
 the stable references.
+
+## Klaveroq milestone settlement claim
+
+`klaveroq.milestone-settlement.v1` records that a worker's delivered milestone was approved and
+settled through a confirmed CKB transaction. Engagement, milestone, and delivery references are
+domain-separated hashes of Klaveroq's private identifiers. The claim excludes job text, proof
+contents, user details, and payment amounts.
 
 ## Consumers
 
