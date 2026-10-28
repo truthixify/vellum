@@ -20,6 +20,11 @@ import {
   githubContributionClaimSchemaManifest,
 } from "./contribution/github.v1.js";
 import {
+  KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
+  KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
+  klaveroqMilestoneSettlementClaimSchemaManifest,
+} from "./klaveroq/milestone-settlement.v1.js";
+import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
   blueskyClaimSchemaManifest,
@@ -58,6 +63,23 @@ export const ckboostQuestSchema = {
     approval_tx_hash: `0x${"33".repeat(32)}`,
     reward_claim_tx_hash: `0x${"44".repeat(32)}`,
     points_awarded: "250",
+  },
+} as const;
+
+export const klaveroqMilestoneSettlementSchema = {
+  id: KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
+  hash: KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
+  manifest: klaveroqMilestoneSettlementClaimSchemaManifest,
+  specification: "docs/schemas/klaveroq.milestone-settlement.v1.md",
+  manifestFile: "docs/schemas/manifests/klaveroq.milestone-settlement.v1.json",
+  example: {
+    engagement_id: `0x${"11".repeat(32)}`,
+    milestone_id: `0x${"22".repeat(32)}`,
+    delivery_id: `0x${"33".repeat(32)}`,
+    milestone_sequence: 2,
+    approval_method: "client",
+    settled_at: VERIFIED_AT,
+    settlement_tx_hash: `0x${"44".repeat(32)}`,
   },
 } as const;
 
@@ -198,6 +220,7 @@ export const blueskyIdentitySchema = {
 
 export const vellumSchemaRegistry = {
   [ckboostQuestSchema.id]: ckboostQuestSchema,
+  [klaveroqMilestoneSettlementSchema.id]: klaveroqMilestoneSettlementSchema,
   [githubIdentitySchema.id]: githubIdentitySchema,
   [githubContributionSchema.id]: githubContributionSchema,
   [discordIdentitySchema.id]: discordIdentitySchema,

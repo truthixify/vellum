@@ -7,6 +7,7 @@ import {
   discordIdentitySchema,
   githubContributionSchema,
   githubIdentitySchema,
+  klaveroqMilestoneSettlementSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,
@@ -46,6 +47,7 @@ describe("public Claim Cell renderers", () => {
   test("renders every published schema through its exact hash registration", () => {
     const examples = [
       [ckboostQuestSchema, "Share project details"],
+      [klaveroqMilestoneSettlementSchema, "Milestone 2 settled"],
       [githubIdentitySchema, "@vellum-builder"],
       [discordIdentitySchema, "vellum-builder"],
       [telegramIdentitySchema, "@vellum_builder"],
@@ -67,6 +69,24 @@ describe("public Claim Cell renderers", () => {
       expect(html).toContain(schema.id);
       expect(html).toContain(expected);
     }
+  });
+
+  test("renders a Klaveroq settlement without private marketplace data", () => {
+    const payload = klaveroqMilestoneSettlementSchema.example;
+    const html = renderToStaticMarkup(
+      <ClaimPayloadRenderer claim={claim(klaveroqMilestoneSettlementSchema.hash, payload)} />,
+    );
+
+    expect(html).toContain("Milestone 2 settled");
+    expect(html).toContain("Client approval");
+    expect(html).toContain(payload.engagement_id);
+    expect(html).toContain(payload.milestone_id);
+    expect(html).toContain(payload.delivery_id);
+    expect(html).toContain(
+      `href="https://pudge.explorer.nervos.org/transaction/${payload.settlement_tx_hash}"`,
+    );
+    expect(html).not.toContain("amount");
+    expect(html).not.toContain("proof contents");
   });
 
   test("scores, validates, and renders the published CKBoost sample claim", () => {

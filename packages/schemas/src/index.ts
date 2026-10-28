@@ -7,6 +7,14 @@ export {
   type CkboostQuestClaimPayload,
 } from "./ckboost/quest.v1.js";
 export {
+  KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
+  KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
+  klaveroqMilestoneSettlementClaimSchemaManifest,
+  parseKlaveroqMilestoneSettlementClaimPayload,
+  type KlaveroqMilestoneSettlementApprovalMethod,
+  type KlaveroqMilestoneSettlementClaimPayload,
+} from "./klaveroq/milestone-settlement.v1.js";
+export {
   DEFAULT_AVATAR_BASE,
   PROFILE_SERVICE_KEY,
   PROFILE_SERVICE_TYPE,
@@ -28,6 +36,7 @@ export {
   getVellumSchemaDefinition,
   githubContributionSchema,
   githubIdentitySchema,
+  klaveroqMilestoneSettlementSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,
