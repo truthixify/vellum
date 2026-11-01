@@ -45,12 +45,16 @@
     "verify:package": "bun run build && tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts && bun run lint:package"
   },
   "dependencies": {
-    "@ckb-ccc/core": "1.19.1",
-    "@ckb-ccc/did-ckb": "0.2.9",
     "@ipld/dag-cbor": "10.0.2"
+  },
+  "peerDependencies": {
+    "@ckb-ccc/core": "^1.19.1",
+    "@ckb-ccc/did-ckb": "^0.2.9"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
+    "@ckb-ccc/core": "1.19.1",
+    "@ckb-ccc/did-ckb": "0.2.9",
     "bun-types": "1.4.2",
     "publint": "0.3.24",
     "typescript": "5.8.3"

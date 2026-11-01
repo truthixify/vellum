@@ -9,8 +9,12 @@ The package is ESM-only and supports browser and server applications that use CC
 ## Install
 
 ```bash
-bun add @usevellum/sdk @ckb-ccc/core
+bun add @usevellum/sdk @ckb-ccc/core @ckb-ccc/did-ckb
 ```
+
+The SDK accepts `@ckb-ccc/core` `^1.19.1` and `@ckb-ccc/did-ckb` `^0.2.9` as peer dependencies.
+Install an aligned CCC release pair in the application so clients, signers, transactions, and DID
+operations use one shared dependency graph. Core `1.23.0` with did-ckb `0.2.15` is a verified pair.
 
 ## Testnet deployment
 
