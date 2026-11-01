@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- 982cdf6: Let applications provide compatible CCC core and did-ckb packages so SDK values share one dependency graph.
+
 ## 0.1.1
 
 ### Patch Changes
