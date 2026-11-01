@@ -145,17 +145,21 @@
     },
     "packages/sdk": {
       "name": "@usevellum/sdk",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
-        "@ckb-ccc/core": "1.19.1",
-        "@ckb-ccc/did-ckb": "0.2.9",
         "@ipld/dag-cbor": "10.0.2",
       },
       "devDependencies": {
         "@arethetypeswrong/cli": "0.18.5",
+        "@ckb-ccc/core": "1.19.1",
+        "@ckb-ccc/did-ckb": "0.2.9",
         "bun-types": "1.4.2",
         "publint": "0.3.24",
         "typescript": "5.8.3",
+      },
+      "peerDependencies": {
+        "@ckb-ccc/core": "^1.19.1",
+        "@ckb-ccc/did-ckb": "^0.2.9",
       },
     },
     "packages/ui": {
