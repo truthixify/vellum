@@ -3,6 +3,7 @@ import type { Claim } from "@usevellum/sdk";
 import {
   blueskyIdentitySchema,
   ckboostQuestSchema,
+  crowdcellCampaignFundedSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   githubContributionSchema,
@@ -47,6 +48,7 @@ describe("public Claim Cell renderers", () => {
   test("renders every published schema through its exact hash registration", () => {
     const examples = [
       [ckboostQuestSchema, "Share project details"],
+      [crowdcellCampaignFundedSchema, "CKB Builders Toolkit"],
       [klaveroqMilestoneSettlementSchema, "Milestone 2 settled"],
       [githubIdentitySchema, "@vellum-builder"],
       [discordIdentitySchema, "vellum-builder"],
@@ -69,6 +71,25 @@ describe("public Claim Cell renderers", () => {
       expect(html).toContain(schema.id);
       expect(html).toContain(expected);
     }
+  });
+
+  test("renders a funded CrowdCell campaign with exact on-chain provenance", () => {
+    const payload = crowdcellCampaignFundedSchema.example;
+    const html = renderToStaticMarkup(
+      <ClaimPayloadRenderer claim={claim(crowdcellCampaignFundedSchema.hash, payload)} />,
+    );
+
+    expect(html).toContain(payload.campaign_title);
+    expect(html).toContain("1000 CKB");
+    expect(html).toContain("1250 CKB");
+    expect(html).toContain(payload.campaign_type_id);
+    expect(html).toContain(
+      `href="https://pudge.explorer.nervos.org/transaction/${payload.campaign_creation_tx_hash}"`,
+    );
+    expect(html).toContain(
+      `href="https://pudge.explorer.nervos.org/transaction/${payload.finalization_tx_hash}"`,
+    );
+    expect(html).not.toContain("backer");
   });
 
   test("renders a Klaveroq settlement without private marketplace data", () => {

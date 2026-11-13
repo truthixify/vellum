@@ -1,0 +1,67 @@
+{
+  "encoding": "dag-cbor",
+  "name": "crowdcell.campaign-funded.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "campaign_type_id and campaign_creation_tx_hash identify one non-repeatable CrowdCell campaign",
+      "campaign_creation_tx_hash and finalization_tx_hash identify distinct confirmed CKB transactions",
+      "funding_goal and total_pledged are canonical unsigned Uint64 decimal strings and total_pledged is at least funding_goal",
+      "funded_at is the finalization block timestamp"
+    ],
+    "properties": {
+      "campaign_creation_tx_hash": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "campaign_title": {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+      },
+      "campaign_type_id": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "finalization_tx_hash": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      },
+      "funded_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "funding_goal": {
+        "maxLength": 20,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,19}$",
+        "type": "string"
+      },
+      "total_pledged": {
+        "maxLength": 20,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,19}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "campaign_type_id",
+      "campaign_title",
+      "campaign_creation_tx_hash",
+      "finalization_tx_hash",
+      "funding_goal",
+      "total_pledged",
+      "funded_at"
+    ],
+    "type": "object"
+  },
+  "version": 1
+}

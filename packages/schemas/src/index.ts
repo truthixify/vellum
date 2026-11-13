@@ -7,6 +7,13 @@ export {
   type CkboostQuestClaimPayload,
 } from "./ckboost/quest.v1.js";
 export {
+  CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_HASH,
+  CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_ID,
+  crowdcellCampaignFundedClaimSchemaManifest,
+  parseCrowdcellCampaignFundedClaimPayload,
+  type CrowdcellCampaignFundedClaimPayload,
+} from "./crowdcell/campaign-funded.v1.js";
+export {
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
   klaveroqMilestoneSettlementClaimSchemaManifest,
@@ -31,6 +38,7 @@ export {
 export {
   blueskyIdentitySchema,
   ckboostQuestSchema,
+  crowdcellCampaignFundedSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   getVellumSchemaDefinition,

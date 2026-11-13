@@ -5,6 +5,7 @@ import { parseCkboostQuestClaimPayload } from "./ckboost/quest.v1";
 import { parseDiscordCommunityClaimPayload } from "./community/discord.v1";
 import { parseTelegramCommunityClaimPayload } from "./community/telegram.v1";
 import { parseGithubContributionClaimPayload } from "./contribution/github.v1";
+import { parseCrowdcellCampaignFundedClaimPayload } from "./crowdcell/campaign-funded.v1";
 import { hashSchemaManifest } from "./hash";
 import { parseKlaveroqMilestoneSettlementClaimPayload } from "./klaveroq/milestone-settlement.v1";
 import { getVellumSchemaDefinition, vellumSchemaRegistry, type VellumSchemaId } from "./registry";
@@ -15,6 +16,7 @@ import { parseTelegramClaimPayload } from "./social/telegram.v1";
 
 const parsers: Record<VellumSchemaId, (value: unknown) => unknown> = {
   "ckboost.quest.v1": parseCkboostQuestClaimPayload,
+  "crowdcell.campaign-funded.v1": parseCrowdcellCampaignFundedClaimPayload,
   "klaveroq.milestone-settlement.v1": parseKlaveroqMilestoneSettlementClaimPayload,
   "vellum.social.github.v1": parseGithubClaimPayload,
   "vellum.contribution.github.v1": parseGithubContributionClaimPayload,
@@ -28,8 +30,8 @@ const parsers: Record<VellumSchemaId, (value: unknown) => unknown> = {
 describe("Vellum schema registry", () => {
   test("indexes every published schema by its immutable ID", () => {
     const definitions = Object.values(vellumSchemaRegistry);
-    expect(definitions).toHaveLength(9);
-    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(9);
+    expect(definitions).toHaveLength(10);
+    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(10);
 
     for (const definition of definitions) {
       expect(getVellumSchemaDefinition(definition.id)).toBe(definition);
