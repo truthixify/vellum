@@ -2,6 +2,7 @@ import type { Claim } from "@usevellum/sdk";
 import {
   blueskyIdentitySchema,
   ckboostQuestSchema,
+  crowdcellCampaignFundedSchema,
   discordCommunitySchema,
   discordIdentitySchema,
   githubContributionSchema,
@@ -9,6 +10,7 @@ import {
   klaveroqMilestoneSettlementSchema,
   parseBlueskyClaimPayload,
   parseCkboostQuestClaimPayload,
+  parseCrowdcellCampaignFundedClaimPayload,
   parseDiscordClaimPayload,
   parseDiscordCommunityClaimPayload,
   parseGithubClaimPayload,
@@ -21,7 +23,14 @@ import {
   type GithubContributionArtifact,
 } from "@vellum/schemas";
 import { ProviderMark, type VerificationProvider } from "@vellum/ui";
-import { AlertCircle, ArrowUpRight, Braces, Handshake, Trophy } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowUpRight,
+  Braces,
+  CircleDollarSign,
+  Handshake,
+  Trophy,
+} from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
 type ClaimRendererProps = { claim: Claim };
@@ -189,6 +198,15 @@ function formatTimestamp(value: number): string {
 
 function formatCount(value: number, singular: string, plural = `${singular}s`): string {
   return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function formatCkbAmount(shannons: string): string {
+  const amount = BigInt(shannons);
+  const whole = amount / 100_000_000n;
+  const remainder = amount % 100_000_000n;
+  if (remainder === 0n) return `${whole} CKB`;
+  const fraction = remainder.toString().padStart(8, "0").replace(/0+$/, "");
+  return `${whole}.${fraction} CKB`;
 }
 
 function titleCase(value: string): string {
@@ -432,6 +450,44 @@ function renderCkboostQuestClaim(payload: ReturnType<typeof parseCkboostQuestCla
   );
 }
 
+function renderCrowdcellCampaignFundedClaim(
+  payload: ReturnType<typeof parseCrowdcellCampaignFundedClaimPayload>,
+) {
+  return (
+    <ClaimFrame
+      mark={<CircleDollarSign size={18} aria-hidden="true" />}
+      schemaId={crowdcellCampaignFundedSchema.id}
+      title={payload.campaign_title}
+      description="CrowdCell campaign funded and finalized successfully on CKB."
+      profileUrl={`${TESTNET_TRANSACTION_EXPLORER}${payload.finalization_tx_hash}`}
+      profileLabel="Finalization"
+    >
+      <ClaimFacts
+        facts={[
+          { label: "Funded", value: formatTimestamp(payload.funded_at) },
+          { label: "Goal", value: formatCkbAmount(payload.funding_goal) },
+          { label: "Raised", value: formatCkbAmount(payload.total_pledged) },
+        ]}
+      />
+      <ul className="claim-renderer__records">
+        <li>
+          <span>
+            <strong>Campaign provenance</strong>
+            <small>Campaign Type ID {payload.campaign_type_id}</small>
+          </span>
+          <a
+            href={`${TESTNET_TRANSACTION_EXPLORER}${payload.campaign_creation_tx_hash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Creation <ArrowUpRight size={13} aria-hidden="true" />
+          </a>
+        </li>
+      </ul>
+    </ClaimFrame>
+  );
+}
+
 function renderKlaveroqMilestoneSettlementClaim(
   payload: ReturnType<typeof parseKlaveroqMilestoneSettlementClaimPayload>,
 ) {
@@ -620,6 +676,11 @@ function defineClaimRenderer<TPayload>(
 
 const registrations = [
   defineClaimRenderer(ckboostQuestSchema, parseCkboostQuestClaimPayload, renderCkboostQuestClaim),
+  defineClaimRenderer(
+    crowdcellCampaignFundedSchema,
+    parseCrowdcellCampaignFundedClaimPayload,
+    renderCrowdcellCampaignFundedClaim,
+  ),
   defineClaimRenderer(
     klaveroqMilestoneSettlementSchema,
     parseKlaveroqMilestoneSettlementClaimPayload,

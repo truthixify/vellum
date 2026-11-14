@@ -20,6 +20,11 @@ import {
   githubContributionClaimSchemaManifest,
 } from "./contribution/github.v1.js";
 import {
+  CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_HASH,
+  CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_ID,
+  crowdcellCampaignFundedClaimSchemaManifest,
+} from "./crowdcell/campaign-funded.v1.js";
+import {
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
   klaveroqMilestoneSettlementClaimSchemaManifest,
@@ -63,6 +68,23 @@ export const ckboostQuestSchema = {
     approval_tx_hash: `0x${"33".repeat(32)}`,
     reward_claim_tx_hash: `0x${"44".repeat(32)}`,
     points_awarded: "250",
+  },
+} as const;
+
+export const crowdcellCampaignFundedSchema = {
+  id: CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_ID,
+  hash: CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_HASH,
+  manifest: crowdcellCampaignFundedClaimSchemaManifest,
+  specification: "docs/schemas/crowdcell.campaign-funded.v1.md",
+  manifestFile: "docs/schemas/manifests/crowdcell.campaign-funded.v1.json",
+  example: {
+    campaign_type_id: `0x${"11".repeat(32)}`,
+    campaign_title: "CKB Builders Toolkit",
+    campaign_creation_tx_hash: `0x${"22".repeat(32)}`,
+    finalization_tx_hash: `0x${"33".repeat(32)}`,
+    funding_goal: "100000000000",
+    total_pledged: "125000000000",
+    funded_at: VERIFIED_AT,
   },
 } as const;
 
@@ -220,6 +242,7 @@ export const blueskyIdentitySchema = {
 
 export const vellumSchemaRegistry = {
   [ckboostQuestSchema.id]: ckboostQuestSchema,
+  [crowdcellCampaignFundedSchema.id]: crowdcellCampaignFundedSchema,
   [klaveroqMilestoneSettlementSchema.id]: klaveroqMilestoneSettlementSchema,
   [githubIdentitySchema.id]: githubIdentitySchema,
   [githubContributionSchema.id]: githubContributionSchema,
