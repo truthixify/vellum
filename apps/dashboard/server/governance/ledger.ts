@@ -196,6 +196,17 @@ function safeCount(value: unknown): number {
   return count;
 }
 
+function choiceTally(
+  hash: ReadonlyMap<string, unknown>,
+  choice: (typeof GOVERNANCE_CHOICES)[number],
+): { weight: number; voters: number } {
+  const weight = hash.get(`${choice}_weight`);
+  const voters = hash.get(`${choice}_voters`);
+  if (weight === undefined && voters === undefined) return { weight: 0, voters: 0 };
+  if (weight === undefined || voters === undefined) throw new GovernanceStorageUnavailableError();
+  return { weight: safeCount(weight), voters: safeCount(voters) };
+}
+
 function parseHash(value: unknown): Map<string, unknown> {
   if (value === null) return new Map();
   if (Array.isArray(value) && value.length % 2 === 0) {
@@ -215,21 +226,19 @@ function parseHash(value: unknown): Map<string, unknown> {
 function resultsFromHash(value: unknown): GovernanceResults {
   const hash = parseHash(value);
   if (hash.size === 0) return emptyResults();
-  const yesWeight = safeCount(hash.get("yes_weight"));
-  const yesVoters = safeCount(hash.get("yes_voters"));
-  const noWeight = safeCount(hash.get("no_weight"));
-  const noVoters = safeCount(hash.get("no_voters"));
+  const yes = choiceTally(hash, "yes");
+  const no = choiceTally(hash, "no");
   const totalWeight = safeCount(hash.get("total_weight"));
   const voterCount = safeCount(hash.get("voter_count"));
-  if (yesWeight + noWeight !== totalWeight || yesVoters + noVoters !== voterCount) {
+  if (yes.weight + no.weight !== totalWeight || yes.voters + no.voters !== voterCount) {
     throw new GovernanceStorageUnavailableError();
   }
   return {
     voterCount,
     totalWeight,
     tallies: [
-      { choice: "yes", voterCount: yesVoters, weight: yesWeight },
-      { choice: "no", voterCount: noVoters, weight: noWeight },
+      { choice: "yes", voterCount: yes.voters, weight: yes.weight },
+      { choice: "no", voterCount: no.voters, weight: no.weight },
     ],
   };
 }

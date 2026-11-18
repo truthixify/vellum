@@ -109,6 +109,54 @@ describe("governance ledger", () => {
     expect(String(command[7])).toContain(`"subjectDid":"${DID}"`);
   });
 
+  test("treats missing choice fields as zero in a one-sided Redis tally", async () => {
+    const ledger = new RedisGovernanceLedger(
+      {
+        UPSTASH_REDIS_REST_TOKEN: "test-token",
+        UPSTASH_REDIS_REST_URL: "https://redis.example.test",
+      },
+      async () =>
+        Response.json({
+          result: {
+            yes_weight: "3",
+            yes_voters: "1",
+            total_weight: "3",
+            voter_count: "1",
+          },
+        }),
+    );
+
+    await expect(ledger.getResults(GOVERNANCE_PROPOSAL.id)).resolves.toEqual({
+      voterCount: 1,
+      totalWeight: 3,
+      tallies: [
+        { choice: "yes", voterCount: 1, weight: 3 },
+        { choice: "no", voterCount: 0, weight: 0 },
+      ],
+    });
+  });
+
+  test("rejects a Redis tally with only one counter for a choice", async () => {
+    const ledger = new RedisGovernanceLedger(
+      {
+        UPSTASH_REDIS_REST_TOKEN: "test-token",
+        UPSTASH_REDIS_REST_URL: "https://redis.example.test",
+      },
+      async () =>
+        Response.json({
+          result: {
+            yes_weight: "3",
+            total_weight: "3",
+            voter_count: "0",
+          },
+        }),
+    );
+
+    await expect(ledger.getResults(GOVERNANCE_PROPOSAL.id)).rejects.toBeInstanceOf(
+      GovernanceStorageUnavailableError,
+    );
+  });
+
   test("fails closed for missing configuration and malformed storage data", async () => {
     expect(() => new RedisGovernanceLedger({})).toThrow(GovernanceStorageUnavailableError);
     const ledger = new RedisGovernanceLedger(
