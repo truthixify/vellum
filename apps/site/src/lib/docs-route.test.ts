@@ -11,6 +11,10 @@ describe("documentation routes", () => {
       kind: "page",
       page: "integrators",
     });
+    expect(docsRouteFromPath("/docs/governance")).toEqual({
+      kind: "page",
+      page: "governance",
+    });
     expect(docsRouteFromPath("/docs/identity")).toEqual({ kind: "page", page: "identity" });
   });
 

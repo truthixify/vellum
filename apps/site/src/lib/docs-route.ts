@@ -1,4 +1,4 @@
-export type DocsPage = "index" | "builders" | "issuers" | "integrators" | "identity";
+export type DocsPage = "index" | "builders" | "issuers" | "integrators" | "governance" | "identity";
 
 export type DocsRoute = { kind: "page"; page: DocsPage } | { kind: "invalid" };
 
@@ -7,6 +7,7 @@ const DOCS_PAGES: Readonly<Record<string, DocsPage>> = {
   "/docs/builders": "builders",
   "/docs/issuers": "issuers",
   "/docs/integrators": "integrators",
+  "/docs/governance": "governance",
   "/docs/identity": "identity",
 };
 
