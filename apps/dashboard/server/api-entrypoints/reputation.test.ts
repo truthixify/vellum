@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import reputationHandler from "./reputation";
+import reputationHandler from "../../api/reputation";
 
 test("reputation API entry ignores the Vercel runtime context", async () => {
   const response = await Reflect.apply(reputationHandler.fetch, reputationHandler, [

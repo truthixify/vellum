@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import governanceHandler from "./governance";
+import governanceHandler from "../../api/governance";
 
 test("governance API entry ignores the Vercel runtime context", async () => {
   const response = await Reflect.apply(governanceHandler.fetch, governanceHandler, [
