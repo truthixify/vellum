@@ -148,4 +148,23 @@ describe("governance service", () => {
       }),
     ).rejects.toMatchObject({ code: "invalid_request" });
   });
+
+  test("rechecks challenge expiry before recording after evaluation", async () => {
+    const timestamps = [NOW, NOW + 300];
+    const deps = dependencies({
+      now: () => timestamps.shift() ?? NOW + 300,
+      verifyProof: async () => ({
+        controllerLockHash: `0x${"33".repeat(32)}`,
+        nonce: "nonce",
+        expiresAt: NOW + 300,
+      }),
+    });
+    const service = createGovernanceService({}, deps);
+
+    await expect(service.vote(request())).rejects.toMatchObject({ code: "challenge_invalid" });
+    await expect(deps.ledger().getResults(GOVERNANCE_PROPOSAL.id)).resolves.toMatchObject({
+      voterCount: 0,
+      totalWeight: 0,
+    });
+  });
 });

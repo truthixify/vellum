@@ -173,10 +173,10 @@ export function createGovernanceService(
     },
 
     async vote(request) {
-      const now = serviceTime(dependencies.now);
+      const authorizationTime = serviceTime(dependencies.now);
       assertProposal(request.proposalId);
-      assertOpen(now);
-      const proof = await dependencies.verifyProof(request, now);
+      assertOpen(authorizationTime);
+      const proof = await dependencies.verifyProof(request, authorizationTime);
 
       let ledger: GovernanceLedger;
       let existing: GovernanceVoteReceipt | undefined;
@@ -209,6 +209,15 @@ export function createGovernanceService(
           "The selected identity does not satisfy the published GitHub claim requirement.",
         );
       }
+      const recordedAt = serviceTime(dependencies.now);
+      assertOpen(recordedAt);
+      if (recordedAt >= proof.expiresAt) {
+        throw new GovernanceServiceError(
+          "challenge_invalid",
+          400,
+          "The vote authorization expired or has already been used.",
+        );
+      }
       const receipt: GovernanceVoteReceipt = {
         version: GOVERNANCE_API_VERSION,
         receiptId: governanceReceiptId(request.proposalId, request.subject.did),
@@ -220,14 +229,14 @@ export function createGovernanceService(
         eligibilityPolicyVersion: evaluation.eligibilityPolicyVersion,
         reputation: evaluation.reputation,
         evaluatedAt: evaluation.evaluatedAt,
-        recordedAt: now,
+        recordedAt,
         controllerLockHash: proof.controllerLockHash,
         evidence: evaluation.evidence,
       };
 
       let recorded;
       try {
-        recorded = await ledger!.recordVote(receipt, proof.nonce, proof.expiresAt, now);
+        recorded = await ledger!.recordVote(receipt, proof.nonce, proof.expiresAt, recordedAt);
       } catch (error) {
         storageError(error);
       }

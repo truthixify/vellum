@@ -71,6 +71,7 @@ describe("documentation site", () => {
     expect(governance).toContain("checkPolicy");
     expect(governance).toContain("checkGithubEligibility");
     expect(governance).toContain("did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc");
+    expect(governance).toContain('href="https://dashboard.usevellum.xyz/demo/governance"');
     expect(governance).toContain("docs/governance-gating.md");
     expect(identity).toContain("resolveDidCkb");
     expect(identity).toContain('href="/resolve"');

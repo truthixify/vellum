@@ -208,11 +208,11 @@ export async function evaluateGovernanceSubject(
     throw new GovernanceEvaluationUnavailableError();
   }
 
-  const evidence = eligible
-    ? gateRead.value.claims
-        .filter((claim) => isAcceptedEvidence(claim, evaluatedAt))
-        .map(evidenceReference)
+  const acceptedClaims = eligible
+    ? gateRead.value.claims.filter((claim) => isAcceptedEvidence(claim, evaluatedAt))
     : [];
+  const newestAcceptedClaim = acceptedClaims.at(-1);
+  const evidence = newestAcceptedClaim ? [evidenceReference(newestAcceptedClaim)] : [];
   if (eligible && evidence.length === 0) throw new GovernanceEvaluationUnavailableError();
 
   return {

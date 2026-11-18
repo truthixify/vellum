@@ -149,6 +149,24 @@ describe("governance evaluation", () => {
     expect(result.evidence[0]?.claimId).not.toBe(invalidEvidence.claimId);
   });
 
+  test("records only the newest accepted gate claim as receipt evidence", async () => {
+    const olderClaim = githubClaim({ claimId: hex("8"), issuedAt: BigInt(NOW - 2) });
+    const newerClaim = githubClaim({ claimId: hex("9"), issuedAt: BigInt(NOW - 1) });
+    const result = await evaluateGovernanceSubject(
+      SUBJECT_DID,
+      {},
+      dependencies({
+        readClaims: async (props) =>
+          props.filter.schemaHash
+            ? { claims: [olderClaim, newerClaim], invalid: [] }
+            : { claims: [], invalid: [] },
+      }),
+    );
+
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0]?.claimId).toBe(newerClaim.claimId);
+  });
+
   test("fails closed for incomplete gate, score, or identity state", async () => {
     const invalidGate = dependencies({
       readClaims: async (props) =>
