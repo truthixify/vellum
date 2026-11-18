@@ -37,10 +37,12 @@
     "build": "bun run clean && tsc -p tsconfig.build.json",
     "clean": "rm -rf ./dist",
     "example": "bun run examples/api.ts",
+    "example:governance:client": "bun run examples/governance/client.ts",
+    "example:governance:server": "bun run examples/governance/server.ts",
     "lint:package": "publint . && attw --profile esm-only --pack .",
     "prepack": "bun run build",
     "test": "bun test src",
-    "test:testnet": "bun test testnet",
+    "test:testnet": "bun run build && bun test testnet",
     "typecheck": "tsc --noEmit",
     "verify:package": "bun run build && tsc --noEmit -p tsconfig.examples.json && bun run example && bun pm pack --dry-run --ignore-scripts && bun run lint:package"
   },

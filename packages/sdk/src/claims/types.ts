@@ -102,6 +102,25 @@ export type Claim<TPayload = unknown> = {
   };
 };
 
+/** One exact issuer-and-schema pair accepted by an application policy. */
+export type ClaimPolicyRequirement = {
+  issuerDid: string;
+  schemaHash: ccc.HexLike;
+};
+
+/** Presence policy evaluated over live claims at one explicit checkpoint. */
+export type ClaimPolicy =
+  | {
+      mode: "any" | "all";
+      requirements: readonly ClaimPolicyRequirement[];
+      threshold?: never;
+    }
+  | {
+      mode: "threshold";
+      requirements: readonly ClaimPolicyRequirement[];
+      threshold: number;
+    };
+
 /** Exact subject query and optional filters applied by {@link readClaims}. */
 export type ClaimFilter = {
   subject: ClaimSubjectLike;
