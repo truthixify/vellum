@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Search,
   Shield,
+  Vote,
 } from "lucide-react";
 import {
   Link,
@@ -57,6 +58,7 @@ const NAV_ICONS: Record<DashboardNavPath, NavItem["icon"]> = {
   "/my": Shield,
   "/verify": BadgeCheck,
   "/reputation": ChartNoAxesColumnIncreasing,
+  "/demo/governance": Vote,
   "/resolve": Search,
   "/docs": BookOpen,
 };
@@ -133,6 +135,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/resolve")) return "Resolve";
   if (pathname.startsWith("/issue")) return "Issue a claim";
   if (pathname.startsWith("/activity")) return "Activity";
+  if (pathname.startsWith("/demo/governance")) return "Governance demo";
   if (pathname.startsWith("/governance")) return "Governance policy";
   if (pathname.startsWith("/docs")) return "Documentation";
   return "Vellum";

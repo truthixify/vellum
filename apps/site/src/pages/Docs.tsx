@@ -625,6 +625,7 @@ function GovernanceDocs() {
           and the published schema hash rather than trusting display labels.
         </p>
         <div className="docs-link-list">
+          <ExternalLink href={dashboardUrl("/demo/governance")}>Open the live demo</ExternalLink>
           <a href="/profile/did%3Ackb%3A4kiidiczwthgxj7dltzkzopgbwu3v6jc">
             Inspect the live subject
           </a>

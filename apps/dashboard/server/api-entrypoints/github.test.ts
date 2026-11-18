@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import githubHandler from "./github";
+import githubHandler from "../../api/github";
 
 const ENVIRONMENT = {
   GITHUB_CLIENT_ID: "github-client-id",

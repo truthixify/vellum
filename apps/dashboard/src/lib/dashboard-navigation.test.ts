@@ -14,6 +14,7 @@ describe("dashboard navigation", () => {
       "/my",
       "/verify",
       "/reputation",
+      "/demo/governance",
       "/resolve",
     ]);
     const visiblePaths = [PRIMARY_NAVIGATION, MOBILE_NAVIGATION, MOBILE_MORE_NAVIGATION]
@@ -21,7 +22,7 @@ describe("dashboard navigation", () => {
       .map((item) => item.to);
     expect(visiblePaths).not.toContain("/issue");
     expect(visiblePaths).not.toContain("/activity");
-    expect(visiblePaths).not.toContain("/governance");
+    expect(visiblePaths).toContain("/demo/governance");
   });
 
   test("keeps identity operations under the Identity destination", () => {

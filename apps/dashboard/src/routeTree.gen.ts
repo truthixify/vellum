@@ -22,6 +22,7 @@ import { Route as MyRouteImport } from './routes/my'
 import { Route as ReputationRouteImport } from './routes/reputation'
 import { Route as ResolveRouteImport } from './routes/resolve'
 import { Route as RotateRouteImport } from './routes/rotate'
+import { Route as DemoGovernanceRouteImport } from './routes/demo/governance'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as DocsCellModelRouteImport } from './routes/docs/cell-model'
 import { Route as DocsDidCkbRouteImport } from './routes/docs/did-ckb'
@@ -32,6 +33,8 @@ import { Route as VerifyBlueskyRouteImport } from './routes/verify/bluesky'
 import { Route as VerifyDiscordRouteImport } from './routes/verify/discord'
 import { Route as VerifyGithubRouteImport } from './routes/verify/github'
 import { Route as VerifyTelegramRouteImport } from './routes/verify/telegram'
+import { Route as DemoGovernanceIndexRouteImport } from './routes/demo/governance/index'
+import { Route as DemoGovernanceReceiptReceiptIdRouteImport } from './routes/demo/governance/receipt.$receiptId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -98,6 +101,11 @@ const RotateRoute = RotateRouteImport.update({
   path: '/rotate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoGovernanceRoute = DemoGovernanceRouteImport.update({
+  id: '/demo/governance',
+  path: '/demo/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsIndexRoute = DocsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -148,6 +156,17 @@ const VerifyTelegramRoute = VerifyTelegramRouteImport.update({
   path: '/verify/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoGovernanceIndexRoute = DemoGovernanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DemoGovernanceRoute,
+} as any)
+const DemoGovernanceReceiptReceiptIdRoute =
+  DemoGovernanceReceiptReceiptIdRouteImport.update({
+    id: '/receipt/$receiptId',
+    path: '/receipt/$receiptId',
+    getParentRoute: () => DemoGovernanceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -163,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/reputation': typeof ReputationRoute
   '/resolve': typeof ResolveRoute
   '/rotate': typeof RotateRoute
+  '/demo/governance': typeof DemoGovernanceRouteWithChildren
   '/docs/cell-model': typeof DocsCellModelRoute
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
@@ -173,6 +193,8 @@ export interface FileRoutesByFullPath {
   '/verify/telegram': typeof VerifyTelegramRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
+  '/demo/governance/': typeof DemoGovernanceIndexRoute
+  '/demo/governance/receipt/$receiptId': typeof DemoGovernanceReceiptReceiptIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -197,6 +219,8 @@ export interface FileRoutesByTo {
   '/verify/telegram': typeof VerifyTelegramRoute
   '/docs': typeof DocsIndexRoute
   '/verify': typeof VerifyIndexRoute
+  '/demo/governance': typeof DemoGovernanceIndexRoute
+  '/demo/governance/receipt/$receiptId': typeof DemoGovernanceReceiptReceiptIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -213,6 +237,7 @@ export interface FileRoutesById {
   '/reputation': typeof ReputationRoute
   '/resolve': typeof ResolveRoute
   '/rotate': typeof RotateRoute
+  '/demo/governance': typeof DemoGovernanceRouteWithChildren
   '/docs/cell-model': typeof DocsCellModelRoute
   '/docs/did-ckb': typeof DocsDidCkbRoute
   '/docs/migration': typeof DocsMigrationRoute
@@ -223,6 +248,8 @@ export interface FileRoutesById {
   '/verify/telegram': typeof VerifyTelegramRoute
   '/docs/': typeof DocsIndexRoute
   '/verify/': typeof VerifyIndexRoute
+  '/demo/governance/': typeof DemoGovernanceIndexRoute
+  '/demo/governance/receipt/$receiptId': typeof DemoGovernanceReceiptReceiptIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -240,6 +267,7 @@ export interface FileRouteTypes {
     | '/reputation'
     | '/resolve'
     | '/rotate'
+    | '/demo/governance'
     | '/docs/cell-model'
     | '/docs/did-ckb'
     | '/docs/migration'
@@ -250,6 +278,8 @@ export interface FileRouteTypes {
     | '/verify/telegram'
     | '/docs/'
     | '/verify/'
+    | '/demo/governance/'
+    | '/demo/governance/receipt/$receiptId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -274,6 +304,8 @@ export interface FileRouteTypes {
     | '/verify/telegram'
     | '/docs'
     | '/verify'
+    | '/demo/governance'
+    | '/demo/governance/receipt/$receiptId'
   id:
     | '__root__'
     | '/'
@@ -289,6 +321,7 @@ export interface FileRouteTypes {
     | '/reputation'
     | '/resolve'
     | '/rotate'
+    | '/demo/governance'
     | '/docs/cell-model'
     | '/docs/did-ckb'
     | '/docs/migration'
@@ -299,6 +332,8 @@ export interface FileRouteTypes {
     | '/verify/telegram'
     | '/docs/'
     | '/verify/'
+    | '/demo/governance/'
+    | '/demo/governance/receipt/$receiptId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -315,6 +350,7 @@ export interface RootRouteChildren {
   ReputationRoute: typeof ReputationRoute
   ResolveRoute: typeof ResolveRoute
   RotateRoute: typeof RotateRoute
+  DemoGovernanceRoute: typeof DemoGovernanceRouteWithChildren
   VerifyBlueskyRoute: typeof VerifyBlueskyRoute
   VerifyDiscordRoute: typeof VerifyDiscordRoute
   VerifyGithubRoute: typeof VerifyGithubRoute
@@ -415,6 +451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RotateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/governance': {
+      id: '/demo/governance'
+      path: '/demo/governance'
+      fullPath: '/demo/governance'
+      preLoaderRoute: typeof DemoGovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/docs/': {
       id: '/docs/'
       path: '/'
@@ -485,6 +528,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo/governance/': {
+      id: '/demo/governance/'
+      path: '/'
+      fullPath: '/demo/governance/'
+      preLoaderRoute: typeof DemoGovernanceIndexRouteImport
+      parentRoute: typeof DemoGovernanceRoute
+    }
+    '/demo/governance/receipt/$receiptId': {
+      id: '/demo/governance/receipt/$receiptId'
+      path: '/receipt/$receiptId'
+      fullPath: '/demo/governance/receipt/$receiptId'
+      preLoaderRoute: typeof DemoGovernanceReceiptReceiptIdRouteImport
+      parentRoute: typeof DemoGovernanceRoute
+    }
   }
 }
 
@@ -506,6 +563,20 @@ const DocsRouteChildren: DocsRouteChildren = {
 
 const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 
+interface DemoGovernanceRouteChildren {
+  DemoGovernanceIndexRoute: typeof DemoGovernanceIndexRoute
+  DemoGovernanceReceiptReceiptIdRoute: typeof DemoGovernanceReceiptReceiptIdRoute
+}
+
+const DemoGovernanceRouteChildren: DemoGovernanceRouteChildren = {
+  DemoGovernanceIndexRoute: DemoGovernanceIndexRoute,
+  DemoGovernanceReceiptReceiptIdRoute: DemoGovernanceReceiptReceiptIdRoute,
+}
+
+const DemoGovernanceRouteWithChildren = DemoGovernanceRoute._addFileChildren(
+  DemoGovernanceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
@@ -520,6 +591,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReputationRoute: ReputationRoute,
   ResolveRoute: ResolveRoute,
   RotateRoute: RotateRoute,
+  DemoGovernanceRoute: DemoGovernanceRouteWithChildren,
   VerifyBlueskyRoute: VerifyBlueskyRoute,
   VerifyDiscordRoute: VerifyDiscordRoute,
   VerifyGithubRoute: VerifyGithubRoute,

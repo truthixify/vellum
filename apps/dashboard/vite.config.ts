@@ -5,6 +5,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+import { handleGovernanceRequest } from "./server/governance/http";
 import { handleReputationRequest } from "./server/reputation/http";
 import { handleDiscordOAuthRequest } from "./server/verification/discord-http";
 import { handleGithubOAuthRequest } from "./server/verification/github-http";
@@ -42,6 +43,39 @@ function installReputationEndpoint(middlewares: Connect.Server) {
         outgoing.end(await response.text());
       })
       .catch(next);
+  });
+}
+
+function installGovernanceEndpoint(middlewares: Connect.Server) {
+  middlewares.use((incoming, outgoing, next) => {
+    const url = new URL(incoming.url ?? "/", "http://localhost:8080");
+    if (url.pathname !== "/api/governance" && !url.pathname.startsWith("/api/governance/")) {
+      next();
+      return;
+    }
+
+    const chunks: Uint8Array[] = [];
+    incoming.on("data", (chunk: Uint8Array) => chunks.push(chunk));
+    incoming.on("end", () => {
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(incoming.headers)) {
+        if (Array.isArray(value)) value.forEach((entry) => headers.append(name, entry));
+        else if (value !== undefined) headers.set(name, value);
+      }
+      const requestMethod = incoming.method ?? "GET";
+      const requestBody =
+        requestMethod === "GET" || requestMethod === "HEAD" ? undefined : Buffer.concat(chunks);
+      const request = new Request(url, { method: requestMethod, headers, body: requestBody });
+
+      void handleGovernanceRequest(request)
+        .then(async (response) => {
+          response.headers.forEach((value, name) => outgoing.setHeader(name, value));
+          outgoing.statusCode = response.status;
+          outgoing.end(await response.text());
+        })
+        .catch(next);
+    });
+    incoming.on("error", next);
   });
 }
 
@@ -88,11 +122,13 @@ function issuerEndpoint(): Plugin {
     configureServer(server) {
       installIssuerEndpoint(server.middlewares);
       installReputationEndpoint(server.middlewares);
+      installGovernanceEndpoint(server.middlewares);
       installOAuthEndpoints(server.middlewares);
     },
     configurePreviewServer(server) {
       installIssuerEndpoint(server.middlewares);
       installReputationEndpoint(server.middlewares);
+      installGovernanceEndpoint(server.middlewares);
       installOAuthEndpoints(server.middlewares);
     },
   };
