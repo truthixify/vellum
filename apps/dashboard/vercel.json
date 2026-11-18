@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/governance/:action",
+      "destination": "/api/governance?action=:action"
+    },
+    {
       "source": "/api/reputation/:did",
       "destination": "/api/reputation?did=:did"
     },

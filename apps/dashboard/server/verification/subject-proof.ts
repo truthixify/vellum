@@ -1,9 +1,15 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { ccc } from "@ckb-ccc/core";
-import { resolveDidCkb } from "@ckb-ccc/did-ckb";
-import { verifyCredential, type CredentialKeyType, type SigningAlg } from "@joyid/ckb";
 
+import {
+  defaultDidControllerDependencies,
+  DidControllerInactiveError,
+  DidControllerUnavailableError,
+  resolveDidController,
+  verifyControllerSignature,
+  type DidControllerDependencies,
+} from "../identity/controller.js";
 import {
   isVerificationPlatform,
   type DidVerificationSubject,
@@ -12,10 +18,8 @@ import {
 } from "./contracts.js";
 import type { VerificationCoordinator } from "./coordination.js";
 import { OAuthConfigurationError, VerificationServiceError } from "./errors.js";
-import { issuerRpcUrl } from "./issuer.js";
 
 const CHALLENGE_TTL_SECONDS = 5 * 60;
-const JOYID_TESTNET_SERVER_URL = "https://api.testnet.joyid.dev/api/v1";
 const NONCE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 type SubjectProofEnvironment = {
@@ -39,21 +43,13 @@ export type SubjectChallenge = {
   message: string;
 };
 
-export type SubjectProofDependencies = {
-  createClient: (rpcUrl: string) => ccc.Client;
+export type SubjectProofDependencies = DidControllerDependencies & {
   nonceBytes: () => Uint8Array;
-  resolveDid: typeof resolveDidCkb;
-  verifyMessage: typeof ccc.Signer.verifyMessage;
-  verifyJoyIdCredential: typeof verifyCredential;
 };
 
 const defaultDependencies: SubjectProofDependencies = {
-  createClient: (rpcUrl) =>
-    new ccc.ClientPublicTestnet({ url: rpcUrl, fallbacks: [], timeout: 10_000 }),
+  ...defaultDidControllerDependencies,
   nonceBytes: () => randomBytes(32),
-  resolveDid: resolveDidCkb,
-  verifyMessage: ccc.Signer.verifyMessage,
-  verifyJoyIdCredential: verifyCredential,
 };
 
 function proofError(message = "The wallet does not control the selected identity."): never {
@@ -130,97 +126,14 @@ async function resolveController(
   environment: SubjectProofEnvironment,
   dependencies: SubjectProofDependencies,
 ): Promise<{ client: ccc.Client; lock: ccc.Script }> {
-  const client = dependencies.createClient(issuerRpcUrl(environment));
-  let record;
   try {
-    record = await dependencies.resolveDid({ client, did: subject.did });
-  } catch {
-    throw new VerificationServiceError(
-      "issuer_unavailable",
-      503,
-      "The selected identity could not be resolved.",
-    );
-  }
-  if (!record) {
-    throw new VerificationServiceError(
-      "subject_control_invalid",
-      400,
-      "The selected identity is not active on CKB Testnet.",
-    );
-  }
-  return { client, lock: record.cell.cellOutput.lock };
-}
-
-async function signerControlsLock(
-  client: ccc.Client,
-  lock: ccc.Script,
-  walletSignature: SubjectProof["signature"],
-  dependencies: SubjectProofDependencies,
-): Promise<boolean> {
-  const identity = walletSignature.identity;
-  switch (walletSignature.signType) {
-    case ccc.SignerSignType.CkbSecp256k1: {
-      const signer = new ccc.SignerCkbPublicKey(client, identity);
-      return (await signer.getAddressObjSecp256k1()).script.eq(lock);
+    return await resolveDidController(subject.did, environment, dependencies);
+  } catch (error) {
+    if (error instanceof DidControllerInactiveError) {
+      throw new VerificationServiceError("subject_control_invalid", 400, error.message);
     }
-    case ccc.SignerSignType.EvmPersonal: {
-      const signer = new ccc.SignerEvmAddressReadonly(client, identity);
-      return (await signer.getAddressObjs()).some(({ script }) => script.eq(lock));
-    }
-    case ccc.SignerSignType.BtcEcdsa: {
-      const publicKey = identity.startsWith("0x") ? identity : `0x${identity}`;
-      const signer = new ccc.SignerBtcPublicKeyReadonly(client, "", publicKey);
-      return (await signer.getAddressObjs()).some(({ script }) => script.eq(lock));
-    }
-    case ccc.SignerSignType.NostrEvent: {
-      const signer = new ccc.SignerNostrPublicKeyReadonly(client, identity);
-      return (await signer.getAddressObjs()).some(({ script }) => script.eq(lock));
-    }
-    case ccc.SignerSignType.DogeEcdsa: {
-      const signer = new ccc.SignerDogeAddressReadonly(client, identity);
-      return (await signer.getAddressObjs()).some(({ script }) => script.eq(lock));
-    }
-    case ccc.SignerSignType.JoyId: {
-      let identityValue: unknown;
-      let signatureValue: unknown;
-      try {
-        identityValue = JSON.parse(identity);
-        signatureValue = JSON.parse(walletSignature.signature);
-      } catch {
-        return false;
-      }
-      if (
-        typeof identityValue !== "object" ||
-        identityValue === null ||
-        Array.isArray(identityValue) ||
-        typeof signatureValue !== "object" ||
-        signatureValue === null ||
-        Array.isArray(signatureValue)
-      ) {
-        return false;
-      }
-      const joyIdentity = identityValue as { keyType?: unknown; publicKey?: unknown };
-      const joySignature = signatureValue as { alg?: unknown };
-      if (
-        typeof joyIdentity.publicKey !== "string" ||
-        typeof joyIdentity.keyType !== "string" ||
-        typeof joySignature.alg !== "number"
-      ) {
-        return false;
-      }
-      const address = ccc.Address.from({ prefix: client.addressPrefix, script: lock }).toString();
-      return dependencies.verifyJoyIdCredential(
-        {
-          pubkey: joyIdentity.publicKey,
-          address,
-          keyType: joyIdentity.keyType as CredentialKeyType,
-          alg: joySignature.alg as SigningAlg,
-        },
-        JOYID_TESTNET_SERVER_URL,
-      );
-    }
-    default:
-      return false;
+    if (!(error instanceof DidControllerUnavailableError)) throw error;
+    throw new VerificationServiceError("issuer_unavailable", 503, error.message);
   }
 }
 
@@ -281,21 +194,12 @@ export async function verifySubjectProof(
   }
 
   const message = challengeMessage(payload);
-  let verified = false;
-  try {
-    verified =
-      (await dependencies.verifyMessage(
-        message,
-        new ccc.Signature(
-          proof.signature.signature,
-          proof.signature.identity,
-          proof.signature.signType as ccc.SignerSignType,
-        ),
-      )) &&
-      (await signerControlsLock(resolved.client, resolved.lock, proof.signature, dependencies));
-  } catch {
-    verified = false;
-  }
+  const verified = await verifyControllerSignature(
+    message,
+    resolved,
+    proof.signature,
+    dependencies,
+  );
   if (!verified) proofError();
   if (!(await coordinator.consumeOnce(payload.nonce, payload.expiresAt, now))) {
     proofError("The wallet verification challenge expired or has already been used.");
