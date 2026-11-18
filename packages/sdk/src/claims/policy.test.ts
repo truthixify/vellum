@@ -136,6 +136,22 @@ describe("checkPolicy", () => {
     }
   });
 
+  test("requires verified live inclusion and Claim Type authorization", () => {
+    const policy = { mode: "all", requirements: [requirements[0]] } satisfies ClaimPolicy;
+    const claim = makeClaim();
+    const spent = {
+      ...claim,
+      verification: { ...claim.verification, inclusion: "spent" },
+    } as unknown as Claim;
+    const unauthorized = {
+      ...claim,
+      verification: { ...claim.verification, issuerAuthorization: "unverified" },
+    } as unknown as Claim;
+
+    expect(checkPolicy([spent], policy, 150n)).toBe(false);
+    expect(checkPolicy([unauthorized], policy, 150n)).toBe(false);
+  });
+
   test("enforces the exact activation and expiry boundary", () => {
     const policy = { mode: "all", requirements: [requirements[0]] } satisfies ClaimPolicy;
 
@@ -187,6 +203,9 @@ describe("checkPolicy", () => {
     expect(() => checkPolicy([], { mode: "threshold", requirements, threshold: 0 }, 150n)).toThrow(
       "threshold must be an integer between 1 and the requirement count",
     );
+    expect(() =>
+      checkPolicy([], { mode: "all", requirements, threshold: 1 } as unknown as ClaimPolicy, 150n),
+    ).toThrow("threshold is only valid for threshold policies");
     expect(() =>
       checkPolicy([], { mode: "all", requirements: [requirements[0], requirements[0]] }, 150n),
     ).toThrow("duplicate issuer-and-schema requirements");

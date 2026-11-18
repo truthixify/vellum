@@ -112,8 +112,10 @@ const eligible = checkPolicy(result.claims, policy, checkpointTimestamp);
 The helper accepts only claims with live inclusion, a currently active issuer DID, Claim Type
 authorization, and an active timestamp evaluation at the exact supplied checkpoint. Expiry takes
 effect at equality. Empty requirements, duplicate issuer-and-schema pairs, malformed values, and
-invalid thresholds reject as policy configuration errors. Applications should also fail closed when
-`readClaims` rejects or returns relevant malformed Cells in `invalid`.
+invalid thresholds reject as policy configuration errors; a threshold attached to another mode is
+also rejected. Applications should distinguish ineligibility from an unavailable decision. The
+governance examples report unavailable when `readClaims` rejects, a relevant issuer cannot be
+resolved, or filtered malformed Cells remain and no verified claim set already satisfies the policy.
 
 ## Parse a payload
 

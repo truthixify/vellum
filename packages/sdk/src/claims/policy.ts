@@ -64,6 +64,9 @@ function normalizePolicy(policy: ClaimPolicy): readonly NormalizedRequirement[] 
   if (policy.mode !== "any" && policy.mode !== "all" && policy.mode !== "threshold") {
     throw new Error(`Unsupported claim policy mode: ${String(policy.mode)}`);
   }
+  if (policy.mode !== "threshold" && policy.threshold !== undefined) {
+    throw new Error("threshold is only valid for threshold policies");
+  }
 
   return requirements;
 }

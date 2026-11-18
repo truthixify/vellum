@@ -1,8 +1,9 @@
 import { ccc } from "@ckb-ccc/core";
 import { didToArgs } from "@ckb-ccc/did-ckb";
-import { checkPolicy, readClaims } from "@usevellum/sdk";
+import { readClaims } from "@usevellum/sdk";
 
 import { githubGate, LIVE_GITHUB_SUBJECT } from "./config.js";
+import { evaluateGithubGate } from "./decision.js";
 import { testnetScripts } from "../testnet.js";
 
 function json(body: unknown, status = 200): Response {
@@ -25,14 +26,18 @@ export async function GET(request: Request): Promise<Response> {
         url: process.env.CKB_RPC_URL ?? "https://testnet.ckbapp.dev",
       }),
       scripts: testnetScripts,
-      filter: { subject: { did: subjectDid }, evaluationTime },
+      filter: {
+        subject: { did: subjectDid },
+        issuerDid: githubGate.requirements[0].issuerDid,
+        schemaHash: githubGate.requirements[0].schemaHash,
+        evaluationTime,
+      },
     });
-    if (result.invalid.length > 0) throw new Error("Malformed Claim Cells prevent a decision");
 
     return json({
       subjectDid,
       evaluationTime: String(evaluationTime),
-      eligible: checkPolicy(result.claims, githubGate, evaluationTime),
+      eligible: evaluateGithubGate(result, evaluationTime),
     });
   } catch {
     return json({ eligible: false, error: "Eligibility is currently unavailable" }, 503);

@@ -18,7 +18,23 @@ const githubGate = {
 ```
 
 `checkPolicy` supports `any`, `all`, and `threshold`. It rejects empty policies, duplicate pairs,
-and invalid thresholds instead of silently weakening the gate.
+invalid thresholds, and thresholds attached to other modes instead of silently weakening the gate.
+
+Keep an incomplete read distinct from a valid negative decision:
+
+```ts
+export function evaluateGithubGate(result: ReadClaimsResult, evaluationTime: ccc.NumLike): boolean {
+  const eligible = checkPolicy(result.claims, githubGate, evaluationTime);
+  if (eligible) return true;
+  if (result.invalid.length > 0) {
+    throw new Error("Eligibility is unavailable because filtered Claim Cells are malformed");
+  }
+  if (result.claims.some((claim) => claim.issuerState.status === "unavailable")) {
+    throw new Error("Eligibility is unavailable because issuer state could not be resolved");
+  }
+  return false;
+}
+```
 
 ## Check eligibility in a client
 
@@ -29,16 +45,22 @@ to `readClaims` and `checkPolicy`.
 const result = await readClaims({
   client,
   scripts: testnetScripts,
-  filter: { subject: { did: subjectDid }, evaluationTime },
+  filter: {
+    subject: { did: subjectDid },
+    issuerDid: githubGate.requirements[0].issuerDid,
+    schemaHash: githubGate.requirements[0].schemaHash,
+    evaluationTime,
+  },
 });
-if (result.invalid.length > 0) throw new Error("Eligibility unavailable");
-const eligible = checkPolicy(result.claims, githubGate, evaluationTime);
+const eligible = evaluateGithubGate(result, evaluationTime);
 ```
 
 The complete runnable example is
 [`packages/sdk/examples/governance/client.ts`](../packages/sdk/examples/governance/client.ts).
 Client results improve the interface, but must not authorize a durable action because callers can
-alter browser code and inputs.
+alter browser code and inputs. The shared decision function reports malformed filtered Cells or an
+unresolved issuer lookup as unavailable rather than mislabeling either case as ineligible. Extra
+rejected Cells do not override evidence that already satisfies the policy.
 
 ## Enforce the gate on a server
 
@@ -51,10 +73,14 @@ const evaluationTime = BigInt(Math.floor(Date.now() / 1_000));
 const result = await readClaims({
   client: testnetClient,
   scripts: testnetScripts,
-  filter: { subject: { did: subjectDid }, evaluationTime },
+  filter: {
+    subject: { did: subjectDid },
+    issuerDid: githubGate.requirements[0].issuerDid,
+    schemaHash: githubGate.requirements[0].schemaHash,
+    evaluationTime,
+  },
 });
-if (result.invalid.length > 0) throw new Error("Eligibility unavailable");
-const eligible = checkPolicy(result.claims, githubGate, evaluationTime);
+const eligible = evaluateGithubGate(result, evaluationTime);
 ```
 
 The runnable Web `Request`/`Response` route is

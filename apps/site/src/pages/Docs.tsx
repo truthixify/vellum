@@ -6,6 +6,8 @@ import { dashboardUrl } from "../config";
 import type { DocsPage } from "../lib/docs-route";
 import {
   CLIENT_GATE_EXAMPLE,
+  GOVERNANCE_DECISION_EXAMPLE,
+  GOVERNANCE_POLICY_EXAMPLE,
   ISSUE_CLAIM_EXAMPLE,
   READ_CLAIMS_EXAMPLE,
   RESOLVE_IDENTITY_EXAMPLE,
@@ -564,6 +566,12 @@ function GovernanceDocs() {
           <code>checkPolicy</code> helper supports <code>any</code>, <code>all</code>, and{" "}
           <code>threshold</code> modes and rejects empty, duplicate, or invalid policy definitions.
         </p>
+        <DocsCode code={GOVERNANCE_POLICY_EXAMPLE} />
+        <p>
+          Keep incomplete reads distinct from a valid negative result. This shared decision function
+          is used by both runnable examples.
+        </p>
+        <DocsCode code={GOVERNANCE_DECISION_EXAMPLE} />
       </section>
 
       <section id="client-gate" className="docs-section">
@@ -581,7 +589,8 @@ function GovernanceDocs() {
         <p>
           Re-read current Testnet state immediately before accepting the action. Record the
           checkpoint with the decision and return an unavailable result when RPC, indexer, issuer,
-          or malformed-cell state prevents a complete answer.
+          or filtered malformed-cell state prevents a complete answer. The client and server
+          examples share that decision logic and the same exact issuer-and-schema filter.
         </p>
         <DocsCode code={SERVER_GATE_EXAMPLE} />
       </section>

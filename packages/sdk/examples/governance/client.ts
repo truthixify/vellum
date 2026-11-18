@@ -1,7 +1,8 @@
 import { ccc } from "@ckb-ccc/core";
-import { checkPolicy, readClaims } from "@usevellum/sdk";
+import { readClaims } from "@usevellum/sdk";
 
 import { githubGate, LIVE_GITHUB_SUBJECT } from "./config.js";
+import { evaluateGithubGate } from "./decision.js";
 import { testnetScripts } from "../testnet.js";
 
 export async function checkGithubEligibility(
@@ -18,10 +19,7 @@ export async function checkGithubEligibility(
       evaluationTime,
     },
   });
-  if (result.invalid.length > 0) {
-    throw new Error("Eligibility is unavailable because the subject has malformed Claim Cells");
-  }
-  return checkPolicy(result.claims, githubGate, evaluationTime);
+  return evaluateGithubGate(result, evaluationTime);
 }
 
 if (import.meta.main) {

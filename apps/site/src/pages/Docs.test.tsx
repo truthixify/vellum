@@ -5,6 +5,8 @@ import type { DocsPage } from "../lib/docs-route";
 import { Docs } from "./Docs";
 import {
   CLIENT_GATE_EXAMPLE,
+  GOVERNANCE_DECISION_EXAMPLE,
+  GOVERNANCE_POLICY_EXAMPLE,
   ISSUE_CLAIM_EXAMPLE,
   READ_CLAIMS_EXAMPLE,
   RESOLVE_IDENTITY_EXAMPLE,
@@ -82,6 +84,12 @@ describe("documentation site", () => {
     const clientGate = await Bun.file(
       `${import.meta.dir}/../../../../packages/sdk/examples/governance/client.ts`,
     ).text();
+    const gatePolicy = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/config.ts`,
+    ).text();
+    const gateDecision = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/decision.ts`,
+    ).text();
     const serverGate = await Bun.file(
       `${import.meta.dir}/../../../../packages/sdk/examples/governance/server.ts`,
     ).text();
@@ -89,6 +97,10 @@ describe("documentation site", () => {
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(READ_CLAIMS_EXAMPLE));
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(ISSUE_CLAIM_EXAMPLE));
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(RESOLVE_IDENTITY_EXAMPLE));
+    expect(withoutWhitespace(gatePolicy)).toContain(withoutWhitespace(GOVERNANCE_POLICY_EXAMPLE));
+    expect(withoutWhitespace(gateDecision)).toContain(
+      withoutWhitespace(GOVERNANCE_DECISION_EXAMPLE),
+    );
     expect(withoutWhitespace(clientGate)).toContain(withoutWhitespace(CLIENT_GATE_EXAMPLE));
     expect(withoutWhitespace(serverGate)).toContain(withoutWhitespace(SERVER_GATE_EXAMPLE));
   });
