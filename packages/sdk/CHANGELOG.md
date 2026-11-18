@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- 87b377d: Add explicit-checkpoint claim policy evaluation for consumer eligibility gates.
+
 ## 0.1.2
 
 ### Patch Changes
