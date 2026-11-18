@@ -4,9 +4,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { DocsPage } from "../lib/docs-route";
 import { Docs } from "./Docs";
 import {
+  CLIENT_GATE_EXAMPLE,
+  GOVERNANCE_DECISION_EXAMPLE,
+  GOVERNANCE_POLICY_EXAMPLE,
   ISSUE_CLAIM_EXAMPLE,
   READ_CLAIMS_EXAMPLE,
   RESOLVE_IDENTITY_EXAMPLE,
+  SERVER_GATE_EXAMPLE,
 } from "./docs-examples";
 
 const PAGE_ANCHORS: Record<DocsPage, readonly string[]> = {
@@ -14,6 +18,7 @@ const PAGE_ANCHORS: Record<DocsPage, readonly string[]> = {
   builders: ["create", "profile", "verify", "score", "share"],
   issuers: ["issuer-identity", "schema", "capacity", "issue", "signer"],
   integrators: ["install", "read", "results", "schemas", "renderers", "trust"],
+  governance: ["policy", "client-gate", "server-gate", "boundaries", "testnet-evidence"],
   identity: ["install", "resolve", "states", "profile"],
 };
 const PAGES = Object.keys(PAGE_ANCHORS) as DocsPage[];
@@ -29,6 +34,7 @@ describe("documentation site", () => {
       expect(html).toContain('href="/docs/builders"');
       expect(html).toContain('href="/docs/issuers"');
       expect(html).toContain('href="/docs/integrators"');
+      expect(html).toContain('href="/docs/governance"');
       expect(html).toContain('href="/docs/identity"');
       expect(html).toContain("Vellum SDK");
       expect(html).toContain('aria-label="Sections on this page"');
@@ -47,6 +53,7 @@ describe("documentation site", () => {
     const builders = renderToStaticMarkup(<Docs page="builders" />);
     const issuers = renderToStaticMarkup(<Docs page="issuers" />);
     const integrators = renderToStaticMarkup(<Docs page="integrators" />);
+    const governance = renderToStaticMarkup(<Docs page="governance" />);
     const identity = renderToStaticMarkup(<Docs page="identity" />);
 
     expect(builders).toContain('href="https://dashboard.usevellum.xyz/claim"');
@@ -61,6 +68,10 @@ describe("documentation site", () => {
     expect(integrators).toContain("evaluationTime");
     expect(integrators).toContain("claim.schemaHash");
     expect(integrators).toContain("apps/site/src/components/ClaimRenderer.tsx");
+    expect(governance).toContain("checkPolicy");
+    expect(governance).toContain("checkGithubEligibility");
+    expect(governance).toContain("did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc");
+    expect(governance).toContain("docs/governance-gating.md");
     expect(identity).toContain("resolveDidCkb");
     expect(identity).toContain('href="/resolve"');
     expect(identity).toContain("optional <code>services.profile</code>");
@@ -70,10 +81,28 @@ describe("documentation site", () => {
     const example = await Bun.file(
       `${import.meta.dir}/../../../../packages/sdk/examples/api.ts`,
     ).text();
+    const clientGate = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/client.ts`,
+    ).text();
+    const gatePolicy = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/config.ts`,
+    ).text();
+    const gateDecision = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/decision.ts`,
+    ).text();
+    const serverGate = await Bun.file(
+      `${import.meta.dir}/../../../../packages/sdk/examples/governance/server.ts`,
+    ).text();
 
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(READ_CLAIMS_EXAMPLE));
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(ISSUE_CLAIM_EXAMPLE));
     expect(withoutWhitespace(example)).toContain(withoutWhitespace(RESOLVE_IDENTITY_EXAMPLE));
+    expect(withoutWhitespace(gatePolicy)).toContain(withoutWhitespace(GOVERNANCE_POLICY_EXAMPLE));
+    expect(withoutWhitespace(gateDecision)).toContain(
+      withoutWhitespace(GOVERNANCE_DECISION_EXAMPLE),
+    );
+    expect(withoutWhitespace(clientGate)).toContain(withoutWhitespace(CLIENT_GATE_EXAMPLE));
+    expect(withoutWhitespace(serverGate)).toContain(withoutWhitespace(SERVER_GATE_EXAMPLE));
   });
 
   test("provides accessible copy success and failure feedback", () => {

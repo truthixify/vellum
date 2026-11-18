@@ -92,6 +92,31 @@ the operation because its result would be incomplete. Issuer lookup failures sta
 claim as `issuerState: { status: "unavailable", reason }`, which authorization code should treat as
 fail-closed.
 
+## Check a claim policy
+
+`checkPolicy` evaluates exact issuer-and-schema requirements over claims returned by `readClaims`.
+It supports `any`, `all`, and `threshold` modes without performing network I/O or selecting a clock.
+
+```ts
+import { checkPolicy } from "@usevellum/sdk";
+import type { ClaimPolicy } from "@usevellum/sdk";
+
+const policy = {
+  mode: "all",
+  requirements: [{ issuerDid: trustedIssuerDid, schemaHash: githubSchemaHash }],
+} satisfies ClaimPolicy;
+
+const eligible = checkPolicy(result.claims, policy, checkpointTimestamp);
+```
+
+The helper accepts only claims with live inclusion, a currently active issuer DID, Claim Type
+authorization, and an active timestamp evaluation at the exact supplied checkpoint. Expiry takes
+effect at equality. Empty requirements, duplicate issuer-and-schema pairs, malformed values, and
+invalid thresholds reject as policy configuration errors; a threshold attached to another mode is
+also rejected. Applications should distinguish ineligibility from an unavailable decision. The
+governance examples report unavailable when `readClaims` rejects, a relevant issuer cannot be
+resolved, or filtered malformed Cells remain and no verified claim set already satisfies the policy.
+
 ## Parse a payload
 
 The base reader returns payloads as `unknown`. `parseClaimPayload` checks the schema hash before
@@ -160,18 +185,19 @@ Output capacity defaults to the exact occupied capacity of the serialized Claim 
 
 ## Public API
 
-The package root exports six runtime values:
+The package root exports seven runtime values:
 
 - `ClaimDataV1` and `ClaimData` for canonical Claim Cell encoding and decoding;
 - `readClaims` for complete live subject scans;
+- `checkPolicy` for pure, explicit-checkpoint eligibility evaluation;
 - `parseClaimPayload` for schema-bound application parsing; and
 - `writeClaim` and `writeClaims` for unsigned single-claim and atomic batch construction.
 
 It also exports the public types used by those values: `Claim`, `ClaimDataLike`, `ClaimDataV1Like`,
-`ClaimFilter`, `ClaimIssuerSource`, `ClaimIssuerState`, `ClaimReadFailure`,
-`ClaimReadFailureCode`, `ClaimSchema`, `ClaimScriptConfigLike`, `ClaimSubjectLike`,
-`ClaimTimeEvaluation`, `ReadClaimsProps`, `ReadClaimsResult`, `WriteClaimInput`, `WriteClaimProps`,
-`WriteClaimResult`, `WriteClaimsProps`, and `WriteClaimsResult`.
+`ClaimFilter`, `ClaimIssuerSource`, `ClaimIssuerState`, `ClaimPolicy`, `ClaimPolicyRequirement`,
+`ClaimReadFailure`, `ClaimReadFailureCode`, `ClaimSchema`, `ClaimScriptConfigLike`,
+`ClaimSubjectLike`, `ClaimTimeEvaluation`, `ReadClaimsProps`, `ReadClaimsResult`, `WriteClaimInput`,
+`WriteClaimProps`, `WriteClaimResult`, `WriteClaimsProps`, and `WriteClaimsResult`.
 
 ## Verify
 
@@ -189,10 +215,18 @@ publishable tarball, and validates its ESM and TypeScript package exports.
 
 The network-dependent suite reads committed Testnet fixtures, covers a claim whose issuer and
 subject are different DIDs, proves a destroyed claim's capacity returned to the subject controller,
-and prepares fresh unsigned single-claim and atomic batch transactions without broadcasting:
+validates both governance-gating examples against a live GitHub claim, and prepares fresh unsigned
+single-claim and atomic batch transactions without broadcasting:
 
 ```bash
 bun run --cwd packages/sdk test:testnet
+```
+
+Run the same client-side and server-side gate examples directly with:
+
+```bash
+bun run --cwd packages/sdk example:governance:client
+bun run --cwd packages/sdk example:governance:server
 ```
 
 These checks use public RPC and indexer state, so they remain separate from the deterministic CI

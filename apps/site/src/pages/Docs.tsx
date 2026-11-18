@@ -5,9 +5,13 @@ import { useState, type ReactNode } from "react";
 import { dashboardUrl } from "../config";
 import type { DocsPage } from "../lib/docs-route";
 import {
+  CLIENT_GATE_EXAMPLE,
+  GOVERNANCE_DECISION_EXAMPLE,
+  GOVERNANCE_POLICY_EXAMPLE,
   ISSUE_CLAIM_EXAMPLE,
   READ_CLAIMS_EXAMPLE,
   RESOLVE_IDENTITY_EXAMPLE,
+  SERVER_GATE_EXAMPLE,
 } from "./docs-examples";
 
 const REPOSITORY_URL = "https://github.com/truthixify/vellum";
@@ -16,6 +20,8 @@ const SDK_WRITE_URL = `${SDK_URL}#write-claims`;
 const SDK_EXAMPLE_URL = `${REPOSITORY_URL}/blob/main/packages/sdk/examples/api.ts`;
 const SCHEMAS_URL = `${REPOSITORY_URL}/tree/main/docs/schemas`;
 const CLAIM_CELL_URL = `${REPOSITORY_URL}/blob/main/docs/claim-cell.md`;
+const GOVERNANCE_GUIDE_URL = `${REPOSITORY_URL}/blob/main/docs/governance-gating.md`;
+const GOVERNANCE_EXAMPLES_URL = `${REPOSITORY_URL}/tree/main/packages/sdk/examples/governance`;
 const RENDERER_URL = `${REPOSITORY_URL}/blob/main/apps/site/src/components/ClaimRenderer.tsx`;
 const DID_PACKAGE_URL = "https://github.com/ckb-devrel/ccc/tree/master/packages/did-ckb";
 
@@ -24,6 +30,7 @@ const DOCS_NAVIGATION: readonly { href: string; label: string; page: DocsPage }[
   { href: "/docs/builders", label: "For builders", page: "builders" },
   { href: "/docs/issuers", label: "For issuers", page: "issuers" },
   { href: "/docs/integrators", label: "For integrators", page: "integrators" },
+  { href: "/docs/governance", label: "Governance gates", page: "governance" },
 ];
 
 const PAGE_SECTIONS: Record<DocsPage, readonly { id: string; label: string }[]> = {
@@ -54,6 +61,13 @@ const PAGE_SECTIONS: Record<DocsPage, readonly { id: string; label: string }[]> 
     { id: "schemas", label: "Resolve schemas" },
     { id: "renderers", label: "Render safely" },
     { id: "trust", label: "Choose trust policy" },
+  ],
+  governance: [
+    { id: "policy", label: "Define the policy" },
+    { id: "client-gate", label: "Check in the client" },
+    { id: "server-gate", label: "Enforce on the server" },
+    { id: "boundaries", label: "Security boundaries" },
+    { id: "testnet-evidence", label: "Testnet evidence" },
   ],
   identity: [
     { id: "install", label: "Install" },
@@ -95,6 +109,7 @@ function DocsNavigation({ page }: { page: DocsPage }) {
       </a>
       <a href={SCHEMAS_URL}>Schema registry</a>
       <a href={CLAIM_CELL_URL}>Claim Cell protocol</a>
+      <a href={GOVERNANCE_GUIDE_URL}>Governance gating</a>
       <a href="/transparency">Reputation policy</a>
       <a href={SDK_URL}>Vellum SDK</a>
       <a href={DID_PACKAGE_URL}>did:ckb package</a>
@@ -213,6 +228,13 @@ function DocsIndex() {
       title: "Read claims in your app",
       body: "Scan a subject, parse pinned schemas, render unknown data safely, and choose an explicit trust policy.",
       action: "Follow the integration guide",
+    },
+    {
+      href: "/docs/governance",
+      label: "Governance apps",
+      title: "Gate actions with claims",
+      body: "Pin trusted issuers and schemas, evaluate at an explicit checkpoint, and enforce the same policy on the server.",
+      action: "Follow the gating guide",
     },
   ] as const;
 
@@ -529,6 +551,96 @@ function IntegratorDocs() {
   );
 }
 
+function GovernanceDocs() {
+  return (
+    <DocsLayout
+      page="governance"
+      eyebrow="Governance reference"
+      title="Gate actions with portable evidence"
+      description="Evaluate exact Claim Cell requirements without turning a Vellum score into a universal permission system."
+    >
+      <section id="policy" className="docs-section">
+        <h2>1. Define the application policy</h2>
+        <p>
+          Pair every accepted schema hash with an explicitly trusted issuer DID. The pure{" "}
+          <code>checkPolicy</code> helper supports <code>any</code>, <code>all</code>, and{" "}
+          <code>threshold</code> modes and rejects empty, duplicate, or invalid policy definitions.
+        </p>
+        <DocsCode code={GOVERNANCE_POLICY_EXAMPLE} />
+        <p>
+          Keep incomplete reads distinct from a valid negative result. This shared decision function
+          is used by both runnable examples.
+        </p>
+        <DocsCode code={GOVERNANCE_DECISION_EXAMPLE} />
+      </section>
+
+      <section id="client-gate" className="docs-section">
+        <h2>2. Explain eligibility in the client</h2>
+        <p>
+          Choose an explicit checkpoint and pass it to both the complete Claim Cell read and the
+          policy check. A browser result can guide the user, but it cannot authorize a durable
+          action because the caller controls that code.
+        </p>
+        <DocsCode code={CLIENT_GATE_EXAMPLE} />
+      </section>
+
+      <section id="server-gate" className="docs-section">
+        <h2>3. Enforce the same gate on the server</h2>
+        <p>
+          Re-read current Testnet state immediately before accepting the action. Record the
+          checkpoint with the decision and return an unavailable result when RPC, indexer, issuer,
+          or filtered malformed-cell state prevents a complete answer. The client and server
+          examples share that decision logic and the same exact issuer-and-schema filter.
+        </p>
+        <DocsCode code={SERVER_GATE_EXAMPLE} />
+      </section>
+
+      <section id="boundaries" className="docs-section">
+        <h2>4. Keep the security boundaries visible</h2>
+        <ul className="docs-checklist">
+          <li>
+            <Check size={14} aria-hidden="true" /> A claim expires exactly when the checkpoint
+            equals <code>expiresAt</code>.
+          </li>
+          <li>
+            <Check size={14} aria-hidden="true" /> Destroyed claims disappear from current reads,
+            but an issuer may authorize a new claim later.
+          </li>
+          <li>
+            <Check size={14} aria-hidden="true" /> Timestamp comparison alone does not prove past
+            Claim Cell or DID state.
+          </li>
+          <li>
+            <Check size={14} aria-hidden="true" /> A voting system must separately authenticate
+            control of the subject DID and prevent replay.
+          </li>
+        </ul>
+      </section>
+
+      <section id="testnet-evidence" className="docs-section">
+        <h2>5. Run the public Testnet fixture</h2>
+        <p>
+          Both examples are exercised against a live <code>vellum.social.github.v1</code> claim on{" "}
+          <code>did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc</code>. The test pins Vellum's issuer DID
+          and the published schema hash rather than trusting display labels.
+        </p>
+        <div className="docs-link-list">
+          <a href="/profile/did%3Ackb%3A4kiidiczwthgxj7dltzkzopgbwu3v6jc">
+            Inspect the live subject
+          </a>
+          <ExternalLink href={GOVERNANCE_EXAMPLES_URL}>Run the complete examples</ExternalLink>
+          <ExternalLink href={GOVERNANCE_GUIDE_URL}>Read the security reference</ExternalLink>
+        </div>
+      </section>
+
+      <div className="docs-pagination">
+        <a href="/docs/integrators">Previous: integration guide</a>
+        <a href={GOVERNANCE_GUIDE_URL}>Open the complete reference</a>
+      </div>
+    </DocsLayout>
+  );
+}
+
 function IdentityDocs() {
   return (
     <DocsLayout
@@ -599,6 +711,8 @@ export function Docs({ page = "index" }: { page?: DocsPage }) {
       return <IssuerDocs />;
     case "integrators":
       return <IntegratorDocs />;
+    case "governance":
+      return <GovernanceDocs />;
     case "identity":
       return <IdentityDocs />;
     default:
