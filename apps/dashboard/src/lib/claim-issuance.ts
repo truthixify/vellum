@@ -1,6 +1,7 @@
 import { ccc } from "@ckb-ccc/core";
 import { didToArgs } from "@ckb-ccc/did-ckb";
 import type { VellumSchemaDefinition, VellumSchemaId } from "@vellum/schemas";
+import { VELLUM_REPUTATION_POLICY_V7 } from "@vellum/scoring";
 
 export type ManifestFieldSchema = {
   type?: "object" | "array" | "string" | "integer";
@@ -34,6 +35,18 @@ export type SchemaPresentation = {
 
 const OMIT = Symbol("omit");
 const HEX_32_PATTERN = /^0x[0-9a-f]{64}$/;
+
+const REGISTERED_SCHEMA_ISSUER_DIDS: Readonly<Partial<Record<VellumSchemaId, readonly string[]>>> =
+  {
+    "ckboost.quest.v1": VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids,
+    "vellum.social.github.v1": VELLUM_REPUTATION_POLICY_V7.github.issuerDids,
+    "vellum.contribution.github.v1": VELLUM_REPUTATION_POLICY_V7.github.issuerDids,
+    "vellum.social.discord.v1": VELLUM_REPUTATION_POLICY_V7.discord.issuerDids,
+    "vellum.community.discord.v1": VELLUM_REPUTATION_POLICY_V7.discord.issuerDids,
+    "vellum.social.telegram.v1": VELLUM_REPUTATION_POLICY_V7.telegram.issuerDids,
+    "vellum.community.telegram.v1": VELLUM_REPUTATION_POLICY_V7.telegram.issuerDids,
+    "vellum.social.bluesky.v1": VELLUM_REPUTATION_POLICY_V7.bluesky.issuerDids,
+  };
 
 const SCHEMA_PRESENTATION: Record<VellumSchemaId, SchemaPresentation> = {
   "ckboost.quest.v1": {
@@ -112,6 +125,22 @@ function fromDateTimeInput(value: string): number | undefined {
 
 export function schemaPresentation(schemaId: VellumSchemaId): SchemaPresentation {
   return SCHEMA_PRESENTATION[schemaId];
+}
+
+export function canIssueRegisteredSchema(
+  issuerDid: string | undefined,
+  schemaId: VellumSchemaId,
+): boolean {
+  return (
+    issuerDid !== undefined && REGISTERED_SCHEMA_ISSUER_DIDS[schemaId]?.includes(issuerDid) === true
+  );
+}
+
+export function registeredSchemaIdsForIssuer(issuerDid: string | undefined): VellumSchemaId[] {
+  if (!issuerDid) return [];
+  return (Object.entries(REGISTERED_SCHEMA_ISSUER_DIDS) as [VellumSchemaId, readonly string[]][])
+    .filter(([, issuerDids]) => issuerDids.includes(issuerDid))
+    .map(([schemaId]) => schemaId);
 }
 
 export function schemaPayloadDefinition(definition: VellumSchemaDefinition): ManifestFieldSchema {

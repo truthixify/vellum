@@ -1689,20 +1689,6 @@
   gap: 8px;
 }
 
-.issuance-security-note {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--primary);
-  border-radius: 3px;
-  color: var(--primary);
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-}
-
 .issuance-history-trigger {
   display: inline-flex;
   align-items: center;
@@ -1871,6 +1857,28 @@
   font-size: 12px;
 }
 
+.issuance-schema-access-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: -4px 0 20px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--primary);
+  background: var(--surface-subtle);
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.issuance-schema-access-note svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--primary);
+}
+
+.issuance-schema-access-note p {
+  margin: 0;
+}
+
 .issuance-terms-grid {
   display: grid;
   grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.3fr);
@@ -2018,6 +2026,10 @@
 
 .issuance-mode button.active::after {
   display: none;
+}
+
+.issuance-mode button:disabled {
+  opacity: 0.45;
 }
 
 .issuance-custom-intro {
@@ -2590,7 +2602,8 @@
 }
 
 .issuance-history-dialog {
-  width: min(calc(100vw - 32px), 1040px);
+  left: calc(50% + 116px);
+  width: min(calc(100vw - 264px), 1040px);
   max-height: min(82dvh, 760px);
 }
 
@@ -2719,8 +2732,7 @@
     font-size: 23px;
   }
 
-  .issuance-page__header .mono-caps,
-  .issuance-security-note {
+  .issuance-page__header .mono-caps {
     display: none;
   }
 
@@ -2874,6 +2886,11 @@
 }
 
 @media (max-width: 767px) {
+  .issuance-history-dialog {
+    left: 50%;
+    width: min(calc(100vw - 32px), 1040px);
+  }
+
   .dashboard-main:has(> .issuance-page) {
     height: calc(100dvh - 120px - env(safe-area-inset-bottom));
     padding-bottom: 12px;

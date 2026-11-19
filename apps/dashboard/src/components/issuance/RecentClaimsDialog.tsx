@@ -32,7 +32,7 @@ export function RecentClaimsDialog(props: Props) {
             <div>
               <Dialog.Title>Issuer claim history</Dialog.Title>
               <Dialog.Description id="recent-claims-description">
-                Live Testnet Claim Cells from the active issuer.
+                Live Claim Cells from the active issuer.
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
