@@ -1,17 +1,25 @@
 import { ccc, useCcc, useSigner } from "@ckb-ccc/connector-react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, ExternalLink, FileJson, ShieldCheck, WalletCards } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ExternalLink,
+  FileJson,
+  ShieldCheck,
+  WalletCards,
+} from "lucide-react";
 import {
   vellumSchemaRegistry,
   type VellumSchemaDefinition,
   type VellumSchemaId,
 } from "@vellum/schemas";
 import { writeClaim, type WriteClaimResult } from "@usevellum/sdk";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { ClaimPayloadFields } from "@/components/issuance/ClaimPayloadFields";
-import { RecentIssuerClaims } from "@/components/issuance/RecentIssuerClaims";
+import { RecentClaimsDialog } from "@/components/issuance/RecentClaimsDialog";
 import { SubjectQrScanner } from "@/components/issuance/SubjectQrScanner";
 import { Brackets, FieldRow, IdTab, Manifest } from "@/components/vellum/Manifest";
 import { VButton } from "@/components/vellum/VButton";
@@ -39,6 +47,10 @@ const DEFINITIONS = Object.values(vellumSchemaRegistry) as VellumSchemaDefinitio
 const DEFAULT_SCHEMA = vellumSchemaRegistry["vellum.social.github.v1"];
 
 type IssuanceMode = "registered" | "custom";
+type IssuanceStage = 0 | 1 | 2;
+
+const ISSUANCE_STEPS = ["Subject", "Evidence", "Terms", "Review"] as const;
+const SCHEMA_GROUPS = ["Partner", "Social", "Community", "Contribution"] as const;
 
 type PreparedIssuance = {
   result: WriteClaimResult;
@@ -77,6 +89,29 @@ function formatTimestamp(value: number): string {
     dateStyle: "medium",
     timeStyle: "long",
   }).format(new Date(value * 1_000));
+}
+
+function IssuanceSteps({ activeStep }: { activeStep: number }) {
+  return (
+    <ol className="issuance-steps" aria-label="Claim issuance progress">
+      {ISSUANCE_STEPS.map((label, index) => (
+        <li
+          key={label}
+          className={
+            index === activeStep
+              ? "issuance-step issuance-step--active"
+              : index < activeStep
+                ? "issuance-step issuance-step--complete"
+                : "issuance-step"
+          }
+          aria-current={index === activeStep ? "step" : undefined}
+        >
+          <span>{index < activeStep ? <Check size={13} aria-hidden="true" /> : index + 1}</span>
+          <strong>{label}</strong>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 function IssuanceAccessState({
@@ -312,9 +347,9 @@ function IssueClaim() {
     error: identityError,
   } = useActiveIdentity();
 
+  const [stage, setStage] = useState<IssuanceStage>(0);
   const [mode, setMode] = useState<IssuanceMode>("registered");
   const [schemaId, setSchemaId] = useState<VellumSchemaId>(DEFAULT_SCHEMA.id);
-  const [schemaQuery, setSchemaQuery] = useState("");
   const [draft, setDraft] = useState<ClaimFormDraft>(() =>
     createEmptyClaimDraft(schemaPayloadDefinition(DEFAULT_SCHEMA)),
   );
@@ -340,14 +375,6 @@ function IssueClaim() {
     () => parseCustomClaimPayload(customSchemaHash, customPayload),
     [customPayload, customSchemaHash],
   );
-  const visibleDefinitions = DEFINITIONS.filter((definition) => {
-    const query = schemaQuery.trim().toLowerCase();
-    if (!query) return true;
-    const presentation = schemaPresentation(definition.id);
-    return `${presentation.title} ${presentation.group} ${definition.id}`
-      .toLowerCase()
-      .includes(query);
-  });
 
   const recentClaims = useQuery({
     queryKey: ["recent-issuer-claims", activeDid, network],
@@ -362,6 +389,8 @@ function IssueClaim() {
     setTransactionHash(null);
     setConfirmation({ status: "pending" });
     setFormError(null);
+    setSubjectError(null);
+    setStage(0);
   }, [activeDid, address, network]);
 
   useEffect(() => {
@@ -408,6 +437,48 @@ function IssueClaim() {
     setConfirmation({ status: "pending" });
     setFormError(null);
     setFieldErrors({});
+    setStage(0);
+  }
+
+  function advanceFromSubject() {
+    try {
+      parseSubjectDid(subjectDid);
+      setSubjectError(null);
+      setFormError(null);
+      setStage(1);
+    } catch (error) {
+      const message = messageFrom(error);
+      setSubjectError(message);
+      setFormError(message);
+    }
+  }
+
+  function advanceFromEvidence() {
+    if (mode === "registered" && !registeredResult.ok) {
+      setFieldErrors(registeredResult.errors);
+      setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
+      return;
+    }
+    if (mode === "custom" && !customResult.ok) {
+      setFormError(customResult.error);
+      return;
+    }
+    setFieldErrors({});
+    setFormError(null);
+    setStage(2);
+  }
+
+  function handleStageSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (stage === 0) {
+      advanceFromSubject();
+      return;
+    }
+    if (stage === 1) {
+      advanceFromEvidence();
+      return;
+    }
+    void prepareTransaction();
   }
 
   async function prepareTransaction() {
@@ -424,6 +495,7 @@ function IssueClaim() {
       const message = messageFrom(error);
       setSubjectError(message);
       setFormError(message);
+      setStage(0);
       return;
     }
 
@@ -435,6 +507,7 @@ function IssueClaim() {
       if (!registeredResult.ok) {
         setFieldErrors(registeredResult.errors);
         setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
+        setStage(1);
         return;
       }
       payload = registeredResult.payload;
@@ -445,6 +518,7 @@ function IssueClaim() {
     } else {
       if (!customResult.ok) {
         setFormError(customResult.error);
+        setStage(1);
         return;
       }
       payload = customResult.payload;
@@ -458,6 +532,7 @@ function IssueClaim() {
       normalizedExpiry = parseExpiry(expiresAt, issuedAt);
     } catch (error) {
       setFormError(messageFrom(error));
+      setStage(2);
       return;
     }
 
@@ -538,361 +613,385 @@ function IssueClaim() {
         <div>
           <span className="mono-caps">PARTNER ISSUANCE · CKB TESTNET</span>
           <h1>Issue a claim</h1>
-          <p>Create schema-valid evidence with a wallet-controlled did:ckb issuer.</p>
         </div>
-        <div className="issuance-security-note">
-          <ShieldCheck size={17} aria-hidden="true" />
-          <span>No server key participates</span>
+        <div className="issuance-header-actions">
+          {!accessState && (
+            <RecentClaimsDialog
+              issuerDid={activeDid}
+              result={recentClaims.data}
+              loading={recentClaims.isLoading}
+              refreshing={recentClaims.isFetching}
+              error={recentClaims.error instanceof Error ? recentClaims.error : null}
+              onRefresh={() => void recentClaims.refetch()}
+            />
+          )}
+          <div className="issuance-security-note">
+            <ShieldCheck size={17} aria-hidden="true" />
+            <span>No server key participates</span>
+          </div>
         </div>
       </header>
 
       {accessState ? (
         <IssuanceAccessState kind={accessState} onConnect={() => open()} />
-      ) : transactionHash && prepared ? (
-        <IssuanceConfirmation
-          prepared={prepared}
-          transactionHash={transactionHash}
-          confirmation={confirmation}
-          error={formError}
-          onNewClaim={resetIssuance}
-        />
-      ) : prepared ? (
-        <TransactionReview
-          prepared={prepared}
-          busy={busy}
-          error={formError}
-          onBack={() => setPrepared(null)}
-          onSign={() => void signAndSubmit()}
-        />
       ) : (
-        <>
-          <div className="issue-layout issuance-layout">
-            <aside className="schema-picker issuance-schema-picker" aria-label="Claim schema">
-              <div className="issuance-mode" role="group" aria-label="Schema source">
-                <button
-                  type="button"
-                  className={mode === "registered" ? "active" : ""}
-                  aria-pressed={mode === "registered"}
-                  onClick={() => {
-                    setMode("registered");
-                    setFieldErrors({});
-                    setFormError(null);
-                  }}
-                >
-                  Registered
-                </button>
-                <button
-                  type="button"
-                  className={mode === "custom" ? "active" : ""}
-                  aria-pressed={mode === "custom"}
-                  onClick={() => {
-                    setMode("custom");
-                    setFieldErrors({});
-                    setFormError(null);
-                  }}
-                >
-                  Custom
-                </button>
-              </div>
+        <section className="issuance-workspace" aria-label="Claim issuance">
+          <IssuanceSteps activeStep={prepared ? 3 : stage} />
 
-              {mode === "registered" ? (
-                <>
-                  <label htmlFor="schema-search">Schema</label>
-                  <input
-                    id="schema-search"
-                    placeholder="Search registered schemas"
-                    value={schemaQuery}
-                    onChange={(event) => setSchemaQuery(event.target.value)}
-                  />
-                  <div className="issuance-schema-list">
-                    {visibleDefinitions.map((definition) => {
-                      const presentation = schemaPresentation(definition.id);
-                      return (
-                        <button
-                          key={definition.id}
-                          type="button"
-                          className={schemaId === definition.id ? "active" : ""}
-                          aria-pressed={schemaId === definition.id}
-                          onClick={() => selectSchema(definition)}
-                        >
-                          <small>{presentation.group}</small>
-                          <strong>{presentation.title}</strong>
-                          <span className="mono">{definition.id}</span>
-                        </button>
-                      );
-                    })}
-                    {visibleDefinitions.length === 0 && (
-                      <p className="schema-picker__empty">No matching schemas.</p>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="issuance-custom-intro">
-                  <FileJson size={20} aria-hidden="true" />
-                  <strong>Advanced path</strong>
-                  <p>
-                    Supply an immutable schema hash and a JSON payload. Vellum cannot validate
-                    custom semantics.
-                  </p>
-                </div>
-              )}
-            </aside>
+          {transactionHash && prepared ? (
+            <div className="issuance-workspace__result">
+              <IssuanceConfirmation
+                prepared={prepared}
+                transactionHash={transactionHash}
+                confirmation={confirmation}
+                error={formError}
+                onNewClaim={resetIssuance}
+              />
+            </div>
+          ) : prepared ? (
+            <div className="issuance-workspace__result">
+              <TransactionReview
+                prepared={prepared}
+                busy={busy}
+                error={formError}
+                onBack={() => {
+                  setPrepared(null);
+                  setStage(2);
+                }}
+                onSign={() => void signAndSubmit()}
+              />
+            </div>
+          ) : (
+            <form className="claim-form issuance-stage-form" onSubmit={handleStageSubmit}>
+              <div className="issuance-stage-scroll">
+                <div className="issuance-stage-inner">
+                  {stage === 0 && (
+                    <section aria-labelledby="issuer-section-title">
+                      <div className="issuance-stage-heading">
+                        <span className="mono-caps">STEP 1 OF 4</span>
+                        <h2 id="issuer-section-title">Choose the claim subject</h2>
+                        <p>The active identity signs and funds the Claim Cell.</p>
+                      </div>
+                      <div className="issuance-field-grid issuance-subject-fields">
+                        <div className="issuance-field">
+                          <label htmlFor="issuer-did">Issuer identity</label>
+                          <select
+                            id="issuer-did"
+                            value={activeDid}
+                            onChange={(event) => setActiveDid(event.target.value)}
+                          >
+                            {records.map((record) => (
+                              <option key={record.did} value={record.did}>
+                                {record.profile.displayName
+                                  ? `${record.profile.displayName} · ${record.did}`
+                                  : record.did}
+                              </option>
+                            ))}
+                          </select>
+                          <small>
+                            Controller wallet {address ? truncate(address) : "connected"}
+                          </small>
+                        </div>
+                        <div className="issuance-field">
+                          <label htmlFor="subject-did">Subject identity</label>
+                          <div className="issuance-subject-input">
+                            <input
+                              id="subject-did"
+                              value={subjectDid}
+                              placeholder="did:ckb:…"
+                              aria-invalid={!!subjectError}
+                              aria-describedby={
+                                subjectError ? "subject-did-error" : "subject-did-hint"
+                              }
+                              onChange={(event) => {
+                                setSubjectDid(event.target.value);
+                                setSubjectError(null);
+                                setFormError(null);
+                              }}
+                            />
+                            <SubjectQrScanner
+                              onDid={(did) => {
+                                setSubjectDid(did);
+                                setSubjectError(null);
+                                setFormError(null);
+                              }}
+                            />
+                          </div>
+                          <small id="subject-did-hint">Claim output owner</small>
+                          {subjectError && (
+                            <small
+                              className="issuance-field__error"
+                              id="subject-did-error"
+                              role="alert"
+                            >
+                              {subjectError}
+                            </small>
+                          )}
+                          {activeDid && subjectDid !== activeDid && (
+                            <button
+                              className="issuance-inline-action"
+                              type="button"
+                              onClick={() => {
+                                setSubjectDid(activeDid);
+                                setSubjectError(null);
+                                setFormError(null);
+                              }}
+                            >
+                              Use issuer DID as subject
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </section>
+                  )}
 
-            <main className="claim-form issuance-form">
-              <div className="issuance-form__heading">
-                <div>
-                  <span className="mono-caps">COMPOSE</span>
-                  <h2>
-                    {mode === "registered" ? displayName(selectedDefinition) : "Custom schema"}
-                  </h2>
-                  <p>
-                    {mode === "registered"
-                      ? schemaPresentation(selectedDefinition.id).summary
-                      : "Use this only when the receiving application already understands the schema hash."}
-                  </p>
-                </div>
-                {mode === "registered" && (
-                  <button
-                    className="issuance-example-button"
-                    type="button"
-                    onClick={() => {
-                      setDraft(createExampleClaimDraft(selectedSchema, selectedDefinition.example));
-                      setFieldErrors({});
-                      setFormError(null);
-                    }}
-                  >
-                    Load example
-                  </button>
-                )}
-              </div>
+                  {stage === 1 && (
+                    <section aria-labelledby="payload-section-title">
+                      <div className="issuance-stage-heading">
+                        <span className="mono-caps">STEP 2 OF 4</span>
+                        <h2 id="payload-section-title">Describe the evidence</h2>
+                        <p>Registered schemas use the same validation as Vellum consumers.</p>
+                      </div>
+                      <div className="issuance-evidence-toolbar">
+                        <div className="issuance-mode" role="group" aria-label="Schema source">
+                          <button
+                            type="button"
+                            className={mode === "registered" ? "active" : ""}
+                            aria-pressed={mode === "registered"}
+                            onClick={() => {
+                              setMode("registered");
+                              setFieldErrors({});
+                              setFormError(null);
+                            }}
+                          >
+                            Registered
+                          </button>
+                          <button
+                            type="button"
+                            className={mode === "custom" ? "active" : ""}
+                            aria-pressed={mode === "custom"}
+                            onClick={() => {
+                              setMode("custom");
+                              setFieldErrors({});
+                              setFormError(null);
+                            }}
+                          >
+                            Custom
+                          </button>
+                        </div>
+                        {mode === "registered" && (
+                          <div className="issuance-field issuance-schema-select">
+                            <label htmlFor="claim-schema">Claim schema</label>
+                            <select
+                              id="claim-schema"
+                              value={schemaId}
+                              onChange={(event) =>
+                                selectSchema(
+                                  vellumSchemaRegistry[event.target.value as VellumSchemaId],
+                                )
+                              }
+                            >
+                              {SCHEMA_GROUPS.map((group) => (
+                                <optgroup key={group} label={group}>
+                                  {DEFINITIONS.filter(
+                                    (definition) =>
+                                      schemaPresentation(definition.id).group === group,
+                                  ).map((definition) => (
+                                    <option key={definition.id} value={definition.id}>
+                                      {displayName(definition)} · {definition.id}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {mode === "registered" && (
+                          <button
+                            className="issuance-example-button"
+                            type="button"
+                            onClick={() => {
+                              setDraft(
+                                createExampleClaimDraft(selectedSchema, selectedDefinition.example),
+                              );
+                              setFieldErrors({});
+                              setFormError(null);
+                            }}
+                          >
+                            Load example
+                          </button>
+                        )}
+                      </div>
 
-              <section className="issuance-form-section" aria-labelledby="issuer-section-title">
-                <div className="issuance-form-section__heading">
-                  <span>01</span>
-                  <div>
-                    <h3 id="issuer-section-title">Issuer and subject</h3>
-                    <p>
-                      The issuer signs and pays. The subject receives the Claim Cell under DID Lock.
-                    </p>
-                  </div>
-                </div>
-                <div className="issuance-field-grid">
-                  <div className="issuance-field">
-                    <label htmlFor="issuer-did">Issuer identity</label>
-                    <select
-                      id="issuer-did"
-                      value={activeDid}
-                      onChange={(event) => setActiveDid(event.target.value)}
-                    >
-                      {records.map((record) => (
-                        <option key={record.did} value={record.did}>
-                          {record.profile.displayName
-                            ? `${record.profile.displayName} · ${record.did}`
-                            : record.did}
-                        </option>
-                      ))}
-                    </select>
-                    <small>Controller wallet {address ? truncate(address) : "connected"}</small>
-                  </div>
-                  <div className="issuance-field">
-                    <label htmlFor="subject-did">Subject identity</label>
-                    <div className="issuance-subject-input">
-                      <input
-                        id="subject-did"
-                        value={subjectDid}
-                        placeholder="did:ckb:…"
-                        aria-invalid={!!subjectError}
-                        aria-describedby={subjectError ? "subject-did-error" : "subject-did-hint"}
-                        onChange={(event) => {
-                          setSubjectDid(event.target.value);
-                          setSubjectError(null);
-                          setFormError(null);
-                        }}
-                      />
-                      <SubjectQrScanner
-                        onDid={(did) => {
-                          setSubjectDid(did);
-                          setSubjectError(null);
-                          setFormError(null);
-                        }}
-                      />
-                    </div>
-                    <small id="subject-did-hint">Claim output owner</small>
-                    {subjectError && (
-                      <small className="issuance-field__error" id="subject-did-error" role="alert">
-                        {subjectError}
-                      </small>
-                    )}
-                    {activeDid && subjectDid !== activeDid && (
-                      <button
-                        className="issuance-inline-action"
-                        type="button"
-                        onClick={() => {
-                          setSubjectDid(activeDid);
-                          setSubjectError(null);
-                          setFormError(null);
-                        }}
-                      >
-                        Use issuer DID as subject
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </section>
+                      {mode === "registered" ? (
+                        <>
+                          <div className="issuance-schema-summary">
+                            <strong>{displayName(selectedDefinition)}</strong>
+                            <span>{schemaPresentation(selectedDefinition.id).summary}</span>
+                          </div>
+                          <ClaimPayloadFields
+                            schema={selectedSchema}
+                            value={draft}
+                            errors={fieldErrors}
+                            onChange={(next) => {
+                              setDraft(next);
+                              setFieldErrors({});
+                              setFormError(null);
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <div className="issuance-custom-fields">
+                          <div className="issuance-custom-intro">
+                            <FileJson size={20} aria-hidden="true" />
+                            <strong>Advanced path</strong>
+                            <p>
+                              Supply an immutable schema hash and JSON payload understood by the
+                              receiving application.
+                            </p>
+                          </div>
+                          <div className="issuance-field">
+                            <label htmlFor="custom-schema-hash">Schema hash</label>
+                            <input
+                              id="custom-schema-hash"
+                              className="mono"
+                              value={customSchemaHash}
+                              placeholder="0x…"
+                              onChange={(event) => {
+                                setCustomSchemaHash(event.target.value);
+                                setFormError(null);
+                              }}
+                            />
+                            <small>CKB_HASH of the canonical schema manifest</small>
+                          </div>
+                          <div className="issuance-field">
+                            <label htmlFor="custom-payload">JSON payload</label>
+                            <textarea
+                              id="custom-payload"
+                              className="mono"
+                              rows={10}
+                              value={customPayload}
+                              onChange={(event) => {
+                                setCustomPayload(event.target.value);
+                                setFormError(null);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {fieldErrors.$form && (
+                        <p className="issuance-form-error" role="alert">
+                          {fieldErrors.$form}
+                        </p>
+                      )}
+                    </section>
+                  )}
 
-              <section className="issuance-form-section" aria-labelledby="payload-section-title">
-                <div className="issuance-form-section__heading">
-                  <span>02</span>
-                  <div>
-                    <h3 id="payload-section-title">Claim payload</h3>
-                    <p>Registered forms enforce the same parser used by Vellum consumers.</p>
-                  </div>
-                </div>
-                {mode === "registered" ? (
-                  <ClaimPayloadFields
-                    schema={selectedSchema}
-                    value={draft}
-                    errors={fieldErrors}
-                    onChange={(next) => {
-                      setDraft(next);
-                      setFieldErrors({});
-                      setFormError(null);
-                    }}
-                  />
-                ) : (
-                  <div className="issuance-custom-fields">
-                    <div className="issuance-field">
-                      <label htmlFor="custom-schema-hash">Schema hash</label>
-                      <input
-                        id="custom-schema-hash"
-                        className="mono"
-                        value={customSchemaHash}
-                        placeholder="0x…"
-                        onChange={(event) => {
-                          setCustomSchemaHash(event.target.value);
-                          setFormError(null);
-                        }}
-                      />
-                      <small>CKB_HASH of the canonical schema manifest</small>
-                    </div>
-                    <div className="issuance-field">
-                      <label htmlFor="custom-payload">JSON payload</label>
-                      <textarea
-                        id="custom-payload"
-                        className="mono"
-                        rows={12}
-                        value={customPayload}
-                        onChange={(event) => {
-                          setCustomPayload(event.target.value);
-                          setFormError(null);
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {fieldErrors.$form && (
-                  <p className="issuance-form-error" role="alert">
-                    {fieldErrors.$form}
-                  </p>
-                )}
-              </section>
-
-              <section className="issuance-form-section" aria-labelledby="terms-section-title">
-                <div className="issuance-form-section__heading">
-                  <span>03</span>
-                  <div>
-                    <h3 id="terms-section-title">Claim terms</h3>
-                    <p>Issuance time is fixed when the transaction is prepared.</p>
-                  </div>
-                </div>
-                <div className="issuance-field issuance-expiry-field">
-                  <label htmlFor="claim-expiry">Expiry</label>
-                  <input
-                    id="claim-expiry"
-                    type="datetime-local"
-                    value={expiresAt}
-                    onChange={(event) => {
-                      setExpiresAt(event.target.value);
-                      setFormError(null);
-                    }}
-                  />
-                  <small>Optional · leave blank for no expiry</small>
-                </div>
-              </section>
-
-              <div className="issuance-trust-boundary">
-                <ShieldCheck size={17} aria-hidden="true" />
-                <p>
-                  Schema validity proves payload shape, not truth. Consumers decide which issuer
-                  DIDs they trust for each schema.
-                </p>
-              </div>
-              {formError && (
-                <p className="issuance-form-error" role="alert">
-                  {formError}
-                </p>
-              )}
-              <div className="form-submit issuance-submit">
-                <VButton
-                  variant="verdant"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void prepareTransaction()}
-                >
-                  {busy ? "Preparing transaction…" : "Review transaction"}
-                </VButton>
-                <span>The wallet signs only after the next review step.</span>
-              </div>
-            </main>
-
-            <aside className="claim-preview issuance-preview" aria-label="Claim preview">
-              <div className="preview-surface">
-                <h3>Claim preview</h3>
-                <div>
-                  <small>Schema</small>
-                  <strong>{mode === "registered" ? selectedDefinition.id : "Custom schema"}</strong>
-                  <span className="mono">
-                    {mode === "registered"
-                      ? selectedDefinition.hash
-                      : customSchemaHash || "Hash required"}
-                  </span>
-                  <small>Subject</small>
-                  <strong className="mono">{subjectDid || "DID required"}</strong>
-                  <small>Normalized payload</small>
-                  {previewPayload === undefined ? (
-                    <p className="issuance-preview__empty">
-                      Complete the payload fields to preview the normalized value.
-                    </p>
-                  ) : (
-                    <pre>{formatCanonicalPayload(previewPayload)}</pre>
+                  {stage === 2 && (
+                    <section aria-labelledby="terms-section-title">
+                      <div className="issuance-stage-heading">
+                        <span className="mono-caps">STEP 3 OF 4</span>
+                        <h2 id="terms-section-title">Set terms and verify</h2>
+                        <p>Check the subject, schema, and normalized payload before preparation.</p>
+                      </div>
+                      <div className="issuance-terms-grid">
+                        <div>
+                          <div className="issuance-field issuance-expiry-field">
+                            <label htmlFor="claim-expiry">Expiry</label>
+                            <input
+                              id="claim-expiry"
+                              type="datetime-local"
+                              value={expiresAt}
+                              onChange={(event) => {
+                                setExpiresAt(event.target.value);
+                                setFormError(null);
+                              }}
+                            />
+                            <small>Optional · leave blank for no expiry</small>
+                          </div>
+                          <div className="issuance-trust-boundary">
+                            <ShieldCheck size={17} aria-hidden="true" />
+                            <p>
+                              Valid shape does not prove truth. Consumers choose which issuer DIDs
+                              they trust for each schema.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="issuance-review-summary">
+                          <dl>
+                            <div>
+                              <dt>Issuer</dt>
+                              <dd className="mono">{activeDid}</dd>
+                            </div>
+                            <div>
+                              <dt>Subject</dt>
+                              <dd className="mono">{subjectDid}</dd>
+                            </div>
+                            <div>
+                              <dt>Schema</dt>
+                              <dd>
+                                {mode === "registered"
+                                  ? selectedDefinition.id
+                                  : customSchemaHash || "Custom schema"}
+                              </dd>
+                            </div>
+                          </dl>
+                          <span className="mono-caps">NORMALIZED PAYLOAD</span>
+                          {previewPayload === undefined ? (
+                            <p className="issuance-preview__empty">Payload validation failed.</p>
+                          ) : (
+                            <pre>{formatCanonicalPayload(previewPayload)}</pre>
+                          )}
+                        </div>
+                      </div>
+                    </section>
                   )}
                 </div>
               </div>
-              <div className="preview-surface">
-                <h3>Transaction roles</h3>
-                <div>
-                  <small>Issuer</small>
-                  <strong className="mono">{activeDid}</strong>
-                  <small>Controller and payer</small>
-                  <strong className="mono">
-                    {address ? truncate(address) : "Connected wallet"}
-                  </strong>
-                  <small>Subject lock</small>
-                  <span>Derived from the live subject DID state during preparation.</span>
-                </div>
-              </div>
-            </aside>
-          </div>
 
-          <RecentIssuerClaims
-            issuerDid={activeDid}
-            result={recentClaims.data}
-            loading={recentClaims.isLoading}
-            refreshing={recentClaims.isFetching}
-            error={recentClaims.error instanceof Error ? recentClaims.error : null}
-            onRefresh={() => void recentClaims.refetch()}
-          />
-        </>
+              <footer className="issuance-stage-footer">
+                <div
+                  className={`issuance-stage-footer__message${formError ? " issuance-stage-footer__message--error" : ""}`}
+                  aria-live="polite"
+                >
+                  {formError ? (
+                    <p className="issuance-form-error" role="alert">
+                      {formError}
+                    </p>
+                  ) : (
+                    <span>
+                      {stage === 2
+                        ? "The wallet signs only after transaction review."
+                        : `Step ${stage + 1} of 4`}
+                    </span>
+                  )}
+                </div>
+                <div className="issuance-stage-footer__actions">
+                  {stage > 0 && (
+                    <VButton
+                      variant="ghost"
+                      type="button"
+                      onClick={() => setStage(stage === 2 ? 1 : 0)}
+                    >
+                      <ArrowLeft size={15} aria-hidden="true" /> Back
+                    </VButton>
+                  )}
+                  <VButton variant="verdant" type="submit" disabled={busy}>
+                    {busy ? (
+                      "Preparing transaction…"
+                    ) : stage === 2 ? (
+                      "Review transaction"
+                    ) : (
+                      <>
+                        Next <ArrowRight size={15} aria-hidden="true" />
+                      </>
+                    )}
+                  </VButton>
+                </div>
+              </footer>
+            </form>
+          )}
+        </section>
       )}
     </div>
   );

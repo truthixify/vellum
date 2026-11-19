@@ -66,11 +66,17 @@ export function RecentIssuerClaims({
       ) : loading ? (
         <p className="issuance-recent__state">Reading live Claim Cells…</p>
       ) : error ? (
-        <p className="issuance-recent__state issuance-recent__state--error" role="alert">
-          Recent claims are unavailable: {error.message}
-        </p>
+        <div className="issuance-recent__state issuance-recent__state--error" role="alert">
+          <p>Recent claims are unavailable: {error.message}</p>
+          <button className="issuance-inline-action" type="button" onClick={onRefresh}>
+            Try again
+          </button>
+        </div>
       ) : result?.claims.length === 0 ? (
-        <p className="issuance-recent__state">No live claims were found for this issuer.</p>
+        <div className="issuance-recent__state">
+          <strong>No claims yet</strong>
+          <p>The next committed claim from this issuer will appear here.</p>
+        </div>
       ) : (
         <div className="issuance-claim-list">
           {result?.claims.map((claim) => (
