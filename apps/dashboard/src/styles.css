@@ -1857,25 +1857,25 @@
   font-size: 12px;
 }
 
-.issuance-schema-access-note {
+.issuance-schema-recognition-note {
   display: flex;
   align-items: flex-start;
   gap: 9px;
   margin: -4px 0 20px;
   padding: 10px 12px;
-  border-left: 2px solid var(--primary);
+  border-left: 2px solid var(--warning);
   background: var(--surface-subtle);
   color: var(--ink-secondary);
   font-size: 12px;
 }
 
-.issuance-schema-access-note svg {
+.issuance-schema-recognition-note svg {
   flex: none;
   margin-top: 1px;
-  color: var(--primary);
+  color: var(--warning);
 }
 
-.issuance-schema-access-note p {
+.issuance-schema-recognition-note p {
   margin: 0;
 }
 
@@ -2026,10 +2026,6 @@
 
 .issuance-mode button.active::after {
   display: none;
-}
-
-.issuance-mode button:disabled {
-  opacity: 0.45;
 }
 
 .issuance-custom-intro {

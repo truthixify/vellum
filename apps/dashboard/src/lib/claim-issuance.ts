@@ -33,10 +33,12 @@ export type SchemaPresentation = {
   summary: string;
 };
 
+export type RegisteredSchemaIssuerRecognition = "recognized" | "unrecognized" | "unconfigured";
+
 const OMIT = Symbol("omit");
 const HEX_32_PATTERN = /^0x[0-9a-f]{64}$/;
 
-const REGISTERED_SCHEMA_ISSUER_DIDS: Readonly<Partial<Record<VellumSchemaId, readonly string[]>>> =
+const RECOGNIZED_SCHEMA_ISSUER_DIDS: Readonly<Partial<Record<VellumSchemaId, readonly string[]>>> =
   {
     "ckboost.quest.v1": VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids,
     "vellum.social.github.v1": VELLUM_REPUTATION_POLICY_V7.github.issuerDids,
@@ -127,20 +129,13 @@ export function schemaPresentation(schemaId: VellumSchemaId): SchemaPresentation
   return SCHEMA_PRESENTATION[schemaId];
 }
 
-export function canIssueRegisteredSchema(
+export function registeredSchemaIssuerRecognition(
   issuerDid: string | undefined,
   schemaId: VellumSchemaId,
-): boolean {
-  return (
-    issuerDid !== undefined && REGISTERED_SCHEMA_ISSUER_DIDS[schemaId]?.includes(issuerDid) === true
-  );
-}
-
-export function registeredSchemaIdsForIssuer(issuerDid: string | undefined): VellumSchemaId[] {
-  if (!issuerDid) return [];
-  return (Object.entries(REGISTERED_SCHEMA_ISSUER_DIDS) as [VellumSchemaId, readonly string[]][])
-    .filter(([, issuerDids]) => issuerDids.includes(issuerDid))
-    .map(([schemaId]) => schemaId);
+): RegisteredSchemaIssuerRecognition {
+  const recognizedIssuerDids = RECOGNIZED_SCHEMA_ISSUER_DIDS[schemaId];
+  if (!recognizedIssuerDids) return "unconfigured";
+  return issuerDid && recognizedIssuerDids.includes(issuerDid) ? "recognized" : "unrecognized";
 }
 
 export function schemaPayloadDefinition(definition: VellumSchemaDefinition): ManifestFieldSchema {

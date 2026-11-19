@@ -8,14 +8,13 @@ import {
 import { VELLUM_REPUTATION_POLICY_V7 } from "@vellum/scoring";
 
 import {
-  canIssueRegisteredSchema,
   createEmptyClaimDraft,
   createExampleClaimDraft,
   formatCanonicalPayload,
   parseCustomClaimPayload,
   parseExpiry,
   parseRegisteredClaimDraft,
-  registeredSchemaIdsForIssuer,
+  registeredSchemaIssuerRecognition,
   schemaPayloadDefinition,
   signAndBroadcastPreparedClaim,
   subjectDidFromQr,
@@ -24,24 +23,38 @@ import {
 const DID = "did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc";
 
 describe("claim issuance forms", () => {
-  test("limits registered schemas to their configured issuer DIDs", () => {
+  test("reports issuer recognition without treating it as issuance permission", () => {
     const ckboostIssuer = VELLUM_REPUTATION_POLICY_V7.ckboost.issuerDids[0];
-    const vellumIssuer = VELLUM_REPUTATION_POLICY_V7.github.issuerDids[0];
+    const recognizedPairs = [
+      [ckboostIssuer, "ckboost.quest.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.github.issuerDids[0], "vellum.social.github.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.github.issuerDids[0], "vellum.contribution.github.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.discord.issuerDids[0], "vellum.social.discord.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.discord.issuerDids[0], "vellum.community.discord.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.telegram.issuerDids[0], "vellum.social.telegram.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.telegram.issuerDids[0], "vellum.community.telegram.v1"],
+      [VELLUM_REPUTATION_POLICY_V7.bluesky.issuerDids[0], "vellum.social.bluesky.v1"],
+    ] as const;
 
-    expect(registeredSchemaIdsForIssuer(ckboostIssuer)).toEqual(["ckboost.quest.v1"]);
-    expect(registeredSchemaIdsForIssuer(vellumIssuer)).toEqual([
-      "vellum.social.github.v1",
-      "vellum.contribution.github.v1",
-      "vellum.social.discord.v1",
-      "vellum.community.discord.v1",
-      "vellum.social.telegram.v1",
-      "vellum.community.telegram.v1",
-      "vellum.social.bluesky.v1",
-    ]);
-    expect(registeredSchemaIdsForIssuer("did:ckb:untrusted")).toEqual([]);
-    expect(canIssueRegisteredSchema(ckboostIssuer, "ckboost.quest.v1")).toBeTrue();
-    expect(canIssueRegisteredSchema(ckboostIssuer, "vellum.social.github.v1")).toBeFalse();
-    expect(canIssueRegisteredSchema(vellumIssuer, "crowdcell.campaign-funded.v1")).toBeFalse();
+    for (const [issuerDid, schemaId] of recognizedPairs) {
+      expect(registeredSchemaIssuerRecognition(issuerDid, schemaId)).toBe("recognized");
+    }
+
+    expect(registeredSchemaIssuerRecognition(ckboostIssuer, "vellum.social.github.v1")).toBe(
+      "unrecognized",
+    );
+    expect(
+      registeredSchemaIssuerRecognition(
+        VELLUM_REPUTATION_POLICY_V7.github.issuerDids[0],
+        "ckboost.quest.v1",
+      ),
+    ).toBe("unrecognized");
+    expect(registeredSchemaIssuerRecognition(ckboostIssuer, "crowdcell.campaign-funded.v1")).toBe(
+      "unconfigured",
+    );
+    expect(
+      registeredSchemaIssuerRecognition(ckboostIssuer, "klaveroq.milestone-settlement.v1"),
+    ).toBe("unconfigured");
   });
 
   test("coerces every registered example through its exact parser", () => {

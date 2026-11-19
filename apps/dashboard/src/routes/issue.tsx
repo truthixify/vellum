@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileJson,
   ShieldCheck,
+  TriangleAlert,
   WalletCards,
 } from "lucide-react";
 import {
@@ -26,7 +27,6 @@ import { VButton } from "@/components/vellum/VButton";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
-  canIssueRegisteredSchema,
   createEmptyClaimDraft,
   createExampleClaimDraft,
   formatCanonicalPayload,
@@ -34,7 +34,7 @@ import {
   parseExpiry,
   parseRegisteredClaimDraft,
   parseSubjectDid,
-  registeredSchemaIdsForIssuer,
+  registeredSchemaIssuerRecognition,
   schemaPayloadDefinition,
   schemaPresentation,
   signAndBroadcastPreparedClaim,
@@ -45,6 +45,7 @@ import { readRecentIssuerClaims } from "@/lib/issuer-claims";
 
 export const Route = createFileRoute("/issue")({ component: IssueClaim });
 
+const DEFINITIONS = Object.values(vellumSchemaRegistry) as VellumSchemaDefinition[];
 const DEFAULT_SCHEMA = vellumSchemaRegistry["vellum.social.github.v1"];
 
 type IssuanceMode = "registered" | "custom";
@@ -364,13 +365,9 @@ function IssueClaim() {
   const [transactionHash, setTransactionHash] = useState<ccc.Hex | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation>({ status: "pending" });
 
-  const authorizedDefinitions = useMemo(
-    () => registeredSchemaIdsForIssuer(activeDid).map((id) => vellumSchemaRegistry[id]),
-    [activeDid],
-  );
-  const hasRegisteredSchemas = authorizedDefinitions.length > 0;
   const selectedDefinition = vellumSchemaRegistry[schemaId];
   const selectedSchema = schemaPayloadDefinition(selectedDefinition);
+  const issuerRecognition = registeredSchemaIssuerRecognition(activeDid, schemaId);
   const registeredResult = useMemo(
     () => parseRegisteredClaimDraft(selectedDefinition, draft),
     [selectedDefinition, draft],
@@ -447,16 +444,6 @@ function IssueClaim() {
   function advanceFromSubject() {
     try {
       parseSubjectDid(subjectDid);
-      if (mode === "registered") {
-        const authorizedDefinition = canIssueRegisteredSchema(activeDid, schemaId)
-          ? selectedDefinition
-          : authorizedDefinitions[0];
-        if (authorizedDefinition) {
-          if (authorizedDefinition.id !== schemaId) selectSchema(authorizedDefinition);
-        } else {
-          setMode("custom");
-        }
-      }
       setSubjectError(null);
       setFormError(null);
       setStage(1);
@@ -468,10 +455,6 @@ function IssueClaim() {
   }
 
   function advanceFromEvidence() {
-    if (mode === "registered" && !canIssueRegisteredSchema(activeDid, schemaId)) {
-      setFormError("The active issuer DID is not authorized for this registered schema.");
-      return;
-    }
     if (mode === "registered" && !registeredResult.ok) {
       setFieldErrors(registeredResult.errors);
       setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
@@ -522,11 +505,6 @@ function IssueClaim() {
     let claimSchemaId: string | undefined;
     let claimSchemaTitle: string;
     if (mode === "registered") {
-      if (!canIssueRegisteredSchema(activeDid, schemaId)) {
-        setFormError("The active issuer DID is not authorized for this registered schema.");
-        setStage(1);
-        return;
-      }
       if (!registeredResult.ok) {
         setFieldErrors(registeredResult.errors);
         setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
@@ -777,26 +755,7 @@ function IssueClaim() {
                             type="button"
                             className={mode === "registered" ? "active" : ""}
                             aria-pressed={mode === "registered"}
-                            aria-describedby={
-                              hasRegisteredSchemas ? undefined : "registered-schema-access"
-                            }
-                            disabled={!hasRegisteredSchemas}
-                            title={
-                              hasRegisteredSchemas
-                                ? undefined
-                                : "No registered schemas are assigned to this issuer DID"
-                            }
                             onClick={() => {
-                              const authorizedDefinition = canIssueRegisteredSchema(
-                                activeDid,
-                                schemaId,
-                              )
-                                ? selectedDefinition
-                                : authorizedDefinitions[0];
-                              if (!authorizedDefinition) return;
-                              if (authorizedDefinition.id !== schemaId) {
-                                selectSchema(authorizedDefinition);
-                              }
                               setMode("registered");
                               setFieldErrors({});
                               setFormError(null);
@@ -830,7 +789,7 @@ function IssueClaim() {
                               }
                             >
                               {SCHEMA_GROUPS.map((group) => {
-                                const definitions = authorizedDefinitions.filter(
+                                const definitions = DEFINITIONS.filter(
                                   (definition) => schemaPresentation(definition.id).group === group,
                                 );
                                 return definitions.length > 0 ? (
@@ -863,12 +822,13 @@ function IssueClaim() {
                         )}
                       </div>
 
-                      {!hasRegisteredSchemas && (
-                        <div className="issuance-schema-access-note" id="registered-schema-access">
-                          <ShieldCheck size={17} aria-hidden="true" />
+                      {mode === "registered" && issuerRecognition !== "recognized" && (
+                        <div className="issuance-schema-recognition-note" role="status">
+                          <TriangleAlert size={17} aria-hidden="true" />
                           <p>
-                            No registered schemas are assigned to this issuer DID. Use Custom for
-                            other evidence.
+                            {issuerRecognition === "unconfigured"
+                              ? `Vellum has not configured a recognized issuer for ${displayName(selectedDefinition)} yet. This claim can still be issued; each consumer decides whether to trust it.`
+                              : `This DID is not a recognized issuer for ${displayName(selectedDefinition)}. The claim can still be issued, but Vellum will not treat it as trusted evidence.`}
                           </p>
                         </div>
                       )}
