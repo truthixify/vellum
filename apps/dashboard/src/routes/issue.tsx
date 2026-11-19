@@ -185,7 +185,6 @@ function TransactionReview({
       stateLabel="READY TO SIGN"
       offset
       footerLeft="VELLUM · ISSUANCE TRANSACTION"
-      footerRight=""
       className="issuance-transaction"
     >
       <div className="issuance-transaction__intro">
