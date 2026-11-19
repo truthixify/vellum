@@ -2,15 +2,18 @@ import {
   CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
   CKBOOST_QUEST_CLAIM_SCHEMA_ID,
   ckboostQuestClaimSchemaManifest,
+  parseCkboostQuestClaimPayload,
 } from "./ckboost/quest.v1.js";
 import {
   DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   discordCommunityClaimSchemaManifest,
+  parseDiscordCommunityClaimPayload,
 } from "./community/discord.v1.js";
 import {
   TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
   TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
+  parseTelegramCommunityClaimPayload,
   telegramCommunityClaimSchemaManifest,
 } from "./community/telegram.v1.js";
 import {
@@ -18,35 +21,42 @@ import {
   GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   GITHUB_CONTRIBUTION_WINDOW_SECONDS,
   githubContributionClaimSchemaManifest,
+  parseGithubContributionClaimPayload,
 } from "./contribution/github.v1.js";
 import {
   CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_HASH,
   CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_ID,
   crowdcellCampaignFundedClaimSchemaManifest,
+  parseCrowdcellCampaignFundedClaimPayload,
 } from "./crowdcell/campaign-funded.v1.js";
 import {
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
   KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
   klaveroqMilestoneSettlementClaimSchemaManifest,
+  parseKlaveroqMilestoneSettlementClaimPayload,
 } from "./klaveroq/milestone-settlement.v1.js";
 import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
   blueskyClaimSchemaManifest,
+  parseBlueskyClaimPayload,
 } from "./social/bluesky.v1.js";
 import {
   DISCORD_CLAIM_SCHEMA_HASH,
   DISCORD_CLAIM_SCHEMA_ID,
   discordClaimSchemaManifest,
+  parseDiscordClaimPayload,
 } from "./social/discord.v1.js";
 import {
   GITHUB_CLAIM_SCHEMA_HASH,
   GITHUB_CLAIM_SCHEMA_ID,
   githubClaimSchemaManifest,
+  parseGithubClaimPayload,
 } from "./social/github.v1.js";
 import {
   TELEGRAM_CLAIM_SCHEMA_HASH,
   TELEGRAM_CLAIM_SCHEMA_ID,
+  parseTelegramClaimPayload,
   telegramClaimSchemaManifest,
 } from "./social/telegram.v1.js";
 
@@ -56,6 +66,7 @@ export const ckboostQuestSchema = {
   id: CKBOOST_QUEST_CLAIM_SCHEMA_ID,
   hash: CKBOOST_QUEST_CLAIM_SCHEMA_HASH,
   manifest: ckboostQuestClaimSchemaManifest,
+  parse: parseCkboostQuestClaimPayload,
   specification: "docs/schemas/ckboost.quest.v1.md",
   manifestFile: "docs/schemas/manifests/ckboost.quest.v1.json",
   example: {
@@ -75,6 +86,7 @@ export const crowdcellCampaignFundedSchema = {
   id: CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_ID,
   hash: CROWDCELL_CAMPAIGN_FUNDED_CLAIM_SCHEMA_HASH,
   manifest: crowdcellCampaignFundedClaimSchemaManifest,
+  parse: parseCrowdcellCampaignFundedClaimPayload,
   specification: "docs/schemas/crowdcell.campaign-funded.v1.md",
   manifestFile: "docs/schemas/manifests/crowdcell.campaign-funded.v1.json",
   example: {
@@ -92,6 +104,7 @@ export const klaveroqMilestoneSettlementSchema = {
   id: KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_ID,
   hash: KLAVEROQ_MILESTONE_SETTLEMENT_CLAIM_SCHEMA_HASH,
   manifest: klaveroqMilestoneSettlementClaimSchemaManifest,
+  parse: parseKlaveroqMilestoneSettlementClaimPayload,
   specification: "docs/schemas/klaveroq.milestone-settlement.v1.md",
   manifestFile: "docs/schemas/manifests/klaveroq.milestone-settlement.v1.json",
   example: {
@@ -109,6 +122,7 @@ export const githubIdentitySchema = {
   id: GITHUB_CLAIM_SCHEMA_ID,
   hash: GITHUB_CLAIM_SCHEMA_HASH,
   manifest: githubClaimSchemaManifest,
+  parse: parseGithubClaimPayload,
   specification: "docs/schemas/social.github.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.social.github.v1.json",
   example: {
@@ -124,6 +138,7 @@ export const githubContributionSchema = {
   id: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_ID,
   hash: GITHUB_CONTRIBUTION_CLAIM_SCHEMA_HASH,
   manifest: githubContributionClaimSchemaManifest,
+  parse: parseGithubContributionClaimPayload,
   specification: "docs/schemas/contribution.github.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.contribution.github.v1.json",
   example: {
@@ -157,6 +172,7 @@ export const discordIdentitySchema = {
   id: DISCORD_CLAIM_SCHEMA_ID,
   hash: DISCORD_CLAIM_SCHEMA_HASH,
   manifest: discordClaimSchemaManifest,
+  parse: parseDiscordClaimPayload,
   specification: "docs/schemas/social.discord.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.social.discord.v1.json",
   example: {
@@ -172,6 +188,7 @@ export const discordCommunitySchema = {
   id: DISCORD_COMMUNITY_CLAIM_SCHEMA_ID,
   hash: DISCORD_COMMUNITY_CLAIM_SCHEMA_HASH,
   manifest: discordCommunityClaimSchemaManifest,
+  parse: parseDiscordCommunityClaimPayload,
   specification: "docs/schemas/community.discord.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.community.discord.v1.json",
   example: {
@@ -195,6 +212,7 @@ export const telegramIdentitySchema = {
   id: TELEGRAM_CLAIM_SCHEMA_ID,
   hash: TELEGRAM_CLAIM_SCHEMA_HASH,
   manifest: telegramClaimSchemaManifest,
+  parse: parseTelegramClaimPayload,
   specification: "docs/schemas/social.telegram.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.social.telegram.v1.json",
   example: {
@@ -210,6 +228,7 @@ export const telegramCommunitySchema = {
   id: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_ID,
   hash: TELEGRAM_COMMUNITY_CLAIM_SCHEMA_HASH,
   manifest: telegramCommunityClaimSchemaManifest,
+  parse: parseTelegramCommunityClaimPayload,
   specification: "docs/schemas/community.telegram.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.community.telegram.v1.json",
   example: {
@@ -230,6 +249,7 @@ export const blueskyIdentitySchema = {
   id: BLUESKY_CLAIM_SCHEMA_ID,
   hash: BLUESKY_CLAIM_SCHEMA_HASH,
   manifest: blueskyClaimSchemaManifest,
+  parse: parseBlueskyClaimPayload,
   specification: "docs/schemas/social.bluesky.v1.md",
   manifestFile: "docs/schemas/manifests/vellum.social.bluesky.v1.json",
   example: {
