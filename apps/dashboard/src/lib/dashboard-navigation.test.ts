@@ -13,6 +13,7 @@ describe("dashboard navigation", () => {
       "/",
       "/my",
       "/verify",
+      "/issue",
       "/reputation",
       "/demo/governance",
       "/resolve",
@@ -20,7 +21,7 @@ describe("dashboard navigation", () => {
     const visiblePaths = [PRIMARY_NAVIGATION, MOBILE_NAVIGATION, MOBILE_MORE_NAVIGATION]
       .flat()
       .map((item) => item.to);
-    expect(visiblePaths).not.toContain("/issue");
+    expect(visiblePaths).toContain("/issue");
     expect(visiblePaths).not.toContain("/activity");
     expect(visiblePaths).toContain("/demo/governance");
   });

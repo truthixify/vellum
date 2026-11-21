@@ -48,7 +48,7 @@ export function Manifest({
   stateLabel,
   children,
   footerLeft = "VELLUM · DOCUMENT",
-  footerRight = "PAGE 01 / 01",
+  footerRight,
   offset = false,
   offsetColor = "verdant",
   className,
@@ -78,7 +78,7 @@ export function Manifest({
         <div className="min-w-0">{children}</div>
         <div className="registry-manifest__footer">
           <span>{footerLeft}</span>
-          <span>{footerRight}</span>
+          {footerRight && <span>{footerRight}</span>}
         </div>
       </div>
     </div>

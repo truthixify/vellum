@@ -1,31 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { parseCkboostQuestClaimPayload } from "./ckboost/quest.v1";
-import { parseDiscordCommunityClaimPayload } from "./community/discord.v1";
-import { parseTelegramCommunityClaimPayload } from "./community/telegram.v1";
-import { parseGithubContributionClaimPayload } from "./contribution/github.v1";
-import { parseCrowdcellCampaignFundedClaimPayload } from "./crowdcell/campaign-funded.v1";
 import { hashSchemaManifest } from "./hash";
-import { parseKlaveroqMilestoneSettlementClaimPayload } from "./klaveroq/milestone-settlement.v1";
-import { getVellumSchemaDefinition, vellumSchemaRegistry, type VellumSchemaId } from "./registry";
-import { parseBlueskyClaimPayload } from "./social/bluesky.v1";
-import { parseDiscordClaimPayload } from "./social/discord.v1";
-import { parseGithubClaimPayload } from "./social/github.v1";
-import { parseTelegramClaimPayload } from "./social/telegram.v1";
-
-const parsers: Record<VellumSchemaId, (value: unknown) => unknown> = {
-  "ckboost.quest.v1": parseCkboostQuestClaimPayload,
-  "crowdcell.campaign-funded.v1": parseCrowdcellCampaignFundedClaimPayload,
-  "klaveroq.milestone-settlement.v1": parseKlaveroqMilestoneSettlementClaimPayload,
-  "vellum.social.github.v1": parseGithubClaimPayload,
-  "vellum.contribution.github.v1": parseGithubContributionClaimPayload,
-  "vellum.social.discord.v1": parseDiscordClaimPayload,
-  "vellum.community.discord.v1": parseDiscordCommunityClaimPayload,
-  "vellum.social.telegram.v1": parseTelegramClaimPayload,
-  "vellum.community.telegram.v1": parseTelegramCommunityClaimPayload,
-  "vellum.social.bluesky.v1": parseBlueskyClaimPayload,
-};
+import { getVellumSchemaDefinition, vellumSchemaRegistry } from "./registry";
 
 describe("Vellum schema registry", () => {
   test("indexes every published schema by its immutable ID", () => {
@@ -45,7 +22,8 @@ describe("Vellum schema registry", () => {
 
   test("publishes a valid example for every schema", () => {
     for (const definition of Object.values(vellumSchemaRegistry)) {
-      expect(parsers[definition.id](definition.example)).toEqual(definition.example);
+      const parse = definition.parse as (value: unknown) => unknown;
+      expect(parse(definition.example)).toEqual(definition.example);
     }
   });
 

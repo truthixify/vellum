@@ -2,6 +2,7 @@ export type DashboardNavPath =
   | "/"
   | "/my"
   | "/verify"
+  | "/issue"
   | "/reputation"
   | "/demo/governance"
   | "/resolve"
@@ -16,6 +17,7 @@ export const PRIMARY_NAVIGATION: readonly DashboardNavDefinition[] = [
   { label: "Overview", to: "/" },
   { label: "Identity", to: "/my" },
   { label: "Verify", to: "/verify" },
+  { label: "Issue", to: "/issue" },
   { label: "Reputation", to: "/reputation" },
   { label: "Governance", to: "/demo/governance" },
   { label: "Resolve", to: "/resolve" },
@@ -29,6 +31,7 @@ export const MOBILE_NAVIGATION: readonly DashboardNavDefinition[] = [
 ];
 
 export const MOBILE_MORE_NAVIGATION: readonly DashboardNavDefinition[] = [
+  { label: "Issue a claim", to: "/issue" },
   { label: "Governance demo", to: "/demo/governance" },
   { label: "Resolve a DID", to: "/resolve" },
   { label: "Documentation", to: "/docs" },

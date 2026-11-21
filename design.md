@@ -123,7 +123,7 @@ Two weights only: 400 and 500. Never 600 or 700.
 |  |--------------------------------------------------|  |
 |  |  [HERO VALUE framed in verdant L-brackets] [CTA] |  |
 |  |--------------------------------------------------|  |
-|  | FORM FOOTER MONO CAPS              PAGE 01 / 01  |  |
+|  | FORM FOOTER MONO CAPS       [OPTIONAL REFERENCE] |  |
 |  +--------------------------------------------------+  |
 +--------------------------------------------------------+
    offset block (12px right + down, ink or verdant) on the single focal card per page
