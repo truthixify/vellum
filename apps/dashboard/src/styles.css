@@ -3818,8 +3818,12 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
+.governance-flow--overview {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
 .governance-steps {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .governance-stage-scroll {

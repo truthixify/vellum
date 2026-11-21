@@ -390,8 +390,11 @@ function GovernanceVoteFlow({
   }
 
   return (
-    <section className="governance-flow" aria-label="Governance vote flow">
-      <GovernanceSteps activeStep={activeReceipt && stage === 4 ? 5 : stage} />
+    <section
+      className={`governance-flow${stage === 0 ? " governance-flow--overview" : ""}`}
+      aria-label={stage === 0 ? "Governance proposal overview" : "Governance vote flow"}
+    >
+      {stage > 0 && <GovernanceSteps activeStep={activeReceipt && stage === 4 ? 4 : stage - 1} />}
       <div className="governance-stage-scroll">{stageContent}</div>
       <GovernanceStageFooter
         stage={stage}

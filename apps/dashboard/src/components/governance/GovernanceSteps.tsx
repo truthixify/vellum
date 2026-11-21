@@ -1,6 +1,6 @@
 import { Check } from "lucide-react";
 
-export const GOVERNANCE_STEPS = ["Overview", "Identity", "Ballot", "Review", "Receipt"] as const;
+export const GOVERNANCE_STEPS = ["Identity", "Ballot", "Review", "Receipt"] as const;
 
 export function GovernanceSteps({ activeStep }: { activeStep: number }) {
   return (
