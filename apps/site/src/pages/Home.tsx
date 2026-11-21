@@ -11,6 +11,7 @@ import {
 import { StatusMark, useCopyFeedback } from "@vellum/ui";
 
 import { dashboardUrl } from "../config";
+import { GRANT_PROPOSAL_URL } from "../data/grant-transparency";
 import { profilePath } from "../lib/profile-route";
 
 const PUBLIC_PROFILE_DID = "did:ckb:omdrzidnxy3lrdrwc6bo4sll6zljhuar";
@@ -22,8 +23,6 @@ const REPOSITORY_URL = "https://github.com/truthixify/vellum";
 const SCHEMAS_URL = `${REPOSITORY_URL}/tree/main/docs/schemas`;
 const SDK_URL = `${REPOSITORY_URL}/tree/main/packages/sdk#read-claims`;
 const ROADMAP_URL = "https://github.com/users/truthixify/projects/2";
-const CFDAO_PROPOSAL_URL =
-  "https://talk.nervos.org/t/vellum-extended-from-identity-to-reputation-on-did-ckb/10406";
 
 const AUDIENCES = [
   {
@@ -51,8 +50,8 @@ const AUDIENCES = [
     label: "CFDAO and community",
     title: "Follow delivery in public",
     body: "Track grant milestones, implementation issues, reviews, and the evidence behind completed work.",
-    href: ROADMAP_URL,
-    action: "See the roadmap",
+    href: "/transparency",
+    action: "Open the grant record",
   },
 ] as const;
 
@@ -282,7 +281,7 @@ function PublicWork() {
     {
       label: "CFDAO proposal",
       detail: "Funding scope and public discussion",
-      href: CFDAO_PROPOSAL_URL,
+      href: GRANT_PROPOSAL_URL,
     },
     {
       label: "Delivery roadmap",
@@ -295,8 +294,8 @@ function PublicWork() {
       href: REPOSITORY_URL,
     },
     {
-      label: "Scoring method",
-      detail: "Policy, trust boundaries, and exclusions",
+      label: "Grant transparency",
+      detail: "Funding, milestones, payments, and evidence",
       href: "/transparency",
     },
   ] as const;

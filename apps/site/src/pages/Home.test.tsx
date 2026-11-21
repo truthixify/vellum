@@ -33,8 +33,12 @@ describe("Vellum landing page", () => {
     expect(html).toContain("https://github.com/users/truthixify/projects/2");
     expect(html).toContain("https://github.com/truthixify/vellum/issues/new");
     expect(html).toContain(
+      "https://talk.nervos.org/t/dis-vellum-reputation-extension-on-did-ckb/10613",
+    );
+    expect(html).not.toContain(
       "https://talk.nervos.org/t/vellum-extended-from-identity-to-reputation-on-did-ckb/10406",
     );
+    expect(html.match(/href="\/transparency"/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   test("does not present the former illustrative record as live evidence", () => {

@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { ThemeButton, Wordmark } from "@vellum/ui";
 import type { ReactNode } from "react";
 import { dashboardUrl } from "../config";
+import { GRANT_PROPOSAL_URL } from "../data/grant-transparency";
 
 const NAVIGATION = [
   { label: "Product", href: "/" },
@@ -12,10 +13,11 @@ const NAVIGATION = [
 
 const FOOTER_NAVIGATION = [
   { label: "Docs", href: "/docs" },
+  { label: "Transparency", href: "/transparency" },
   { label: "GitHub", href: "https://github.com/truthixify/vellum" },
   {
     label: "CFDAO forum",
-    href: "https://talk.nervos.org/t/vellum-extended-from-identity-to-reputation-on-did-ckb/10406",
+    href: GRANT_PROPOSAL_URL,
   },
   { label: "Roadmap", href: "https://github.com/users/truthixify/projects/2" },
   { label: "Contact", href: "https://github.com/truthixify/vellum/issues/new" },
