@@ -42,7 +42,11 @@ export function RecentIssuerClaims({
   onRefresh,
 }: Props) {
   return (
-    <section className="issuance-recent" aria-labelledby="recent-claims-title">
+    <section
+      className="issuance-recent"
+      aria-labelledby="recent-claims-title"
+      aria-busy={loading || refreshing}
+    >
       <div className="issuance-section-heading">
         <div>
           <span className="mono-caps">ON-CHAIN OUTPUTS</span>
@@ -55,6 +59,7 @@ export function RecentIssuerClaims({
           aria-label="Refresh recent claims"
           title="Refresh recent claims"
           disabled={!issuerDid || refreshing}
+          aria-busy={refreshing}
           onClick={onRefresh}
         >
           <RefreshCw size={16} aria-hidden="true" />
@@ -90,7 +95,13 @@ export function RecentIssuerClaims({
               </div>
               <div>
                 <small>Subject lock</small>
-                <span className="mono">{truncate(claim.subjectLockHash)}</span>
+                <span
+                  className="mono"
+                  aria-label={`Subject lock ${claim.subjectLockHash}`}
+                  title={claim.subjectLockHash}
+                >
+                  {truncate(claim.subjectLockHash)}
+                </span>
               </div>
               <div>
                 <small>Issued</small>

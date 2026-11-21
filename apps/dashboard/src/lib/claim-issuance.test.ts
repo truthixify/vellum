@@ -11,6 +11,7 @@ import {
   createEmptyClaimDraft,
   createExampleClaimDraft,
   formatCanonicalPayload,
+  isWalletRequestRejection,
   parseCustomClaimPayload,
   parseExpiry,
   parseRegisteredClaimDraft,
@@ -140,6 +141,15 @@ describe("claim issuance forms", () => {
     expect(() => parseExpiry("2026-01-01T00:00", 1_800_000_000)).toThrow(
       "Expiry must be a valid date and time after issuance.",
     );
+  });
+
+  test("distinguishes wallet cancellation from transaction failure", () => {
+    expect(isWalletRequestRejection({ code: 4001 })).toBeTrue();
+    expect(isWalletRequestRejection(new Error("User rejected the request."))).toBeTrue();
+    expect(isWalletRequestRejection({ code: "ACTION_REJECTED" })).toBeTrue();
+    expect(
+      isWalletRequestRejection(new Error("Transaction rejected by the CKB node.")),
+    ).toBeFalse();
   });
 
   test("broadcasts only the exact transaction reviewed by the issuer", async () => {

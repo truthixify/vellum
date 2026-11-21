@@ -378,6 +378,23 @@ export function formatCanonicalPayload(payload: unknown): string {
   return JSON.stringify(sortedJsonValue(payload), null, 2);
 }
 
+export function isWalletRequestRejection(error: unknown): boolean {
+  if (typeof error === "object" && error !== null) {
+    const code = "code" in error ? error.code : undefined;
+    if (code === 4001 || code === "ACTION_REJECTED") return true;
+  }
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String(error.message)
+        : typeof error === "string"
+          ? error
+          : "";
+  return /\buser (?:rejected|denied|cancell?ed)\b/i.test(message);
+}
+
 export async function signAndBroadcastPreparedClaim(
   signer: ccc.Signer,
   transaction: ccc.Transaction,
@@ -440,4 +457,8 @@ export function subjectDidFromQr(rawValue: string): string {
 export function fieldLabel(name: string): string {
   const label = name.replaceAll("_", " ");
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+export function claimFieldId(path: string): string {
+  return `claim-${path.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }

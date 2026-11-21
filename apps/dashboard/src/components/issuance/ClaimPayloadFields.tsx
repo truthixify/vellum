@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 
 import {
+  claimFieldId,
   createEmptyClaimDraft,
   fieldLabel,
   type ClaimFormDraft,
@@ -16,10 +17,6 @@ type Props = {
 
 function objectDraft(value: ClaimFormDraft): Record<string, ClaimFormDraft> {
   return typeof value === "object" && !Array.isArray(value) ? value : {};
-}
-
-function fieldId(path: string): string {
-  return `claim-${path.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function fieldHint(schema: ManifestFieldSchema, required: boolean): string {
@@ -55,7 +52,7 @@ function PrimitiveField({
   error?: string;
   onChange: (value: ClaimFormDraft) => void;
 }) {
-  const id = fieldId(path);
+  const id = claimFieldId(path);
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const textValue = typeof value === "string" ? value : "";
@@ -90,20 +87,17 @@ function PrimitiveField({
             schema.format === "unix-time-seconds"
               ? "datetime-local"
               : schema.type === "integer"
-                ? "number"
+                ? "text"
                 : "text"
           }
           step={schema.format === "unix-time-seconds" ? 1 : undefined}
           inputMode={schema.type === "integer" ? "numeric" : undefined}
+          pattern={schema.type === "integer" ? "-?[0-9]*" : undefined}
+          autoComplete={schema.type === "integer" ? "off" : undefined}
+          spellCheck={schema.type === "integer" ? false : undefined}
           value={textValue}
           readOnly={schema.const !== undefined}
           required={required}
-          min={
-            schema.type === "integer" && schema.minimum !== undefined ? schema.minimum : undefined
-          }
-          max={
-            schema.type === "integer" && schema.maximum !== undefined ? schema.maximum : undefined
-          }
           minLength={schema.type === "string" ? schema.minLength : undefined}
           maxLength={schema.type === "string" ? schema.maxLength : undefined}
           aria-invalid={!!error}
@@ -171,8 +165,10 @@ function SchemaField({
     const atMaximum = schema.maxItems !== undefined && values.length >= schema.maxItems;
     return (
       <fieldset
+        id={claimFieldId(path)}
         className="issuance-array-field"
-        aria-describedby={errors[path] ? `${fieldId(path)}-error` : undefined}
+        aria-describedby={errors[path] ? `${claimFieldId(path)}-error` : undefined}
+        tabIndex={-1}
       >
         <legend>
           <span>{fieldLabel(name)}</span>
@@ -219,7 +215,7 @@ function SchemaField({
           </div>
         )}
         {errors[path] && (
-          <small className="issuance-field__error" id={`${fieldId(path)}-error`} role="alert">
+          <small className="issuance-field__error" id={`${claimFieldId(path)}-error`} role="alert">
             {errors[path]}
           </small>
         )}

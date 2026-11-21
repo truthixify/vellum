@@ -1693,13 +1693,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 36px;
+  min-height: 40px;
   padding: 0 12px;
   border: 1px solid var(--line-strong);
   border-radius: 3px;
   background: var(--surface);
   color: var(--ink);
   font-size: 12px;
+  cursor: pointer;
 }
 
 .issuance-history-trigger:hover {
@@ -1751,7 +1752,7 @@
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .issuance-step > strong {
@@ -2011,12 +2012,13 @@
 }
 
 .issuance-mode button {
-  min-height: 34px;
+  min-height: 40px;
   padding: 0 8px;
   border: 0;
   border-radius: 2px;
   background: transparent;
   text-align: center;
+  cursor: pointer;
 }
 
 .issuance-mode button.active {
@@ -2067,7 +2069,7 @@
 
 .issuance-example-button {
   flex: 0 0 auto;
-  min-height: 36px;
+  min-height: 40px;
 }
 
 .issuance-field-grid {
@@ -2149,7 +2151,7 @@
   display: block !important;
   margin-top: 6px !important;
   color: var(--ink-secondary) !important;
-  font-size: 10px !important;
+  font-size: 11px !important;
   line-height: 1.45;
 }
 
@@ -2162,7 +2164,7 @@
 }
 
 .issuance-inline-action {
-  min-height: 28px;
+  min-height: 40px;
   margin-top: 4px;
   padding: 0;
 }
@@ -2239,7 +2241,7 @@
 .issuance-array-field > legend {
   padding: 0 7px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .issuance-array-field > legend span,
@@ -2250,7 +2252,7 @@
 .issuance-array-field > legend small {
   margin-top: 2px;
   color: var(--ink-secondary);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
 }
 
@@ -2288,12 +2290,12 @@
 
 .issuance-array-item__header strong {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .issuance-array-item__header .issuance-icon-button {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   color: var(--danger);
 }
 
@@ -2305,7 +2307,7 @@
 
 .issuance-add-button {
   gap: 7px;
-  min-height: 38px;
+  min-height: 40px;
   margin-top: 12px;
   padding: 0 12px;
   font-size: 11px;
@@ -2456,7 +2458,7 @@
 
 .issuance-claim-row small {
   color: var(--ink-secondary);
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
@@ -2714,7 +2716,7 @@
   .issuance-evidence-toolbar .issuance-example-button {
     grid-column: 2;
     justify-self: start;
-    min-height: 28px;
+    min-height: 40px;
   }
 }
 
@@ -2758,7 +2760,7 @@
   }
 
   .issuance-step > strong {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .issuance-stage-scroll,

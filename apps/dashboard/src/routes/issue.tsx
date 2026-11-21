@@ -29,7 +29,9 @@ import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
   createEmptyClaimDraft,
   createExampleClaimDraft,
+  claimFieldId,
   formatCanonicalPayload,
+  isWalletRequestRejection,
   parseCustomClaimPayload,
   parseExpiry,
   parseRegisteredClaimDraft,
@@ -66,6 +68,8 @@ type PreparedIssuance = {
   expiresAt?: number;
   fee: bigint;
   capacity: bigint;
+  subjectLockHash: ccc.Hex;
+  payerAddress: string;
 };
 
 type Confirmation =
@@ -91,6 +95,15 @@ function formatTimestamp(value: number): string {
     dateStyle: "medium",
     timeStyle: "long",
   }).format(new Date(value * 1_000));
+}
+
+function focusElement(id: string): void {
+  requestAnimationFrame(() => document.getElementById(id)?.focus());
+}
+
+function focusFirstClaimError(errors: Record<string, string>): void {
+  const path = Object.keys(errors).find((key) => key !== "$form");
+  focusElement(path ? claimFieldId(path) : "issuance-stage-error");
 }
 
 function IssuanceSteps({ activeStep }: { activeStep: number }) {
@@ -198,8 +211,9 @@ function TransactionReview({
         {prepared.schemaId && <FieldRow label="Schema ID" value={prepared.schemaId} mono />}
         <FieldRow label="Schema hash" value={prepared.schemaHash} mono />
         <FieldRow label="Subject DID" value={prepared.subjectDid} mono />
+        <FieldRow label="Subject lock" value={prepared.subjectLockHash} mono />
         <FieldRow label="Issuer DID" value={prepared.issuerDid} mono />
-        <FieldRow label="Payer" value="Connected issuer wallet" />
+        <FieldRow label="Payer address" value={prepared.payerAddress} mono />
         <FieldRow label="Issued at" value={formatTimestamp(prepared.issuedAt)} />
         <FieldRow
           label="Expires"
@@ -235,7 +249,7 @@ function TransactionReview({
         <VButton variant="ghost" onClick={onBack} disabled={busy}>
           <ArrowLeft size={15} aria-hidden="true" /> Back to compose
         </VButton>
-        <VButton variant="verdant" onClick={onSign} disabled={busy}>
+        <VButton variant="verdant" onClick={onSign} disabled={busy} aria-busy={busy}>
           {busy ? "Waiting for wallet…" : "Sign and issue claim"}
         </VButton>
       </div>
@@ -450,7 +464,8 @@ function IssueClaim() {
     } catch (error) {
       const message = messageFrom(error);
       setSubjectError(message);
-      setFormError(message);
+      setFormError(null);
+      focusElement("subject-did");
     }
   }
 
@@ -458,10 +473,14 @@ function IssueClaim() {
     if (mode === "registered" && !registeredResult.ok) {
       setFieldErrors(registeredResult.errors);
       setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
+      focusFirstClaimError(registeredResult.errors);
       return;
     }
     if (mode === "custom" && !customResult.ok) {
       setFormError(customResult.error);
+      focusElement(
+        customResult.error.startsWith("Schema hash") ? "custom-schema-hash" : "custom-payload",
+      );
       return;
     }
     setFieldErrors({});
@@ -483,7 +502,7 @@ function IssueClaim() {
   }
 
   async function prepareTransaction() {
-    if (!signer || !activeDid || network !== "testnet") {
+    if (!signer || !activeDid || !address || network !== "testnet") {
       setFormError("Connect a Testnet wallet that controls the issuer DID.");
       return;
     }
@@ -495,8 +514,9 @@ function IssueClaim() {
     } catch (error) {
       const message = messageFrom(error);
       setSubjectError(message);
-      setFormError(message);
+      setFormError(null);
       setStage(0);
+      focusElement("subject-did");
       return;
     }
 
@@ -509,6 +529,7 @@ function IssueClaim() {
         setFieldErrors(registeredResult.errors);
         setFormError(registeredResult.errors.$form ?? "Complete the required schema fields.");
         setStage(1);
+        focusFirstClaimError(registeredResult.errors);
         return;
       }
       payload = registeredResult.payload;
@@ -520,6 +541,9 @@ function IssueClaim() {
       if (!customResult.ok) {
         setFormError(customResult.error);
         setStage(1);
+        focusElement(
+          customResult.error.startsWith("Schema hash") ? "custom-schema-hash" : "custom-payload",
+        );
         return;
       }
       payload = customResult.payload;
@@ -534,6 +558,7 @@ function IssueClaim() {
     } catch (error) {
       setFormError(messageFrom(error));
       setStage(2);
+      focusElement("claim-expiry");
       return;
     }
 
@@ -567,6 +592,8 @@ function IssueClaim() {
         expiresAt: normalizedExpiry,
         fee,
         capacity: output.capacity,
+        subjectLockHash: output.lock.hash(),
+        payerAddress: address,
       });
     } catch (error) {
       console.error(error);
@@ -585,6 +612,7 @@ function IssueClaim() {
       setTransactionHash(hash);
       setConfirmation({ status: "pending" });
     } catch (error) {
+      if (isWalletRequestRejection(error)) return;
       console.error(error);
       setFormError(messageFrom(error));
     } finally {
@@ -607,6 +635,13 @@ function IssueClaim() {
       : customResult.ok
         ? customResult.payload
         : undefined;
+  const customErrorTarget =
+    mode === "custom" && !customResult.ok && formError === customResult.error
+      ? customResult.error.startsWith("Schema hash")
+        ? "hash"
+        : "payload"
+      : null;
+  const expiryError = formError?.startsWith("Expiry must be") ?? false;
 
   return (
     <div className="preview-page preview-page--wide issuance-page">
@@ -659,7 +694,11 @@ function IssueClaim() {
               />
             </div>
           ) : (
-            <form className="claim-form issuance-stage-form" onSubmit={handleStageSubmit}>
+            <form
+              className="claim-form issuance-stage-form"
+              noValidate
+              onSubmit={handleStageSubmit}
+            >
               <div className="issuance-stage-scroll">
                 <div className="issuance-stage-inner">
                   {stage === 0 && (
@@ -696,6 +735,9 @@ function IssueClaim() {
                               id="subject-did"
                               value={subjectDid}
                               placeholder="did:ckb:…"
+                              autoComplete="off"
+                              autoCapitalize="none"
+                              spellCheck={false}
                               aria-invalid={!!subjectError}
                               aria-describedby={
                                 subjectError ? "subject-did-error" : "subject-did-hint"
@@ -867,12 +909,23 @@ function IssueClaim() {
                               className="mono"
                               value={customSchemaHash}
                               placeholder="0x…"
+                              autoComplete="off"
+                              autoCapitalize="none"
+                              spellCheck={false}
+                              aria-invalid={customErrorTarget === "hash"}
+                              aria-describedby={
+                                customErrorTarget === "hash"
+                                  ? "custom-schema-hash-hint issuance-stage-error"
+                                  : "custom-schema-hash-hint"
+                              }
                               onChange={(event) => {
                                 setCustomSchemaHash(event.target.value);
                                 setFormError(null);
                               }}
                             />
-                            <small>CKB_HASH of the canonical schema manifest</small>
+                            <small id="custom-schema-hash-hint">
+                              CKB_HASH of the canonical schema manifest
+                            </small>
                           </div>
                           <div className="issuance-field">
                             <label htmlFor="custom-payload">JSON payload</label>
@@ -881,6 +934,13 @@ function IssueClaim() {
                               className="mono"
                               rows={10}
                               value={customPayload}
+                              autoComplete="off"
+                              autoCapitalize="none"
+                              spellCheck={false}
+                              aria-invalid={customErrorTarget === "payload"}
+                              aria-describedby={
+                                customErrorTarget === "payload" ? "issuance-stage-error" : undefined
+                              }
                               onChange={(event) => {
                                 setCustomPayload(event.target.value);
                                 setFormError(null);
@@ -888,11 +948,6 @@ function IssueClaim() {
                             />
                           </div>
                         </div>
-                      )}
-                      {fieldErrors.$form && (
-                        <p className="issuance-form-error" role="alert">
-                          {fieldErrors.$form}
-                        </p>
                       )}
                     </section>
                   )}
@@ -912,6 +967,8 @@ function IssueClaim() {
                               id="claim-expiry"
                               type="datetime-local"
                               value={expiresAt}
+                              aria-invalid={expiryError}
+                              aria-describedby={expiryError ? "issuance-stage-error" : undefined}
                               onChange={(event) => {
                                 setExpiresAt(event.target.value);
                                 setFormError(null);
@@ -965,7 +1022,12 @@ function IssueClaim() {
                   aria-live="polite"
                 >
                   {formError ? (
-                    <p className="issuance-form-error" role="alert">
+                    <p
+                      className="issuance-form-error"
+                      id="issuance-stage-error"
+                      role="alert"
+                      tabIndex={-1}
+                    >
                       {formError}
                     </p>
                   ) : (
@@ -986,7 +1048,7 @@ function IssueClaim() {
                       <ArrowLeft size={15} aria-hidden="true" /> Back
                     </VButton>
                   )}
-                  <VButton variant="verdant" type="submit" disabled={busy}>
+                  <VButton variant="verdant" type="submit" disabled={busy} aria-busy={busy}>
                     {busy ? (
                       "Preparing transaction…"
                     ) : stage === 2 ? (

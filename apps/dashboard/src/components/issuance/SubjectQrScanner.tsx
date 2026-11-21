@@ -153,6 +153,7 @@ export function SubjectQrScanner({ onDid }: Props) {
               className="v-button v-button--primary"
               type="button"
               disabled={status !== "idle"}
+              aria-busy={status === "starting"}
               onClick={() => void startCamera()}
             >
               <Camera size={15} aria-hidden="true" />
