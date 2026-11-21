@@ -51,7 +51,7 @@ import {
 type ProfileViewState = { status: "index" } | { status: "loading" } | PublicProfileResult;
 type LoadedProfile = Extract<PublicProfileResult, { status: "available" }>;
 
-const TESTNET_EXPLORER = "https://pudge.explorer.nervos.org/transaction/";
+const TESTNET_EXPLORER = "https://testnet.explorer.nervos.org/transaction/";
 const PROFILE_ORIGIN = "https://usevellum.xyz";
 const CATEGORY_LABELS = {
   technical: "Technical",
@@ -232,8 +232,8 @@ export function Profile({
     return (
       <ProfileState
         eyebrow="Not found"
-        title="This identity is not active on Testnet"
-        message="No live DID Metadata Cell matches this identifier."
+        title="This identity was not found"
+        message="No live DID Metadata Cell matches this identifier in the Testnet registry."
         action={
           <>
             <a className="v-button v-button--primary" href="/profile">
@@ -250,7 +250,7 @@ export function Profile({
   if (state.status === "unavailable") {
     return (
       <ProfileState
-        eyebrow="CKB Testnet"
+        eyebrow="Profile lookup"
         title="This profile is temporarily unavailable"
         message={state.message}
         action={
@@ -704,7 +704,7 @@ function ClaimsSection({
       <div className="profile-ledger__heading">
         <div>
           <h2 id="activity-title">Activity and claims</h2>
-          <p>Live Claim Cells held by this identity on CKB Testnet.</p>
+          <p>Public Claim Cells currently held by this identity.</p>
         </div>
         {claims.status === "available" && (
           <StatusMark icon={false}>{claimCellTotal} total</StatusMark>
@@ -831,8 +831,8 @@ function ClaimLedger({
               href={`${TESTNET_EXPLORER}${cell.outPoint.txHash}`}
               target="_blank"
               rel="noreferrer"
-              title="View transaction on CKB Testnet explorer"
-              aria-label="View claim transaction on CKB Testnet explorer"
+              title="View transaction in explorer"
+              aria-label="View claim transaction in explorer"
             >
               <ArrowUpRight size={15} aria-hidden="true" />
             </a>

@@ -18,7 +18,7 @@ const PUBLIC_PROFILE_DID = "did:ckb:omdrzidnxy3lrdrwc6bo4sll6zljhuar";
 const CKBOOST_CLAIM_TX = "0x83f547f606bce2d6163e997eff45463f09956725e9217c88c1e97a52e7c3e1f2";
 const PUBLIC_PROFILE_PATH = profilePath(PUBLIC_PROFILE_DID);
 const REPUTATION_PATH = dashboardUrl(`/reputation?did=${encodeURIComponent(PUBLIC_PROFILE_DID)}`);
-const TESTNET_EXPLORER = "https://pudge.explorer.nervos.org/transaction/";
+const TESTNET_EXPLORER = "https://testnet.explorer.nervos.org/transaction/";
 const REPOSITORY_URL = "https://github.com/truthixify/vellum";
 const SCHEMAS_URL = `${REPOSITORY_URL}/tree/main/docs/schemas`;
 const SDK_URL = `${REPOSITORY_URL}/tree/main/packages/sdk#read-claims`;
@@ -65,7 +65,7 @@ function LiveEvidence() {
       <div className="site-content">
         <div className="home-section-heading home-section-heading--split">
           <div>
-            <span className="eyebrow">Confirmed on CKB Testnet</span>
+            <span className="eyebrow">Confirmed public evidence</span>
             <h2 id="live-evidence-title">One completion, readable all the way through.</h2>
           </div>
           <p>
@@ -133,21 +133,21 @@ function ProductModel() {
       number: "01",
       title: "Identity",
       body: "A wallet-controlled did:ckb record that can be created, updated, rotated, resolved, and deactivated.",
-      fact: "Live on CKB Testnet and Mainnet",
+      fact: "Wallet-controlled and publicly resolvable",
     },
     {
       icon: FileCheck2,
       number: "02",
       title: "Evidence",
       body: "Claim Cells keep the subject, issuer, schema, dates, and public payload available to independent readers.",
-      fact: "Live on CKB Testnet",
+      fact: "Issuer, schema, and source remain visible",
     },
     {
       icon: Gauge,
       number: "03",
       title: "Reputation",
       body: "A versioned policy explains which evidence counted, which evidence was excluded, and why the score changed.",
-      fact: "Policy v7 is live on Testnet",
+      fact: "Versioned policy with explicit exclusions",
     },
   ] as const;
 

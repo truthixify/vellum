@@ -84,10 +84,10 @@ describe("public Claim Cell renderers", () => {
     expect(html).toContain("1250 CKB");
     expect(html).toContain(payload.campaign_type_id);
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${payload.campaign_creation_tx_hash}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${payload.campaign_creation_tx_hash}"`,
     );
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${payload.finalization_tx_hash}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${payload.finalization_tx_hash}"`,
     );
     expect(html).not.toContain("backer");
   });
@@ -104,7 +104,7 @@ describe("public Claim Cell renderers", () => {
     expect(html).toContain(payload.milestone_id);
     expect(html).toContain(payload.delivery_id);
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${payload.settlement_tx_hash}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${payload.settlement_tx_hash}"`,
     );
     expect(html).not.toContain("amount");
     expect(html).not.toContain("proof contents");
@@ -179,10 +179,10 @@ describe("public Claim Cell renderers", () => {
     expect(html).toContain("CKB &lt;Builders&gt;");
     expect(html).not.toContain("<Builders>");
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${ckboostQuestSchema.example.reward_claim_tx_hash}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${ckboostQuestSchema.example.reward_claim_tx_hash}"`,
     );
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${ckboostQuestSchema.example.approval_tx_hash}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${ckboostQuestSchema.example.approval_tx_hash}"`,
     );
   });
 

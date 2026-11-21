@@ -508,7 +508,7 @@ function ActivityEntry({
 function explorerLinkForTx(txHash: ccc.Hex, isMainnet: boolean): string {
   const base = isMainnet
     ? "https://explorer.nervos.org/transaction/"
-    : "https://pudge.explorer.nervos.org/transaction/";
+    : "https://testnet.explorer.nervos.org/transaction/";
   return `${base}${txHash}`;
 }
 

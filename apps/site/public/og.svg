@@ -23,12 +23,12 @@
     <text x="22" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#101814">Wallet-controlled did:ckb</text>
     <rect x="365" width="326" height="80" fill="#ffffff" stroke="#cbd1ca"/>
     <text x="387" y="29" font-family="Menlo, monospace" font-size="11" fill="#526058">EVIDENCE</text>
-    <text x="387" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#101814">Issuer-authorized claims</text>
+    <text x="387" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#101814">Issuer-signed Claim Cells</text>
     <rect x="730" width="326" height="80" fill="#ffffff" stroke="#cbd1ca"/>
     <text x="752" y="29" font-family="Menlo, monospace" font-size="11" fill="#526058">REPUTATION</text>
     <text x="752" y="57" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#147a49">Inspectable policy output</text>
   </g>
 
   <text x="72" y="560" font-family="Menlo, monospace" font-size="14" fill="#526058">USEVELLUM.XYZ</text>
-  <text x="1128" y="560" text-anchor="end" font-family="Menlo, monospace" font-size="14" fill="#147a49">LIVE ON CKB TESTNET</text>
+  <text x="1128" y="560" text-anchor="end" font-family="Menlo, monospace" font-size="14" fill="#147a49">IDENTITY · EVIDENCE · REPUTATION</text>
 </svg>

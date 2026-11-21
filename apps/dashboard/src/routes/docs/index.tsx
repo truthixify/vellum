@@ -43,7 +43,7 @@ function DocsIndex() {
   return (
     <>
       <header className="docs-page-header">
-        <span>Documentation · 0.1</span>
+        <span>did:ckb reference</span>
         <h1>Vellum documentation</h1>
         <p>
           Understand did:ckb identity records, CKB Cells, resolution, and migration from the

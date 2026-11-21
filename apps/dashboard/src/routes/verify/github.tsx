@@ -310,7 +310,7 @@ function ConnectionPanel({
         <div className="account-verification-empty">
           <WalletCards size={24} strokeWidth={1.7} aria-hidden="true" />
           <h3>Connect your wallet</h3>
-          <p>Your Testnet identities are loaded from the lock controlled by your wallet.</p>
+          <p>Your identities are loaded from the lock controlled by your wallet.</p>
           <button className="v-button v-button--primary" type="button" onClick={() => open()}>
             <WalletCards size={15} aria-hidden="true" /> Connect wallet
           </button>
@@ -320,20 +320,20 @@ function ConnectionPanel({
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Wallet address unavailable</strong>
-            <p>Reconnect the wallet, then try loading your Testnet identities again.</p>
+            <p>Reconnect the wallet, then try loading your identities again.</p>
           </div>
         </div>
       ) : !lock || identities.isLoading ? (
         <div className="account-verification-loading" role="status" aria-live="polite">
           <span className="pulse-dot" aria-hidden="true" />
-          Looking up Testnet identities
+          Looking up identities
         </div>
       ) : identities.isError ? (
         <div className="account-verification-alert" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Identity lookup failed</strong>
-            <p>The CKB Testnet indexer did not return your identities.</p>
+            <p>The indexer did not return your identities.</p>
             <button
               className="v-button v-button--quiet"
               type="button"
@@ -346,8 +346,8 @@ function ConnectionPanel({
       ) : records.length === 0 ? (
         <div className="account-verification-empty">
           <ShieldCheck size={24} strokeWidth={1.7} aria-hidden="true" />
-          <h3>No Testnet DID found</h3>
-          <p>This wallet does not control a did:ckb identity on CKB Testnet.</p>
+          <h3>No DID found</h3>
+          <p>This wallet does not control a did:ckb identity.</p>
           <Link className="v-button v-button--secondary" to="/claim">
             Claim a DID
           </Link>
@@ -506,7 +506,7 @@ function ExistingGithubClaims({
       </ul>
 
       <div className="account-verification-existing__footer">
-        <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found on CKB Testnet.</span>
+        <span>Active Claim Cell{claims.length === 1 ? "" : "s"} found.</span>
         <div className="account-verification-existing__actions">
           <Link className="v-button v-button--quiet" to="/reputation" search={{ did: subject }}>
             View evidence
@@ -693,9 +693,7 @@ function ResultStatus({
           <StatusMark tone="warning" icon={false}>
             Indexing {claimCount === 1 ? "claim" : "claims"}
           </StatusMark>
-          <p>
-            The transaction is committed. Waiting for the Testnet indexer to expose every claim.
-          </p>
+          <p>The transaction is committed. Waiting for the indexer to expose every claim.</p>
         </div>
       </div>
     );
@@ -707,7 +705,7 @@ function ResultStatus({
         <StatusMark tone="info" icon={false}>
           Transaction submitted
         </StatusMark>
-        <p>Vellum submitted the claim transaction. Waiting for it to commit on CKB Testnet.</p>
+        <p>Vellum submitted the claim transaction. Waiting for it to commit.</p>
       </div>
     </div>
   );
@@ -764,8 +762,8 @@ function ProtocolSummary({ submission }: { submission?: GithubSubmission }) {
         </div>
       </dl>
       <p>
-        Claims are public on CKB Testnet. Private repositories, email addresses, and OAuth tokens
-        are never written to them.
+        Claims are public on chain. Private repositories, email addresses, and OAuth tokens are
+        never written to them.
       </p>
     </aside>
   );

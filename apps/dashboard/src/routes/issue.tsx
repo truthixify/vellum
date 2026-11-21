@@ -146,12 +146,12 @@ function IssuanceAccessState({
       body: "Vellum is checking which did:ckb identities the connected wallet controls.",
     },
     mainnet: {
-      title: "Switch to CKB Testnet",
+      title: "Switch to Testnet",
       body: "Wallet issuance is limited to the deployed Testnet Claim Type and DID Lock contracts.",
     },
     "missing-did": {
       title: "Claim an issuer identity",
-      body: "This wallet does not control a did:ckb identity on Testnet yet.",
+      body: "This wallet does not control a did:ckb identity yet.",
     },
     "identity-error": {
       title: "Issuer identities are unavailable",

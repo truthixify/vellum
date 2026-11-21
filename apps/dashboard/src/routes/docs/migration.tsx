@@ -94,14 +94,6 @@ function MigrationPage() {
           </li>
         </ul>
       </Section>
-
-      <Section title="Status today">
-        <p>
-          The on-chain side is shipped and tested in the upstream did-ckb repository. The dashboard
-          wiring (form, witness assembly, signature path) is open and will land alongside a small JS
-          helper module that wraps <Code>@did-plc/lib</Code> for the operation history construction.
-        </p>
-      </Section>
     </>
   );
 }

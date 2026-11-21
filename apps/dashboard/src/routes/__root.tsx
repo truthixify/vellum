@@ -136,7 +136,6 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith("/reputation")) return "Reputation";
   if (pathname.startsWith("/resolve")) return "Resolve";
   if (pathname.startsWith("/issue")) return "Issue a claim";
-  if (pathname.startsWith("/activity")) return "Activity";
   if (pathname.startsWith("/demo/governance")) return "Governance demo";
   if (pathname.startsWith("/governance")) return "Governance policy";
   if (pathname.startsWith("/docs")) return "Documentation";
