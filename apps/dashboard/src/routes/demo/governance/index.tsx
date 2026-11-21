@@ -11,7 +11,6 @@ import {
   Clock3,
   ExternalLink,
   FileCheck2,
-  RefreshCw,
   Search,
   ShieldCheck,
   Vote,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
+import { GovernanceOverview } from "@/components/governance/GovernanceOverview";
 import { GovernanceSteps } from "@/components/governance/GovernanceSteps";
 import { VoteReceipt } from "@/components/governance/VoteReceipt";
 import { useDocumentTitle } from "@/hooks/use-document-title";
@@ -36,14 +36,13 @@ import {
   type GovernanceEvaluation,
   type GovernanceProposalSnapshot,
   type GovernanceProposalStatus,
-  type GovernanceResults,
 } from "@/lib/governance-contracts";
 
 export const Route = createFileRoute("/demo/governance/")({ component: GovernanceDemoPage });
 
 const PROPOSAL_QUERY_KEY = ["governance-proposal", GOVERNANCE_PROPOSAL.id] as const;
 
-type GovernanceStage = 0 | 1 | 2 | 3;
+type GovernanceStage = 0 | 1 | 2 | 3 | 4;
 
 function formatTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -87,15 +86,15 @@ function GovernanceDemoPage() {
       </header>
 
       <div className="governance-demo-layout">
-        <GovernanceVoteFlow proposalStatus={currentStatus} />
+        <GovernanceVoteFlow
+          proposalStatus={currentStatus}
+          proposal={proposal.data}
+          proposalLoading={proposal.isLoading}
+          proposalError={proposal.error}
+          onRetryProposal={proposal.refetch}
+        />
         <aside className="governance-context" aria-label="Proposal context">
           <ProposalContext />
-          <ResultsSection
-            proposal={proposal.data}
-            loading={proposal.isLoading}
-            error={proposal.error}
-            onRetry={proposal.refetch}
-          />
           <GovernanceLimitations />
         </aside>
       </div>
@@ -151,100 +150,19 @@ function ProposalContext() {
   );
 }
 
-function ResultsSection({
+function GovernanceVoteFlow({
+  proposalStatus,
   proposal,
-  loading,
-  error,
-  onRetry,
+  proposalLoading,
+  proposalError,
+  onRetryProposal,
 }: {
+  proposalStatus: GovernanceProposalStatus;
   proposal: GovernanceProposalSnapshot | undefined;
-  loading: boolean;
-  error: unknown;
-  onRetry: () => Promise<unknown>;
+  proposalLoading: boolean;
+  proposalError: unknown;
+  onRetryProposal: () => Promise<unknown>;
 }) {
-  let content;
-  if (loading) {
-    content = (
-      <div className="governance-results__loading" role="status">
-        <span className="pulse-dot" aria-hidden="true" /> Loading tally
-      </div>
-    );
-  } else if (error || proposal?.results.status === "unavailable") {
-    content = (
-      <div className="governance-inline-alert" role="status">
-        <AlertCircle size={17} aria-hidden="true" />
-        <div>
-          <strong>Results unavailable</strong>
-          <p>
-            {proposal?.results.status === "unavailable"
-              ? proposal.results.message
-              : errorMessage(error)}
-          </p>
-        </div>
-        <button className="v-button v-button--quiet" type="button" onClick={() => void onRetry()}>
-          <RefreshCw size={14} aria-hidden="true" /> Retry
-        </button>
-      </div>
-    );
-  } else {
-    content = <WeightedResults results={proposal?.results.results} />;
-  }
-
-  return (
-    <section className="governance-context-section" aria-labelledby="governance-results-title">
-      <div className="governance-section-heading governance-section-heading--row">
-        <div>
-          <span>Public result</span>
-          <h2 id="governance-results-title">Current signal</h2>
-        </div>
-        {proposal?.results.status === "available" && (
-          <p>
-            {proposal.results.results.voterCount} voter
-            {proposal.results.results.voterCount === 1 ? "" : "s"} ·{" "}
-            {proposal.results.results.totalWeight} weight
-          </p>
-        )}
-      </div>
-      {content}
-    </section>
-  );
-}
-
-function WeightedResults({ results }: { results: GovernanceResults | undefined }) {
-  const empty: GovernanceResults = {
-    voterCount: 0,
-    totalWeight: 0,
-    tallies: [
-      { choice: "yes", voterCount: 0, weight: 0 },
-      { choice: "no", voterCount: 0, weight: 0 },
-    ],
-  };
-  const value = results ?? empty;
-  return (
-    <div className="governance-tallies">
-      {value.tallies.map((tally) => {
-        const share = value.totalWeight === 0 ? 0 : (tally.weight / value.totalWeight) * 100;
-        return (
-          <div className="governance-tally" key={tally.choice}>
-            <div className="governance-tally__label">
-              <strong>{tally.choice === "yes" ? "Yes" : "No"}</strong>
-              <span>{share.toFixed(0)}%</span>
-            </div>
-            <div className="governance-tally__track" aria-hidden="true">
-              <span style={{ width: `${share}%` }} />
-            </div>
-            <div className="governance-tally__details">
-              <span>{tally.weight} weight</span>
-              <span>{tally.voterCount} voters</span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProposalStatus }) {
   const signer = useSigner();
   const { open } = useCcc();
   const queryClient = useQueryClient();
@@ -297,7 +215,7 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
     },
     onSuccess: (result) => {
       setLastSubject(subject);
-      setStage(3);
+      setStage(4);
       queryClient.setQueryData<GovernanceProposalSnapshot>(PROPOSAL_QUERY_KEY, (current) =>
         current ? { ...current, results: result.results } : current,
       );
@@ -325,11 +243,21 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
     setLastSubject(undefined);
     setSubject("");
     setInput(activeDid ?? "");
-    setStage(0);
+    setStage(1);
   }
 
   let stageContent: ReactNode;
   if (stage === 0) {
+    stageContent = (
+      <GovernanceOverview
+        snapshot={proposal}
+        proposalStatus={proposalStatus}
+        loading={proposalLoading}
+        error={proposalError}
+        onRetry={onRetryProposal}
+      />
+    );
+  } else if (stage === 1) {
     stageContent = (
       <IdentityStage
         input={input}
@@ -343,7 +271,7 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
         onUseActive={() => activeDid && setInput(activeDid)}
       />
     );
-  } else if (stage === 1) {
+  } else if (stage === 2) {
     stageContent = (
       <BallotStage
         signerAvailable={!!signer}
@@ -368,7 +296,7 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
         onChoiceChange={setChoice}
       />
     );
-  } else if (stage === 2) {
+  } else if (stage === 3) {
     stageContent = (
       <ReviewStage
         subject={subject}
@@ -404,7 +332,7 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
 
   return (
     <section className="governance-flow" aria-label="Governance vote flow">
-      <GovernanceSteps activeStep={vote.data && lastSubject ? 4 : stage} />
+      <GovernanceSteps activeStep={vote.data && lastSubject ? 5 : stage} />
       <div className="governance-stage-scroll">{stageContent}</div>
       <GovernanceStageFooter
         stage={stage}
@@ -414,7 +342,7 @@ function GovernanceVoteFlow({ proposalStatus }: { proposalStatus: GovernanceProp
         isSigning={vote.isPending}
         hasReceipt={!!vote.data && lastSubject === vote.data.receipt.subjectDid}
         onBack={() => setStage((current) => Math.max(0, current - 1) as GovernanceStage)}
-        onNext={() => setStage((current) => Math.min(3, current + 1) as GovernanceStage)}
+        onNext={() => setStage((current) => Math.min(4, current + 1) as GovernanceStage)}
         onSign={() => vote.mutate()}
         onReset={startAnotherEvaluation}
       />
@@ -865,6 +793,7 @@ function GovernanceStageFooter({
   onReset: () => void;
 }) {
   const messages = [
+    "Review the proposal, current tally, and voting rules before continuing.",
     "Eligibility is evaluated against current public evidence.",
     "Only an identity controlled by the connected wallet can sign.",
     "The wallet will sign the exact ballot shown above.",
@@ -875,7 +804,7 @@ function GovernanceStageFooter({
     <footer className="issuance-stage-footer governance-stage-footer">
       <span className="issuance-stage-footer__message">{messages[stage]}</span>
       <div className="issuance-stage-footer__actions">
-        {stage > 0 && stage < 3 && (
+        {stage > 0 && stage < 4 && (
           <button
             className="v-button v-button--quiet"
             type="button"
@@ -886,6 +815,11 @@ function GovernanceStageFooter({
           </button>
         )}
         {stage === 0 && (
+          <button className="v-button v-button--primary" type="button" onClick={onNext}>
+            Check eligibility <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        )}
+        {stage === 1 && (
           <button
             className="v-button v-button--primary"
             type="button"
@@ -895,7 +829,7 @@ function GovernanceStageFooter({
             Ballot <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
-        {stage === 1 && (
+        {stage === 2 && (
           <button
             className="v-button v-button--primary"
             type="button"
@@ -905,7 +839,7 @@ function GovernanceStageFooter({
             Review <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
-        {stage === 2 && (
+        {stage === 3 && (
           <button
             className="v-button v-button--primary"
             type="button"
@@ -916,7 +850,7 @@ function GovernanceStageFooter({
             {isSigning ? "Awaiting authorization" : "Sign and record"}
           </button>
         )}
-        {stage === 3 && (
+        {stage === 4 && (
           <button
             className="v-button v-button--secondary"
             type="button"
