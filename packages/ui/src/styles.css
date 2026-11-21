@@ -20,7 +20,7 @@
   --warning-soft: #f8e7c4;
   --danger: #b53b34;
   --danger-soft: #f7ddda;
-  --focus: #3155c6;
+  --focus: var(--primary);
   --on-primary: #ffffff;
   --overlay: rgb(21 24 23 / 0.32);
   --overlay-shadow: 0 12px 32px rgb(21 24 23 / 0.14);
@@ -42,10 +42,17 @@
   --warning-soft: #463218;
   --danger: #ff8b82;
   --danger-soft: #492522;
-  --focus: #94a9ff;
+  --focus: var(--primary);
   --on-primary: #111411;
   --overlay: rgb(0 0 0 / 0.54);
   --overlay-shadow: 0 12px 32px rgb(0 0 0 / 0.36);
+}
+
+:where(input, select, textarea)[aria-invalid="true"] {
+  --focus: transparent;
+  --color-ring: transparent;
+  border-color: var(--danger);
+  outline-color: transparent;
 }
 
 .v-wordmark {
