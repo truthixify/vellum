@@ -86,7 +86,10 @@ async function resultsState(ledger: GovernanceLedger): Promise<GovernanceResults
   try {
     return { status: "available", results: await ledger.getResults(GOVERNANCE_PROPOSAL.id) };
   } catch {
-    return { status: "unavailable", message: "The current vote tally is temporarily unavailable." };
+    return {
+      status: "unavailable",
+      message: "The current tally could not be loaded. Retry to check the latest result.",
+    };
   }
 }
 
@@ -148,7 +151,7 @@ export function createGovernanceService(
       } catch {
         results = {
           status: "unavailable",
-          message: "The current vote tally is temporarily unavailable.",
+          message: "The current tally could not be loaded. Retry to check the latest result.",
         };
       }
       return {

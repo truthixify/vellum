@@ -85,7 +85,10 @@ describe("governance service", () => {
     await expect(service.proposal()).resolves.toMatchObject({
       proposal: { id: GOVERNANCE_PROPOSAL.id },
       proposalStatus: "open",
-      results: { status: "unavailable" },
+      results: {
+        status: "unavailable",
+        message: "The current tally could not be loaded. Retry to check the latest result.",
+      },
     });
   });
 

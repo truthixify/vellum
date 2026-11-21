@@ -27,7 +27,7 @@ function GovernanceReceiptPage() {
       <header>
         <span>Public vote record</span>
         <h1>Governance receipt</h1>
-        <p>A durable off-chain record of the signed Testnet governance decision.</p>
+        <p>A durable off-chain record of the signed signalling vote.</p>
       </header>
       {receipt.isLoading ? (
         <div className="governance-evaluation-state" role="status">
@@ -56,8 +56,8 @@ function GovernanceReceiptPage() {
         <VoteReceipt receipt={receipt.data} />
       ) : null}
       <p className="governance-receipt-page__boundary">
-        This receipt records an unaudited, off-chain Testnet demonstration. It does not prove one
-        person per DID or execute a governance decision.
+        This is an unaudited Testnet demonstration. The receipt does not prove one person per DID or
+        execute a governance decision.
       </p>
     </div>
   );
