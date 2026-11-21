@@ -629,7 +629,7 @@ function ReputationSection({
           Evaluated {formatTimestamp(result.evaluatedAt)} from {result.evidence.length} accepted
           Claim Cell{result.evidence.length === 1 ? "" : "s"}.
         </p>
-        <a className="v-button v-button--secondary" href="/transparency">
+        <a className="v-button v-button--secondary" href="/transparency#method">
           Scoring methodology <ArrowUpRight size={13} aria-hidden="true" />
         </a>
       </div>

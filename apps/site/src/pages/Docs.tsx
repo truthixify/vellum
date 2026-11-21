@@ -110,7 +110,7 @@ function DocsNavigation({ page }: { page: DocsPage }) {
       <a href={SCHEMAS_URL}>Schema registry</a>
       <a href={CLAIM_CELL_URL}>Claim Cell protocol</a>
       <a href={GOVERNANCE_GUIDE_URL}>Governance gating</a>
-      <a href="/transparency">Reputation policy</a>
+      <a href="/transparency#method">Reputation policy</a>
       <a href={SDK_URL}>Vellum SDK</a>
       <a href={DID_PACKAGE_URL}>did:ckb package</a>
     </nav>
@@ -302,7 +302,7 @@ function DocsIndex() {
           <ExternalLink href={SCHEMAS_URL}>Published schemas and pinned hashes</ExternalLink>
           <ExternalLink href={SDK_URL}>SDK API and deployment configuration</ExternalLink>
           <a href="/docs/identity">Resolve did:ckb identities</a>
-          <a href="/transparency">Versioned reputation policy</a>
+          <a href="/transparency#method">Versioned reputation policy</a>
         </div>
       </section>
 
@@ -545,7 +545,7 @@ function IntegratorDocs() {
 
       <div className="docs-pagination">
         <a href="/docs/issuers">Previous: issuer guide</a>
-        <a href="/transparency">Next: reputation policy</a>
+        <a href="/transparency#method">Next: reputation policy</a>
       </div>
     </DocsLayout>
   );
