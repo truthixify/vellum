@@ -40,7 +40,7 @@ describe("GovernanceOverview", () => {
     expect(markup).toContain("75%");
     expect(markup).toContain("How participation works");
     expect(markup).toContain("No CKB transaction or fee is required");
-    expect(markup).toContain("records one vote per DID");
+    expect(markup).toContain("fixes one choice and weight per DID");
   });
 
   test("keeps tally failures recoverable before the voting flow starts", () => {

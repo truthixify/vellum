@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 
+import { GovernanceExistingVote } from "@/components/governance/GovernanceExistingVote";
 import { GovernanceOverview } from "@/components/governance/GovernanceOverview";
 import { GovernanceSteps } from "@/components/governance/GovernanceSteps";
 import { VoteReceipt } from "@/components/governance/VoteReceipt";
@@ -26,6 +27,7 @@ import { useActiveIdentity } from "@/lib/active-identity-context";
 import {
   evaluateGovernanceDid,
   fetchGovernanceProposal,
+  fetchGovernanceVoteStatus,
   GovernanceRequestError,
   submitGovernanceVote,
 } from "@/lib/governance";
@@ -36,11 +38,16 @@ import {
   type GovernanceEvaluation,
   type GovernanceProposalSnapshot,
   type GovernanceProposalStatus,
+  type GovernanceVoteStatus,
 } from "@/lib/governance-contracts";
 
 export const Route = createFileRoute("/demo/governance/")({ component: GovernanceDemoPage });
 
 const PROPOSAL_QUERY_KEY = ["governance-proposal", GOVERNANCE_PROPOSAL.id] as const;
+
+function voteStatusQueryKey(did: string) {
+  return ["governance-vote-status", did] as const;
+}
 
 type GovernanceStage = 0 | 1 | 2 | 3 | 4;
 
@@ -182,15 +189,34 @@ function GovernanceVoteFlow({
     }
   }, [activeDid, identityPrefilled, input, subject]);
 
-  const evaluation = useQuery({
-    queryKey: ["governance-evaluation", subject],
-    queryFn: () => evaluateGovernanceDid(subject),
+  const currentInput = input.trim();
+  const evaluationIsCurrent = !!subject && currentInput === subject;
+  const voteStatus = useQuery({
+    queryKey: voteStatusQueryKey(subject),
+    queryFn: () => fetchGovernanceVoteStatus(subject),
     enabled: !!subject,
     retry: false,
   });
-  const currentInput = input.trim();
-  const evaluationIsCurrent = !!subject && currentInput === subject;
-  const eligible = evaluationIsCurrent && evaluation.data?.status === "eligible";
+  const evaluation = useQuery({
+    queryKey: ["governance-evaluation", subject],
+    queryFn: () => evaluateGovernanceDid(subject),
+    enabled:
+      !!subject &&
+      voteStatus.isSuccess &&
+      !voteStatus.isFetching &&
+      voteStatus.data.status === "not_recorded",
+    retry: false,
+  });
+  const existingVote =
+    evaluationIsCurrent && voteStatus.data?.status === "recorded"
+      ? voteStatus.data.receipt
+      : undefined;
+  const eligible =
+    evaluationIsCurrent &&
+    voteStatus.isSuccess &&
+    !voteStatus.isFetching &&
+    voteStatus.data?.status === "not_recorded" &&
+    evaluation.data?.status === "eligible";
   const controlsSubject = !!activeDid && activeDid === subject;
   const canReview =
     !!signer &&
@@ -199,6 +225,10 @@ function GovernanceVoteFlow({
     controlsSubject &&
     eligible &&
     proposalStatus === "open";
+
+  useEffect(() => {
+    if (existingVote && stage > 1 && stage < 4) setStage(1);
+  }, [existingVote, stage]);
 
   const vote = useMutation({
     mutationFn: async () => {
@@ -216,9 +246,20 @@ function GovernanceVoteFlow({
     onSuccess: (result) => {
       setLastSubject(subject);
       setStage(4);
+      const recordedStatus: GovernanceVoteStatus = {
+        status: "recorded",
+        receipt: result.receipt,
+      };
+      queryClient.setQueryData(voteStatusQueryKey(subject), recordedStatus);
       queryClient.setQueryData<GovernanceProposalSnapshot>(PROPOSAL_QUERY_KEY, (current) =>
         current ? { ...current, results: result.results } : current,
       );
+    },
+    onError: (error) => {
+      if (error instanceof GovernanceRequestError && error.code === "already_voted") {
+        setStage(1);
+        void voteStatus.refetch();
+      }
     },
   });
 
@@ -227,8 +268,13 @@ function GovernanceVoteFlow({
     const next = input.trim();
     vote.reset();
     setLastSubject(undefined);
-    if (next === subject && next) void evaluation.refetch();
-    else setSubject(next);
+    if (next === subject && next) {
+      void voteStatus.refetch().then((result) => {
+        if (result.data?.status === "not_recorded") void evaluation.refetch();
+      });
+    } else {
+      setSubject(next);
+    }
   }
 
   function evaluateControlledIdentity(did: string) {
@@ -236,6 +282,7 @@ function GovernanceVoteFlow({
     setLastSubject(undefined);
     setInput(did);
     setSubject(did);
+    setStage(1);
   }
 
   function startAnotherEvaluation() {
@@ -245,6 +292,10 @@ function GovernanceVoteFlow({
     setInput(activeDid ?? "");
     setStage(1);
   }
+
+  const submittedReceipt =
+    vote.data && lastSubject === vote.data.receipt.subjectDid ? vote.data.receipt : undefined;
+  const activeReceipt = submittedReceipt ?? existingVote;
 
   let stageContent: ReactNode;
   if (stage === 0) {
@@ -262,12 +313,17 @@ function GovernanceVoteFlow({
       <IdentityStage
         input={input}
         activeDid={activeDid}
+        subjectSet={!!subject}
+        voteStatus={evaluationIsCurrent ? voteStatus.data : undefined}
+        statusLoading={evaluationIsCurrent && (voteStatus.isLoading || voteStatus.isFetching)}
+        statusError={evaluationIsCurrent ? voteStatus.error : null}
         evaluation={evaluation.data}
         loading={evaluation.isLoading || evaluation.isFetching}
         error={evaluation.error}
         evaluationIsCurrent={evaluationIsCurrent}
         onInputChange={setInput}
         onEvaluate={evaluate}
+        onRetryStatus={() => void voteStatus.refetch()}
         onUseActive={() => activeDid && setInput(activeDid)}
       />
     );
@@ -307,32 +363,35 @@ function GovernanceVoteFlow({
       />
     );
   } else {
-    stageContent =
-      vote.data && lastSubject === vote.data.receipt.subjectDid ? (
-        <div className="governance-stage-inner governance-receipt-stage">
-          <div className="issuance-stage-heading">
-            <span className="mono-caps">Receipt</span>
-            <h2>Vote recorded</h2>
-            <p>The signed signal is available through a durable public receipt.</p>
-          </div>
-          <VoteReceipt receipt={vote.data.receipt} linkToReceipt />
+    stageContent = activeReceipt ? (
+      <div className="governance-stage-inner governance-receipt-stage">
+        <div className="issuance-stage-heading">
+          <span className="mono-caps">Receipt</span>
+          <h2>{submittedReceipt ? "Vote recorded" : "Vote already recorded"}</h2>
+          <p>
+            {submittedReceipt
+              ? "The signed signal is available through a durable public receipt."
+              : "This identity's existing signal and recorded weight remain available below."}
+          </p>
         </div>
-      ) : (
-        <div className="governance-stage-inner">
-          <div className="governance-inline-alert" role="status">
-            <AlertCircle size={17} aria-hidden="true" />
-            <div>
-              <strong>No receipt available</strong>
-              <p>Return to the review step and record the ballot.</p>
-            </div>
+        <VoteReceipt receipt={activeReceipt} linkToReceipt />
+      </div>
+    ) : (
+      <div className="governance-stage-inner">
+        <div className="governance-inline-alert" role="status">
+          <AlertCircle size={17} aria-hidden="true" />
+          <div>
+            <strong>No receipt available</strong>
+            <p>Return to the review step and record the ballot.</p>
           </div>
         </div>
-      );
+      </div>
+    );
   }
 
   return (
     <section className="governance-flow" aria-label="Governance vote flow">
-      <GovernanceSteps activeStep={vote.data && lastSubject ? 5 : stage} />
+      <GovernanceSteps activeStep={activeReceipt && stage === 4 ? 5 : stage} />
       <div className="governance-stage-scroll">{stageContent}</div>
       <GovernanceStageFooter
         stage={stage}
@@ -340,10 +399,12 @@ function GovernanceVoteFlow({
         canReview={canReview}
         canSign={canReview && !vote.isPending}
         isSigning={vote.isPending}
-        hasReceipt={!!vote.data && lastSubject === vote.data.receipt.subjectDid}
+        alreadyVoted={!!existingVote}
+        hasReceipt={!!activeReceipt}
         onBack={() => setStage((current) => Math.max(0, current - 1) as GovernanceStage)}
         onNext={() => setStage((current) => Math.min(4, current + 1) as GovernanceStage)}
         onSign={() => vote.mutate()}
+        onViewReceipt={() => setStage(4)}
         onReset={startAnotherEvaluation}
       />
     </section>
@@ -353,22 +414,32 @@ function GovernanceVoteFlow({
 function IdentityStage({
   input,
   activeDid,
+  subjectSet,
+  voteStatus,
+  statusLoading,
+  statusError,
   evaluation,
   loading,
   error,
   evaluationIsCurrent,
   onInputChange,
   onEvaluate,
+  onRetryStatus,
   onUseActive,
 }: {
   input: string;
   activeDid: string | undefined;
+  subjectSet: boolean;
+  voteStatus: GovernanceVoteStatus | undefined;
+  statusLoading: boolean;
+  statusError: unknown;
   evaluation: GovernanceEvaluation | undefined;
   loading: boolean;
   error: unknown;
   evaluationIsCurrent: boolean;
   onInputChange: (value: string) => void;
   onEvaluate: (event: FormEvent) => void;
+  onRetryStatus: () => void;
   onUseActive: () => void;
 }) {
   return (
@@ -400,14 +471,68 @@ function IdentityStage({
           </button>
         )}
       </form>
-      {evaluation && !evaluationIsCurrent ? (
+      {subjectSet && !evaluationIsCurrent ? (
         <div className="governance-evaluation-empty">
           The identity changed. Evaluate it to continue.
         </div>
       ) : (
-        <EvaluationState evaluation={evaluation} loading={loading} error={error} />
+        <IdentityState
+          voteStatus={voteStatus}
+          statusLoading={statusLoading}
+          statusError={statusError}
+          evaluation={evaluation}
+          evaluationLoading={loading}
+          evaluationError={error}
+          onRetryStatus={onRetryStatus}
+        />
       )}
     </div>
+  );
+}
+
+function IdentityState({
+  voteStatus,
+  statusLoading,
+  statusError,
+  evaluation,
+  evaluationLoading,
+  evaluationError,
+  onRetryStatus,
+}: {
+  voteStatus: GovernanceVoteStatus | undefined;
+  statusLoading: boolean;
+  statusError: unknown;
+  evaluation: GovernanceEvaluation | undefined;
+  evaluationLoading: boolean;
+  evaluationError: unknown;
+  onRetryStatus: () => void;
+}) {
+  if (statusLoading) {
+    return (
+      <div className="governance-evaluation-state" role="status">
+        <span className="pulse-dot" aria-hidden="true" /> Checking prior participation
+      </div>
+    );
+  }
+  if (statusError) {
+    return (
+      <div className="governance-inline-alert" role="alert">
+        <AlertCircle size={17} aria-hidden="true" />
+        <div>
+          <strong>Vote status unavailable</strong>
+          <p>{errorMessage(statusError)}</p>
+        </div>
+        <button className="v-button v-button--quiet" type="button" onClick={onRetryStatus}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+  if (voteStatus?.status === "recorded") {
+    return <GovernanceExistingVote receipt={voteStatus.receipt} />;
+  }
+  return (
+    <EvaluationState evaluation={evaluation} loading={evaluationLoading} error={evaluationError} />
   );
 }
 
@@ -743,7 +868,9 @@ function ReviewStage({
           <FileCheck2 size={17} aria-hidden="true" />
           <p>
             The authorization binds this proposal, choice, identity, nonce, and expiry. The server
-            rechecks controller, eligibility, and weight before recording the vote.
+            rechecks controller, eligibility, and weight before recording the vote. Once recorded,
+            the choice and weight are final for this proposal; later reputation changes apply to
+            future proposals.
           </p>
         </div>
       </div>
@@ -775,10 +902,12 @@ function GovernanceStageFooter({
   canReview,
   canSign,
   isSigning,
+  alreadyVoted,
   hasReceipt,
   onBack,
   onNext,
   onSign,
+  onViewReceipt,
   onReset,
 }: {
   stage: GovernanceStage;
@@ -786,10 +915,12 @@ function GovernanceStageFooter({
   canReview: boolean;
   canSign: boolean;
   isSigning: boolean;
+  alreadyVoted: boolean;
   hasReceipt: boolean;
   onBack: () => void;
   onNext: () => void;
   onSign: () => void;
+  onViewReceipt: () => void;
   onReset: () => void;
 }) {
   const messages = [
@@ -799,10 +930,14 @@ function GovernanceStageFooter({
     "The wallet will sign the exact ballot shown above.",
     "The receipt preserves the recorded signal and evidence checkpoint.",
   ];
+  const message =
+    stage === 1 && alreadyVoted
+      ? "This identity's vote and recorded weight are fixed for this proposal."
+      : messages[stage];
 
   return (
     <footer className="issuance-stage-footer governance-stage-footer">
-      <span className="issuance-stage-footer__message">{messages[stage]}</span>
+      <span className="issuance-stage-footer__message">{message}</span>
       <div className="issuance-stage-footer__actions">
         {stage > 0 && stage < 4 && (
           <button
@@ -819,7 +954,12 @@ function GovernanceStageFooter({
             Check eligibility <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
-        {stage === 1 && (
+        {stage > 0 && stage < 4 && alreadyVoted && (
+          <button className="v-button v-button--primary" type="button" onClick={onViewReceipt}>
+            <FileCheck2 size={14} aria-hidden="true" /> View receipt
+          </button>
+        )}
+        {stage === 1 && !alreadyVoted && (
           <button
             className="v-button v-button--primary"
             type="button"
@@ -829,7 +969,7 @@ function GovernanceStageFooter({
             Ballot <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
-        {stage === 2 && (
+        {stage === 2 && !alreadyVoted && (
           <button
             className="v-button v-button--primary"
             type="button"
@@ -839,7 +979,7 @@ function GovernanceStageFooter({
             Review <ArrowRight size={14} aria-hidden="true" />
           </button>
         )}
-        {stage === 3 && (
+        {stage === 3 && !alreadyVoted && (
           <button
             className="v-button v-button--primary"
             type="button"

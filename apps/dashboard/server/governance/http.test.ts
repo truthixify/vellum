@@ -41,6 +41,7 @@ function service(overrides: Partial<GovernanceService> = {}): GovernanceService 
       participationWeight: null,
       evidence: [],
     }),
+    voteStatus: async () => ({ status: "not_recorded" }),
     challenge: async () => ({
       challenge: "challenge",
       message: "message",
@@ -57,13 +58,17 @@ function service(overrides: Partial<GovernanceService> = {}): GovernanceService 
 }
 
 describe("governance HTTP boundary", () => {
-  test("serves the public proposal and evaluates one DID", async () => {
+  test("serves the public proposal, evaluation, and vote status", async () => {
     const proposal = await handleGovernanceRequest(
       new Request("https://dashboard.usevellum.xyz/api/governance/proposal"),
       service(),
     );
     const evaluation = await handleGovernanceRequest(
       new Request(`https://dashboard.usevellum.xyz/api/governance/evaluate?did=${DID}`),
+      service(),
+    );
+    const status = await handleGovernanceRequest(
+      new Request(`https://dashboard.usevellum.xyz/api/governance/vote-status?did=${DID}`),
       service(),
     );
     expect(proposal.status).toBe(200);
@@ -75,6 +80,12 @@ describe("governance HTTP boundary", () => {
     expect(await evaluation.json()).toMatchObject({
       ok: true,
       evaluation: { subjectDid: DID, status: "ineligible" },
+    });
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({
+      ok: true,
+      version: "1",
+      vote: { status: "not_recorded" },
     });
   });
 
@@ -156,6 +167,11 @@ describe("governance HTTP boundary", () => {
     expect(
       governanceActionFromUrl(new Request("https://dashboard.usevellum.xyz/api/governance/vote")),
     ).toBe("vote");
+    expect(
+      governanceActionFromUrl(
+        new Request("https://dashboard.usevellum.xyz/api/governance/vote-status"),
+      ),
+    ).toBe("vote-status");
     expect(
       governanceActionFromUrl(
         new Request("https://dashboard.usevellum.xyz/api/governance/vote/extra"),

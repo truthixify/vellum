@@ -89,7 +89,7 @@ export function GovernanceOverview({
           <ProcessStep
             number="04"
             title="Record the signal"
-            body="The server rechecks evidence, records one vote per DID, and updates the public tally."
+            body="The server rechecks evidence, then fixes one choice and weight per DID for this proposal."
           />
         </ol>
       </section>

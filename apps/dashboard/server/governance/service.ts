@@ -9,6 +9,7 @@ import {
   type GovernanceResultsState,
   type GovernanceVoteReceipt,
   type GovernanceVoteResult,
+  type GovernanceVoteStatus,
 } from "../../src/lib/governance-contracts.js";
 import {
   createGovernanceChallenge,
@@ -29,6 +30,7 @@ import {
   GovernanceStorageUnavailableError,
   type GovernanceLedger,
 } from "./ledger.js";
+import { validateReputationSubject } from "../reputation/service.js";
 
 export type GovernanceServiceEnvironment = {
   [key: string]: string | undefined;
@@ -52,6 +54,7 @@ export type GovernanceServiceDependencies = {
 export type GovernanceService = {
   proposal(): Promise<GovernanceProposalSnapshot>;
   evaluate(subjectDid: string): Promise<GovernanceEvaluation>;
+  voteStatus(subjectDid: string): Promise<GovernanceVoteStatus>;
   challenge(request: GovernanceChallengeRequest): Promise<GovernanceChallenge>;
   vote(request: GovernanceVoteRequest): Promise<GovernanceVoteResult>;
   receipt(receiptId: string): Promise<GovernanceVoteReceipt>;
@@ -166,6 +169,25 @@ export function createGovernanceService(
 
     evaluate(subjectDid) {
       return mapEvaluation(subjectDid, dependencies.evaluateSubject);
+    },
+
+    async voteStatus(subjectDid) {
+      let canonicalDid: string;
+      try {
+        canonicalDid = validateReputationSubject(subjectDid);
+      } catch (error) {
+        if (error instanceof InvalidGovernanceSubjectError) {
+          throw new GovernanceServiceError("invalid_request", 400, error.message);
+        }
+        throw error;
+      }
+
+      try {
+        const receipt = await dependencies.ledger().getVote(GOVERNANCE_PROPOSAL.id, canonicalDid);
+        return receipt ? { status: "recorded", receipt } : { status: "not_recorded" };
+      } catch (error) {
+        storageError(error);
+      }
     },
 
     async challenge(request) {

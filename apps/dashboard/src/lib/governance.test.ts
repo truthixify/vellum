@@ -9,6 +9,7 @@ import {
 import {
   evaluateGovernanceDid,
   fetchGovernanceProposal,
+  fetchGovernanceVoteStatus,
   GovernanceRequestError,
   submitGovernanceVote,
 } from "./governance";
@@ -116,6 +117,35 @@ describe("governance client", () => {
     await expect(evaluateGovernanceDid(DID, unavailable)).rejects.toEqual(
       new GovernanceRequestError("service_unavailable", "Evaluation unavailable"),
     );
+  });
+
+  test("loads an existing immutable vote before ballot authorization", async () => {
+    const recorded = mock(async () =>
+      Response.json({
+        ok: true,
+        version: GOVERNANCE_API_VERSION,
+        vote: { status: "recorded", receipt: receipt() },
+      }),
+    );
+    await expect(fetchGovernanceVoteStatus(DID, recorded)).resolves.toMatchObject({
+      status: "recorded",
+      receipt: { subjectDid: DID, choice: "yes", participationWeight: 3 },
+    });
+    expect(recorded).toHaveBeenCalledWith(
+      `/api/governance/vote-status?did=${encodeURIComponent(DID)}`,
+      { credentials: "same-origin" },
+    );
+
+    const empty = mock(async () =>
+      Response.json({
+        ok: true,
+        version: GOVERNANCE_API_VERSION,
+        vote: { status: "not_recorded" },
+      }),
+    );
+    await expect(fetchGovernanceVoteStatus(DID, empty)).resolves.toEqual({
+      status: "not_recorded",
+    });
   });
 
   test("signs the server message and submits the exact vote intent", async () => {

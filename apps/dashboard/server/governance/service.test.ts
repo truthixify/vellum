@@ -5,7 +5,7 @@ import {
   type GovernanceChallenge,
   type GovernanceEvaluation,
 } from "../../src/lib/governance-contracts";
-import { MemoryGovernanceLedger } from "./ledger";
+import { GovernanceStorageUnavailableError, MemoryGovernanceLedger } from "./ledger";
 import { createGovernanceService, type GovernanceServiceDependencies } from "./service";
 
 const DID = "did:ckb:4kiidiczwthgxj7dltzkzopgbwu3v6jc";
@@ -115,6 +115,35 @@ describe("governance service", () => {
     });
     expect(evaluations).toBe(1);
     await expect(service.receipt(first.receipt.receiptId)).resolves.toEqual(first.receipt);
+  });
+
+  test("reports whether an identity already has an immutable vote", async () => {
+    const service = createGovernanceService({}, dependencies());
+
+    await expect(service.voteStatus(DID)).resolves.toEqual({ status: "not_recorded" });
+    const recorded = await service.vote(request());
+    await expect(service.voteStatus(DID)).resolves.toEqual({
+      status: "recorded",
+      receipt: recorded.receipt,
+    });
+    await expect(service.voteStatus("did:ckb:not-canonical")).rejects.toMatchObject({
+      code: "invalid_request",
+    });
+  });
+
+  test("fails closed when prior participation cannot be checked", async () => {
+    const service = createGovernanceService(
+      {},
+      dependencies({
+        ledger: () => {
+          throw new GovernanceStorageUnavailableError();
+        },
+      }),
+    );
+
+    await expect(service.voteStatus(DID)).rejects.toMatchObject({
+      code: "service_unavailable",
+    });
   });
 
   test("rejects ineligible identities and conflicting second choices", async () => {
