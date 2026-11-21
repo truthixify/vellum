@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, ExternalLink } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, ExternalLink } from "lucide-react";
 import { StatusMark } from "@vellum/ui";
 
 import {
@@ -11,6 +11,7 @@ import {
   GRANT_VOTE_URL,
   GRANT_VOTE_VERIFICATION_URL,
   PUBLICLY_RECORDED_PAID_USD,
+  RECORDED_PAYMENT_COUNT,
   REMAINING_GRANT_USD,
 } from "../data/grant-transparency";
 
@@ -25,16 +26,33 @@ function formatUsd(amount: number) {
   }).format(amount);
 }
 
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00Z`));
+}
+
+function formatGrantShare(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(amount / GRANT_TOTAL_USD);
+}
+
 function ExternalLinkIcon() {
   return <ArrowUpRight size={13} aria-hidden="true" />;
 }
 
 export function Transparency() {
+  const grantDeliveryComplete = RECORDED_PAYMENT_COUNT === GRANT_STAGES.length;
+
   return (
     <div className="transparency-page">
       <section className="transparency-hero site-content">
-        <StatusMark tone="warning" icon={false}>
-          Grant delivery in progress
+        <StatusMark tone={grantDeliveryComplete ? "positive" : "warning"} icon={false}>
+          Grant delivery {grantDeliveryComplete ? "complete" : "in progress"}
         </StatusMark>
         <h1>Grant funding and delivery record</h1>
         <p>
@@ -47,7 +65,8 @@ export function Transparency() {
             Read the approved proposal <ExternalLinkIcon />
           </a>
           <span>
-            Updated <time dateTime={GRANT_RECORD_UPDATED_AT}>November 21, 2026</time>
+            Updated{" "}
+            <time dateTime={GRANT_RECORD_UPDATED_AT}>{formatDate(GRANT_RECORD_UPDATED_AT)}</time>
           </span>
         </div>
       </section>
@@ -78,16 +97,18 @@ export function Transparency() {
             <div>
               <small>Publicly recorded as paid</small>
               <strong>{formatUsd(PUBLICLY_RECORDED_PAID_USD)}</strong>
-              <span>Initial funding through Milestone 2</span>
+              <span>Paid stages with linked transactions</span>
             </div>
             <div>
               <small>Remaining grant amount</small>
               <strong>{formatUsd(REMAINING_GRANT_USD)}</strong>
-              <span>Milestone 3</span>
+              <span>Approved allocation not yet recorded as paid</span>
             </div>
             <div>
               <small>Payments recorded</small>
-              <strong>3 of 4</strong>
+              <strong>
+                {RECORDED_PAYMENT_COUNT} of {GRANT_STAGES.length}
+              </strong>
               <span>Every transaction linked below</span>
             </div>
           </div>
@@ -98,7 +119,7 @@ export function Transparency() {
               <strong>Passed with {GRANT_VOTE.approval} approval</strong>
               <span>
                 {GRANT_VOTE.totalWeight} total voting weight, confirmed on{" "}
-                <time dateTime={GRANT_VOTE.confirmedAt}>September 4, 2026</time>.
+                <time dateTime={GRANT_VOTE.confirmedAt}>{formatDate(GRANT_VOTE.confirmedAt)}</time>.
               </span>
             </div>
             <div>
@@ -135,7 +156,10 @@ export function Transparency() {
                 <div className="grant-stage__body">
                   <div className="grant-stage__topline">
                     <small>{stage.label}</small>
-                    <StatusMark tone={stage.tone} icon={stage.status !== "In progress"}>
+                    <StatusMark
+                      tone={stage.status === "Paid" ? "positive" : "warning"}
+                      icon={stage.status === "Paid"}
+                    >
                       {stage.status}
                     </StatusMark>
                   </div>
@@ -175,22 +199,37 @@ export function Transparency() {
             </p>
           </div>
 
-          <div className="budget-table">
-            <div className="budget-table__head" aria-hidden="true">
-              <span>Category</span>
-              <span>Amount</span>
-              <span>Share</span>
-              <span>Scope</span>
-            </div>
-            {BUDGET_ALLOCATIONS.map((allocation) => (
-              <div key={allocation.category}>
-                <strong>{allocation.category}</strong>
-                <span className="mono">{formatUsd(allocation.amountUsd)}</span>
-                <span className="mono">{allocation.share}</span>
-                <span>{allocation.detail}</span>
-              </div>
-            ))}
-          </div>
+          <table className="budget-table">
+            <caption className="sr-only">Approved grant allocation</caption>
+            <colgroup>
+              <col className="budget-table__category-column" />
+              <col className="budget-table__amount-column" />
+              <col className="budget-table__share-column" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Category</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Share</th>
+                <th scope="col">Scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BUDGET_ALLOCATIONS.map((allocation) => (
+                <tr key={allocation.category}>
+                  <th className="budget-table__category" scope="row">
+                    {allocation.category}
+                  </th>
+                  <td className="budget-table__amount mono">{formatUsd(allocation.amountUsd)}</td>
+                  <td className="budget-table__share mono">
+                    {formatGrantShare(allocation.amountUsd)}
+                  </td>
+                  <td className="budget-table__scope">{allocation.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           <p className="transparency-note">
             These figures reproduce the approved grant allocation. They are not a claim that every
             allocated dollar has already been spent. Payment evidence is linked per stage above.
@@ -211,21 +250,33 @@ export function Transparency() {
             </p>
           </div>
 
-          <div className="method-table">
-            <div className="method-table__head">
-              <span>Version</span>
-              <span>Status</span>
-              <span>Current scope</span>
-            </div>
-            <div>
-              <span className="mono">vellum.reputation.v7</span>
-              <span>Live on Testnet</span>
-              <span>
-                Scores accepted work in curated CKB repositories, eligible CKBoost completions,
-                verified account age and recency, and recognized community evidence.
-              </span>
-            </div>
-          </div>
+          <table className="method-table">
+            <caption className="sr-only">Current reputation policy</caption>
+            <colgroup>
+              <col className="method-table__version-column" />
+              <col className="method-table__status-column" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Version</th>
+                <th scope="col">Status</th>
+                <th scope="col">Current scope</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th className="method-table__version mono" scope="row">
+                  vellum.reputation.v7
+                </th>
+                <td className="method-table__status">Live on Testnet</td>
+                <td className="method-table__scope">
+                  Scores accepted work in curated CKB repositories, eligible CKBoost completions,
+                  verified account age and recency, and recognized community evidence.
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
           <div className="service-grid">
             <div>
@@ -276,7 +327,7 @@ export function Transparency() {
                 </li>
                 <li>
                   <a href="/docs/integrators">
-                    Integration guide <ExternalLink size={13} aria-hidden="true" />
+                    Integration guide <ArrowRight size={13} aria-hidden="true" />
                   </a>
                 </li>
                 <li>

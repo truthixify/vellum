@@ -5,6 +5,7 @@ import {
   GRANT_STAGES,
   GRANT_TOTAL_USD,
   PUBLICLY_RECORDED_PAID_USD,
+  RECORDED_PAYMENT_COUNT,
   REMAINING_GRANT_USD,
 } from "./grant-transparency";
 
@@ -18,6 +19,7 @@ describe("grant transparency record", () => {
     );
     expect(PUBLICLY_RECORDED_PAID_USD).toBe(5_250);
     expect(REMAINING_GRANT_USD).toBe(1_750);
+    expect(RECORDED_PAYMENT_COUNT).toBe(3);
   });
 
   test("keeps milestone and payment evidence public", () => {
@@ -34,10 +36,16 @@ describe("grant transparency record", () => {
     }
 
     const paidStages = GRANT_STAGES.filter((stage) => stage.status === "Paid");
-    expect(paidStages).toHaveLength(3);
+    expect(paidStages).toHaveLength(RECORDED_PAYMENT_COUNT);
+
+    const paymentTransactions = new Set<string>();
     for (const stage of paidStages) {
       expect(stage.evidence.some((item) => item.label === "Payment record")).toBe(true);
       expect(stage.evidence.some((item) => item.label === "Payment transaction")).toBe(true);
+      paymentTransactions.add(
+        stage.evidence.find((item) => item.label === "Payment transaction")?.href ?? "",
+      );
     }
+    expect(paymentTransactions.size).toBe(RECORDED_PAYMENT_COUNT);
   });
 });

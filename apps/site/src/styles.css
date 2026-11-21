@@ -2203,6 +2203,11 @@ a.profile-account:hover {
   scroll-margin-top: 80px;
 }
 
+.transparency-page a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .transparency-section {
   padding-block: 56px;
   border-top: 1px solid var(--line);
@@ -2387,31 +2392,51 @@ a.profile-account:hover {
 }
 
 .budget-table {
+  width: 100%;
   margin-top: 32px;
+  border-collapse: collapse;
   border-top: 1px solid var(--line-strong);
+  table-layout: fixed;
 }
 
-.budget-table > div {
-  display: grid;
-  grid-template-columns: minmax(160px, 0.8fr) 100px 72px minmax(0, 2fr);
-  align-items: baseline;
-  gap: 16px;
+.budget-table__category-column {
+  width: 22%;
+}
+
+.budget-table__amount-column {
+  width: 12%;
+}
+
+.budget-table__share-column {
+  width: 9%;
+}
+
+.budget-table th,
+.budget-table td {
   padding: 15px 0;
   border-bottom: 1px solid var(--line);
   font-size: 13px;
+  text-align: left;
+  vertical-align: baseline;
 }
 
-.budget-table__head {
-  padding-block: 10px !important;
+.budget-table th:not(:last-child),
+.budget-table td:not(:last-child) {
+  padding-right: 16px;
+}
+
+.budget-table thead th {
+  padding-block: 10px;
   color: var(--ink-secondary);
-  font-size: 11px !important;
+  font-size: 11px;
+  font-weight: 400;
 }
 
-.budget-table strong {
+.budget-table tbody th {
   font-weight: 500;
 }
 
-.budget-table > div > :last-child {
+.budget-table__scope {
   color: var(--ink-secondary);
   line-height: 1.55;
 }
@@ -2425,23 +2450,52 @@ a.profile-account:hover {
 }
 
 .method-table {
+  width: 100%;
   margin-top: 32px;
+  border-collapse: collapse;
   border-top: 1px solid var(--line);
+  table-layout: fixed;
 }
 
-.method-table > div {
-  display: grid;
-  grid-template-columns: 120px 180px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 16px;
+.method-table__version-column {
+  width: 24%;
+}
+
+.method-table__status-column {
+  width: 20%;
+}
+
+.method-table th,
+.method-table td {
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
   font-size: 13px;
+  text-align: left;
+  vertical-align: baseline;
 }
 
-.method-table__head {
+.method-table th:not(:last-child),
+.method-table td:not(:last-child) {
+  padding-right: 16px;
+}
+
+.method-table thead th {
   color: var(--ink-secondary);
-  font-size: 12px !important;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.method-table tbody th {
+  font-weight: 400;
+}
+
+.method-table__version {
+  white-space: nowrap;
+}
+
+.method-table__scope {
+  color: var(--ink-secondary);
+  line-height: 1.55;
 }
 
 .service-grid {
@@ -2868,21 +2922,50 @@ a.profile-account:hover {
     align-items: flex-start;
   }
 
-  .budget-table__head {
-    display: none !important;
+  .budget-table colgroup,
+  .method-table colgroup {
+    display: none;
   }
 
-  .budget-table > div {
+  .budget-table thead,
+  .method-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .budget-table,
+  .budget-table tbody,
+  .method-table,
+  .method-table tbody {
+    display: block;
+  }
+
+  .budget-table tbody tr {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 5px 16px;
     padding-block: 18px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .budget-table > div > :nth-child(3) {
+  .budget-table tbody th,
+  .budget-table tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .budget-table__share {
     grid-column: 2;
   }
 
-  .budget-table > div > :last-child {
+  .budget-table__scope {
     grid-column: 1 / -1;
   }
 
@@ -3182,17 +3265,27 @@ a.profile-account:hover {
     height: 44px;
   }
 
-  .method-table__head {
-    display: none !important;
+  .method-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 5px 16px;
+    padding-block: 12px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .method-table > div {
-    grid-template-columns: 90px minmax(0, 1fr);
+  .method-table tbody th,
+  .method-table tbody td {
+    padding: 0;
+    border: 0;
   }
 
-  .method-table > div > :last-child {
+  .method-table__scope {
     grid-column: 1 / -1;
-    color: var(--ink-secondary);
+  }
+
+  .method-table__status {
+    white-space: nowrap;
   }
 
   .transparency-hero h1 {
@@ -3220,15 +3313,15 @@ a.profile-account:hover {
 
 @media (max-width: 390px) {
   .site-header__inner {
-    gap: 35px;
+    gap: 16px;
   }
 
   .site-nav {
-    gap: 4px;
+    gap: 10px;
   }
 
   .site-nav a {
-    padding-inline: 10px;
+    padding-inline: 0;
   }
 
   .home-hero__actions {

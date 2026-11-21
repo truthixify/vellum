@@ -5,7 +5,6 @@ export type GrantStage = {
   label: string;
   title: string;
   status: GrantStageStatus;
-  tone: "positive" | "warning";
   allocationUsd: number;
   paymentState: string;
   summary: string;
@@ -38,7 +37,6 @@ export const GRANT_STAGES: readonly GrantStage[] = [
     label: "Initial funding",
     title: "Roadmap and public tracking",
     status: "Paid",
-    tone: "positive",
     allocationUsd: GRANT_TRANCHE_USD,
     paymentState: "Payment recorded on September 5, 2026",
     summary:
@@ -58,7 +56,6 @@ export const GRANT_STAGES: readonly GrantStage[] = [
     label: "Milestone 1",
     title: "Claim Cell, SDK, verification, and scoring",
     status: "Paid",
-    tone: "positive",
     allocationUsd: GRANT_TRANCHE_USD,
     paymentState: "Payment recorded on October 15, 2026",
     summary:
@@ -85,7 +82,6 @@ export const GRANT_STAGES: readonly GrantStage[] = [
     label: "Milestone 2",
     title: "Builder profiles, CKBoost, and public website",
     status: "Paid",
-    tone: "positive",
     allocationUsd: GRANT_TRANCHE_USD,
     paymentState: "Payment recorded on November 17, 2026",
     summary:
@@ -116,7 +112,6 @@ export const GRANT_STAGES: readonly GrantStage[] = [
     label: "Milestone 3",
     title: "Governance, partner issuance, and production readiness",
     status: "In progress",
-    tone: "warning",
     allocationUsd: GRANT_TRANCHE_USD,
     paymentState: "Released after delivery review and approval",
     summary:
@@ -154,27 +149,29 @@ export const BUDGET_ALLOCATIONS = [
   {
     category: "Development",
     amountUsd: 6_000,
-    share: "85.7%",
     detail:
       "Claim contracts, SDK, verification, scoring, profiles, integrations, governance, and issuance UI.",
   },
   {
     category: "Infrastructure and hosting",
     amountUsd: 500,
-    share: "7.1%",
     detail: "Domain, public applications, verification endpoints, and standard hosting costs.",
   },
   {
     category: "Documentation and community",
     amountUsd: 500,
-    share: "7.1%",
     detail:
       "Schema specifications, integration guides, delivery reports, and public review support.",
   },
 ] as const;
 
-export const PUBLICLY_RECORDED_PAID_USD = GRANT_STAGES.filter(
-  (stage) => stage.status === "Paid",
-).reduce((total, stage) => total + stage.allocationUsd, 0);
+const PAID_GRANT_STAGES = GRANT_STAGES.filter((stage) => stage.status === "Paid");
+
+export const RECORDED_PAYMENT_COUNT = PAID_GRANT_STAGES.length;
+
+export const PUBLICLY_RECORDED_PAID_USD = PAID_GRANT_STAGES.reduce(
+  (total, stage) => total + stage.allocationUsd,
+  0,
+);
 
 export const REMAINING_GRANT_USD = GRANT_TOTAL_USD - PUBLICLY_RECORDED_PAID_USD;
