@@ -991,13 +991,6 @@
   height: clamp(14px, 1.83cqw, 22px);
 }
 
-.reputation-share-card__brand > span:last-child {
-  margin-left: auto;
-  color: var(--share-muted);
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: clamp(7px, 0.92cqw, 11px);
-}
-
 .reputation-share-card__body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 28%;
@@ -1163,7 +1156,6 @@
     height: clamp(17px, 5.2cqw, 20px);
   }
 
-  .reputation-share-card--preview .reputation-share-card__brand > span:last-child,
   .reputation-share-card--preview .reputation-share-card__score > span,
   .reputation-share-card--preview .reputation-share-card__qr > span,
   .reputation-share-card--preview .reputation-share-card__categories span,

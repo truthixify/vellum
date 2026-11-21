@@ -61,7 +61,7 @@ function ResolvePage() {
         <div>
           <span className="dashboard-page-kicker">Public registry</span>
           <h1>Resolve an identity</h1>
-          <p>Look up any did:ckb identifier and inspect its current document on CKB Testnet.</p>
+          <p>Look up any did:ckb identifier and inspect its current on-chain document.</p>
         </div>
         <StatusMark tone="info" icon={false}>
           CKB Testnet
@@ -83,12 +83,12 @@ function ResolvePage() {
             {status === "loading" ? "Resolving..." : "Resolve"}
           </VButton>
         </div>
-        <small>Resolved directly against CKB Testnet</small>
+        <small>Reads the live DID Metadata Cell</small>
       </form>
 
       {status === "loading" && (
         <div className="dashboard-verify-result" role="status">
-          <div className="mono-caps text-muted-foreground">Resolving DID on CKB Testnet...</div>
+          <div className="mono-caps text-muted-foreground">Resolving current DID record...</div>
         </div>
       )}
 
@@ -96,7 +96,7 @@ function ResolvePage() {
         <div className="dashboard-verify-result">
           <div className="mono-caps text-alarm mb-2">Not found</div>
           <p className="text-muted-foreground">
-            No Live DID Cell matches that identifier on the current network.
+            No live DID Cell matches that identifier in the Testnet registry.
           </p>
         </div>
       )}

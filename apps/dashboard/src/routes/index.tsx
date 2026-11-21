@@ -396,7 +396,7 @@ function EvidenceCoverage({
         <div>
           <dt>Network</dt>
           <dd className={`mono${mainnet ? " warning" : ""}`}>
-            {mainnet ? "MAINNET · unsupported" : "CKB TESTNET"}
+            {mainnet ? "MAINNET · unsupported" : "TESTNET"}
           </dd>
         </div>
       </dl>
@@ -601,7 +601,7 @@ function EvidenceLedger({ result }: { result: ReputationResponse | undefined }) 
               </span>
               <a
                 className="v-button v-button--quiet"
-                href={`https://pudge.explorer.nervos.org/transaction/${evidence.claim.transactionHash}`}
+                href={`https://testnet.explorer.nervos.org/transaction/${evidence.claim.transactionHash}`}
                 target="_blank"
                 rel="noreferrer"
               >

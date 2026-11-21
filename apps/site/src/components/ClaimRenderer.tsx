@@ -72,7 +72,7 @@ const RAW_MAX_STRING_LENGTH = 256;
 const RAW_MAX_KEY_LENGTH = 96;
 const RAW_MAX_OUTPUT_LENGTH = 12_000;
 const RAW_MAX_BYTES = 64;
-const TESTNET_TRANSACTION_EXPLORER = "https://pudge.explorer.nervos.org/transaction/";
+const TESTNET_TRANSACTION_EXPLORER = "https://testnet.explorer.nervos.org/transaction/";
 
 function truncate(value: string, maximum: number): string {
   if (value.length <= maximum) return value;

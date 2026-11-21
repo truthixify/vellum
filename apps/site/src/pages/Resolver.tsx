@@ -63,9 +63,7 @@ export function Resolver() {
     <section className="resolver-page">
       <div className="resolver-page__inner">
         <h1>Resolve a DID</h1>
-        <p>
-          Enter a Vellum identifier to read its current identity record directly from CKB Testnet.
-        </p>
+        <p>Enter a Vellum identifier to read its current identity record directly from CKB.</p>
         <form className="resolver-form" onSubmit={resolve}>
           <label htmlFor="did-input">Identifier</label>
           <div className="resolver-form__row">
@@ -92,8 +90,7 @@ export function Resolver() {
             </Button>
           </div>
           <small>
-            Format <span className="mono">did:ckb:&lt;base32 identifier&gt;</span> - resolved
-            against CKB Testnet
+            Format <span className="mono">did:ckb:&lt;base32 identifier&gt;</span>
           </small>
         </form>
         <div className="resolver-network">
@@ -130,7 +127,7 @@ function ResolverResult({
         <span />
         <span />
         <span />
-        <p>Resolving on CKB Testnet.</p>
+        <p>Resolving the current identity record.</p>
       </div>
     );
   }
@@ -153,8 +150,8 @@ function ResolverResult({
       <div className="notice">
         <Search size={15} />
         <div>
-          <strong>This DID could not be resolved on CKB Testnet.</strong>
-          <p>No live DID Metadata Cell matches this identifier. Check the network or identifier.</p>
+          <strong>This DID could not be resolved.</strong>
+          <p>No live DID Metadata Cell matches this identifier in the Testnet registry.</p>
           <a className="v-button v-button--secondary" href={dashboardUrl("/claim")}>
             Claim an identity
           </a>

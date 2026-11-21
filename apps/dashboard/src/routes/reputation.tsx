@@ -128,11 +128,11 @@ function ReputationPage() {
     <div className="reputation-page">
       <header className="reputation-header">
         <div>
-          <span className="reputation-kicker">Live CKB Testnet evidence</span>
+          <span className="reputation-kicker">Reputation explorer</span>
           <h1>Reputation</h1>
           <p>A deterministic score derived from active claims under a versioned public policy.</p>
         </div>
-        <StatusMark tone="positive">Policy live</StatusMark>
+        <StatusMark tone="positive">Testnet policy</StatusMark>
       </header>
 
       <form className="reputation-lookup" onSubmit={handleLookup}>
@@ -185,9 +185,9 @@ function ReputationPage() {
 function TestnetOnlyState() {
   return (
     <section className="reputation-state reputation-state--warning" role="status">
-      <span>Testnet policy</span>
-      <h2>Switch networks or enter a Testnet DID.</h2>
-      <p>The current reputation policy does not evaluate Mainnet identities.</p>
+      <span>Unsupported network</span>
+      <h2>Reputation is not available for Mainnet identities.</h2>
+      <p>Switch the wallet to Testnet or enter a Testnet DID above.</p>
     </section>
   );
 }
@@ -269,7 +269,7 @@ function ReputationReport({ result }: { result: AvailableReputation }) {
         <div className="reputation-score-panel__subject">
           <span>Subject</span>
           <strong title={result.subject}>{shorten(result.subject, 22, 10)}</strong>
-          <small>CKB Testnet</small>
+          <small>{result.policyVersion}</small>
         </div>
         <div className="reputation-score-panel__score">
           <span>Aggregate score</span>
@@ -469,7 +469,7 @@ export function ReputationEvidenceItem({ evidence }: { evidence: ReputationEvide
                 <dt>Approval transaction</dt>
                 <dd>
                   <a
-                    href={`https://pudge.explorer.nervos.org/transaction/${ckboost.approvalTransactionHash}`}
+                    href={`https://testnet.explorer.nervos.org/transaction/${ckboost.approvalTransactionHash}`}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -481,7 +481,7 @@ export function ReputationEvidenceItem({ evidence }: { evidence: ReputationEvide
                 <dt>Reward claim transaction</dt>
                 <dd>
                   <a
-                    href={`https://pudge.explorer.nervos.org/transaction/${ckboost.rewardClaimTransactionHash}`}
+                    href={`https://testnet.explorer.nervos.org/transaction/${ckboost.rewardClaimTransactionHash}`}
                     target="_blank"
                     rel="noreferrer"
                   >
