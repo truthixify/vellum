@@ -4,7 +4,7 @@ import { governanceChallengeRequestSchema, governanceVoteRequestSchema } from ".
 import { GovernanceServiceError } from "./errors.js";
 import { createGovernanceService, type GovernanceService } from "./service.js";
 
-type GovernanceAction = "proposal" | "evaluate" | "challenge" | "vote" | "receipt";
+type GovernanceAction = "proposal" | "evaluate" | "vote-status" | "challenge" | "vote" | "receipt";
 
 function json(body: unknown, status = 200, headers?: HeadersInit): Response {
   return Response.json(body, {
@@ -44,7 +44,9 @@ export function governanceActionFromUrl(request: Request): string | undefined {
 }
 
 function isAction(value: string | undefined): value is GovernanceAction {
-  return ["proposal", "evaluate", "challenge", "vote", "receipt"].includes(value ?? "");
+  return ["proposal", "evaluate", "vote-status", "challenge", "vote", "receipt"].includes(
+    value ?? "",
+  );
 }
 
 function method(request: Request, expected: "GET" | "POST"): Response | undefined {
@@ -100,6 +102,23 @@ export async function handleGovernanceRequest(
           ok: true,
           version: GOVERNANCE_API_VERSION,
           evaluation: await service.evaluate(values[0]),
+        });
+      }
+      case "vote-status": {
+        const rejected = method(request, "GET");
+        if (rejected) return rejected;
+        const values = new URL(request.url).searchParams.getAll("did");
+        if (values.length !== 1 || !values[0]) {
+          throw new GovernanceServiceError(
+            "invalid_request",
+            400,
+            "A single did:ckb identity is required.",
+          );
+        }
+        return json({
+          ok: true,
+          version: GOVERNANCE_API_VERSION,
+          vote: await service.voteStatus(values[0]),
         });
       }
       case "challenge": {

@@ -195,8 +195,8 @@ function VerificationPage() {
           })}
         </dl>
         <p className="verification-policy__note">
-          Verified claims are public on CKB Testnet. They contain public evidence, never the
-          credential used to verify it.
+          Verified claims are public on chain. They contain public evidence, never the credential
+          used to verify it.
         </p>
       </section>
     </div>

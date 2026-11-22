@@ -109,6 +109,10 @@ export type GovernanceVoteReceipt = {
   evidence: readonly GovernanceEvidenceReference[];
 };
 
+export type GovernanceVoteStatus =
+  | { status: "not_recorded" }
+  | { status: "recorded"; receipt: GovernanceVoteReceipt };
+
 export type GovernanceChallenge = {
   challenge: string;
   message: string;

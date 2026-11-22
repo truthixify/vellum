@@ -26,8 +26,6 @@
     <line x1="650" y1="0" x2="650" y2="108" stroke="#cbd1ca"/>
     <text x="678" y="31" font-family="Menlo, monospace" font-size="12" fill="#526058">EVIDENCE</text>
     <text x="678" y="67" font-family="system-ui, sans-serif" font-size="20" font-weight="600" fill="#101814">Accepted and excluded</text>
-    <rect x="936" y="28" width="92" height="34" fill="#147a49"/>
-    <text x="982" y="50" text-anchor="middle" font-family="Menlo, monospace" font-size="11" font-weight="600" fill="#ffffff">TESTNET LIVE</text>
   </g>
 
   <text x="72" y="560" font-family="Menlo, monospace" font-size="14" fill="#526058">DASHBOARD.USEVELLUM.XYZ</text>

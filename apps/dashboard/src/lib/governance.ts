@@ -13,6 +13,7 @@ import {
   type GovernanceProposalSnapshot,
   type GovernanceVoteReceipt,
   type GovernanceVoteResult,
+  type GovernanceVoteStatus,
 } from "@/lib/governance-contracts";
 import { isDidCkb } from "@/lib/verification-issuer";
 
@@ -85,6 +86,10 @@ const receiptSchema = z
     evidence: z.array(evidenceSchema).min(1),
   })
   .strict();
+const voteStatusSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("not_recorded") }).strict(),
+  z.object({ status: z.literal("recorded"), receipt: receiptSchema }).strict(),
+]);
 
 const ERROR_CODES = [
   "invalid_request",
@@ -205,6 +210,31 @@ export async function evaluateGovernanceDid(
   );
   if (!parsed.success) invalidResponse();
   return parsed.data.evaluation;
+}
+
+export async function fetchGovernanceVoteStatus(
+  did: string,
+  fetchImplementation: FetchImplementation = globalThis.fetch,
+): Promise<GovernanceVoteStatus> {
+  if (!isDidCkb(did)) {
+    throw new GovernanceRequestError("invalid_request", "Use a canonical did:ckb identity.");
+  }
+  const schema = z
+    .object({
+      ok: z.literal(true),
+      version: z.literal(GOVERNANCE_API_VERSION),
+      vote: voteStatusSchema,
+    })
+    .strict();
+  const parsed = schema.safeParse(
+    await requestJson(
+      `/api/governance/vote-status?did=${encodeURIComponent(did)}`,
+      { credentials: "same-origin" },
+      fetchImplementation,
+    ),
+  );
+  if (!parsed.success) invalidResponse();
+  return parsed.data.vote;
 }
 
 export async function fetchGovernanceReceipt(

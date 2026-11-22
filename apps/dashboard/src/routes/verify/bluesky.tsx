@@ -347,7 +347,7 @@ function ConnectionPanel({
         <div className="account-verification-empty">
           <WalletCards size={24} strokeWidth={1.7} aria-hidden="true" />
           <h3>Connect your wallet</h3>
-          <p>Your Testnet identities are loaded from the lock controlled by your wallet.</p>
+          <p>Your identities are loaded from the lock controlled by your wallet.</p>
           <button className="v-button v-button--primary" type="button" onClick={() => open()}>
             <WalletCards size={15} aria-hidden="true" /> Connect wallet
           </button>
@@ -357,19 +357,19 @@ function ConnectionPanel({
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Wallet address unavailable</strong>
-            <p>Reconnect the wallet, then try loading your Testnet identities again.</p>
+            <p>Reconnect the wallet, then try loading your identities again.</p>
           </div>
         </div>
       ) : !lock || identities.isLoading ? (
         <div className="account-verification-loading" role="status" aria-live="polite">
-          <span className="pulse-dot" aria-hidden="true" /> Looking up Testnet identities
+          <span className="pulse-dot" aria-hidden="true" /> Looking up identities
         </div>
       ) : identities.isError ? (
         <div className="account-verification-alert" role="alert">
           <AlertCircle size={18} aria-hidden="true" />
           <div>
             <strong>Identity lookup failed</strong>
-            <p>The CKB Testnet indexer did not return your identities.</p>
+            <p>The indexer did not return your identities.</p>
             <button
               className="v-button v-button--quiet"
               type="button"
@@ -382,8 +382,8 @@ function ConnectionPanel({
       ) : records.length === 0 ? (
         <div className="account-verification-empty">
           <ShieldCheck size={24} strokeWidth={1.7} aria-hidden="true" />
-          <h3>No Testnet DID found</h3>
-          <p>This wallet does not control a did:ckb identity on CKB Testnet.</p>
+          <h3>No DID found</h3>
+          <p>This wallet does not control a did:ckb identity.</p>
           <Link className="v-button v-button--secondary" to="/claim">
             Claim a DID
           </Link>
@@ -749,7 +749,7 @@ function ResultStatus({
           <StatusMark tone="warning" icon={false}>
             Indexing claim
           </StatusMark>
-          <p>The transaction is committed. Waiting for the Testnet indexer to expose the claim.</p>
+          <p>The transaction is committed. Waiting for the indexer to expose the claim.</p>
         </div>
       </div>
     );
@@ -761,7 +761,7 @@ function ResultStatus({
         <StatusMark tone="info" icon={false}>
           Transaction submitted
         </StatusMark>
-        <p>Vellum submitted the claim. Waiting for it to commit on CKB Testnet.</p>
+        <p>Vellum submitted the claim. Waiting for it to commit.</p>
       </div>
     </div>
   );
@@ -818,7 +818,7 @@ function ProtocolSummary({ submission }: { submission?: BlueskySubmission }) {
         </div>
       </dl>
       <p>
-        The claim is public on CKB Testnet. Revoke the dedicated app password in Bluesky after
+        The claim is public on chain. Revoke the dedicated app password in Bluesky after
         verification.
       </p>
     </aside>

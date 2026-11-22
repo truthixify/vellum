@@ -21,7 +21,7 @@ describe("Vellum landing page", () => {
     expect(html).toContain("Portable identity and verifiable reputation on CKB");
     expect(html).toContain(`href="/profile/${encodeURIComponent(PROFILE_DID)}"`);
     expect(html).toContain(
-      `href="https://pudge.explorer.nervos.org/transaction/${CLAIM_TRANSACTION}"`,
+      `href="https://testnet.explorer.nervos.org/transaction/${CLAIM_TRANSACTION}"`,
     );
     expect(html).toContain("Send the Vellum Dashboard Link");
     expect(html).toContain("ckboost.quest.v1");
@@ -48,6 +48,7 @@ describe("Vellum landing page", () => {
     expect(html).not.toContain("deterministic example record");
     expect(html).not.toContain("Self-declared link");
     expect(html).not.toContain("vellum.reputation.v5");
+    expect(html).not.toContain("Confirmed on CKB Testnet");
   });
 
   test("publishes current production metadata and a large social preview", async () => {
@@ -56,6 +57,7 @@ describe("Vellum landing page", () => {
     const socialCardHeader = new DataView(await socialCard.arrayBuffer());
     const favicon = Bun.file(`${import.meta.dir}/../../public/favicon.svg`);
     const appleTouchIcon = Bun.file(`${import.meta.dir}/../../public/apple-touch-icon.png`);
+    const socialCardSource = await Bun.file(`${import.meta.dir}/../../public/og.svg`).text();
 
     expect(index).toContain("<title>Vellum | Portable identity and reputation on CKB</title>");
     expect(index).toContain('rel="canonical" href="https://usevellum.xyz/"');
@@ -64,13 +66,15 @@ describe("Vellum landing page", () => {
       'rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2"',
     );
     expect(index).toContain(
-      'property="og:image" content="https://usevellum.xyz/social-card.png?v=3"',
+      'property="og:image" content="https://usevellum.xyz/social-card.png?v=4"',
     );
     expect(index).toContain('name="twitter:card" content="summary_large_image"');
     expect(await socialCard.exists()).toBe(true);
     expect(socialCard.size).toBeGreaterThan(20_000);
     expect(socialCardHeader.getUint32(16)).toBe(1_200);
     expect(socialCardHeader.getUint32(20)).toBe(630);
+    expect(socialCardSource).toContain("Issuer-signed Claim Cells");
+    expect(socialCardSource).not.toContain("LIVE ON CKB TESTNET");
     expect(await favicon.exists()).toBe(true);
     expect(await appleTouchIcon.exists()).toBe(true);
   });

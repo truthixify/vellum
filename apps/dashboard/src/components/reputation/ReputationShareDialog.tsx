@@ -87,7 +87,6 @@ function ReputationShareCard({
     >
       <div className="reputation-share-card__brand">
         <Wordmark />
-        <span>CKB TESTNET</span>
       </div>
 
       <div className="reputation-share-card__body">
