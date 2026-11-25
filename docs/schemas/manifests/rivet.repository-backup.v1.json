@@ -1,0 +1,72 @@
+{
+  "encoding": "dag-cbor",
+  "name": "rivet.repository-backup.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "github_user_id and github_repository_id are stable decimal GitHub identifiers",
+      "snapshot_tx_hash and snapshot_output_index identify one confirmed public Rivet backup anchor",
+      "anchor_version is the Rivet backup anchor format used by the referenced output",
+      "commit_count is read from the referenced backup anchor",
+      "backed_up_at is the referenced transaction block timestamp"
+    ],
+    "properties": {
+      "anchor_version": {
+        "const": 2,
+        "type": "integer"
+      },
+      "backed_up_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "commit_count": {
+        "maximum": 4294967295,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "github_repository_id": {
+        "maxLength": 30,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,29}$",
+        "type": "string"
+      },
+      "github_user_id": {
+        "maxLength": 30,
+        "minLength": 1,
+        "pattern": "^[1-9][0-9]{0,29}$",
+        "type": "string"
+      },
+      "repository": {
+        "maxLength": 201,
+        "minLength": 3,
+        "pattern": "^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$",
+        "type": "string"
+      },
+      "snapshot_output_index": {
+        "maximum": 4294967295,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "snapshot_tx_hash": {
+        "maxLength": 66,
+        "minLength": 66,
+        "pattern": "^0x[0-9a-f]{64}$",
+        "type": "string"
+      }
+    },
+    "required": [
+      "github_user_id",
+      "github_repository_id",
+      "repository",
+      "snapshot_tx_hash",
+      "snapshot_output_index",
+      "anchor_version",
+      "commit_count",
+      "backed_up_at"
+    ],
+    "type": "object"
+  },
+  "version": 1
+}

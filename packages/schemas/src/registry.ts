@@ -36,6 +36,12 @@ import {
   parseKlaveroqMilestoneSettlementClaimPayload,
 } from "./klaveroq/milestone-settlement.v1.js";
 import {
+  RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_HASH,
+  RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_ID,
+  parseRivetRepositoryBackupClaimPayload,
+  rivetRepositoryBackupClaimSchemaManifest,
+} from "./rivet/repository-backup.v1.js";
+import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
   blueskyClaimSchemaManifest,
@@ -115,6 +121,25 @@ export const klaveroqMilestoneSettlementSchema = {
     approval_method: "client",
     settled_at: VERIFIED_AT,
     settlement_tx_hash: `0x${"44".repeat(32)}`,
+  },
+} as const;
+
+export const rivetRepositoryBackupSchema = {
+  id: RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_ID,
+  hash: RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_HASH,
+  manifest: rivetRepositoryBackupClaimSchemaManifest,
+  parse: parseRivetRepositoryBackupClaimPayload,
+  specification: "docs/schemas/rivet.repository-backup.v1.md",
+  manifestFile: "docs/schemas/manifests/rivet.repository-backup.v1.json",
+  example: {
+    github_user_id: "9000000001",
+    github_repository_id: "9000000002",
+    repository: "vellum-builder/portable-reputation",
+    snapshot_tx_hash: `0x${"11".repeat(32)}`,
+    snapshot_output_index: 0,
+    anchor_version: 2,
+    commit_count: 248,
+    backed_up_at: VERIFIED_AT,
   },
 } as const;
 
@@ -264,6 +289,7 @@ export const vellumSchemaRegistry = {
   [ckboostQuestSchema.id]: ckboostQuestSchema,
   [crowdcellCampaignFundedSchema.id]: crowdcellCampaignFundedSchema,
   [klaveroqMilestoneSettlementSchema.id]: klaveroqMilestoneSettlementSchema,
+  [rivetRepositoryBackupSchema.id]: rivetRepositoryBackupSchema,
   [githubIdentitySchema.id]: githubIdentitySchema,
   [githubContributionSchema.id]: githubContributionSchema,
   [discordIdentitySchema.id]: discordIdentitySchema,

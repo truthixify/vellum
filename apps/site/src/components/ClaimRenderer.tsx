@@ -16,6 +16,8 @@ import {
   parseGithubClaimPayload,
   parseGithubContributionClaimPayload,
   parseKlaveroqMilestoneSettlementClaimPayload,
+  parseRivetRepositoryBackupClaimPayload,
+  rivetRepositoryBackupSchema,
   parseTelegramClaimPayload,
   parseTelegramCommunityClaimPayload,
   telegramCommunitySchema,
@@ -25,6 +27,7 @@ import {
 import { ProviderMark, type VerificationProvider } from "@vellum/ui";
 import {
   AlertCircle,
+  Archive,
   ArrowUpRight,
   Braces,
   CircleDollarSign,
@@ -522,6 +525,39 @@ function renderKlaveroqMilestoneSettlementClaim(
   );
 }
 
+function renderRivetRepositoryBackupClaim(
+  payload: ReturnType<typeof parseRivetRepositoryBackupClaimPayload>,
+) {
+  return (
+    <ClaimFrame
+      mark={<Archive size={18} aria-hidden="true" />}
+      schemaId={rivetRepositoryBackupSchema.id}
+      title={payload.repository}
+      description="Public repository snapshot confirmed and anchored by Rivet."
+      profileUrl={`${TESTNET_TRANSACTION_EXPLORER}${payload.snapshot_tx_hash}`}
+      profileLabel="Backup anchor"
+    >
+      <ClaimFacts
+        facts={[
+          { label: "Backed up", value: formatTimestamp(payload.backed_up_at) },
+          { label: "Commits", value: payload.commit_count },
+          { label: "Anchor version", value: payload.anchor_version },
+        ]}
+      />
+      <ul className="claim-renderer__records">
+        <li>
+          <span>
+            <strong>Public repository provenance</strong>
+            <small>GitHub repository ID {payload.github_repository_id}</small>
+            <small>GitHub account ID {payload.github_user_id}</small>
+            <small>Output {payload.snapshot_output_index}</small>
+          </span>
+        </li>
+      </ul>
+    </ClaimFrame>
+  );
+}
+
 function ArtifactRow({ artifact }: { artifact: GithubContributionArtifact }) {
   return (
     <li>
@@ -685,6 +721,11 @@ const registrations = [
     klaveroqMilestoneSettlementSchema,
     parseKlaveroqMilestoneSettlementClaimPayload,
     renderKlaveroqMilestoneSettlementClaim,
+  ),
+  defineClaimRenderer(
+    rivetRepositoryBackupSchema,
+    parseRivetRepositoryBackupClaimPayload,
+    renderRivetRepositoryBackupClaim,
   ),
   defineClaimRenderer(githubIdentitySchema, parseGithubClaimPayload, renderGithubIdentityClaim),
   defineClaimRenderer(discordIdentitySchema, parseDiscordClaimPayload, renderDiscordIdentityClaim),

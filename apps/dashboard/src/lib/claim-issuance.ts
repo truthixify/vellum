@@ -66,6 +66,11 @@ const SCHEMA_PRESENTATION: Record<VellumSchemaId, SchemaPresentation> = {
     group: "Partner",
     summary: "Records one settled marketplace milestone without exposing private work details.",
   },
+  "rivet.repository-backup.v1": {
+    title: "Rivet repository backup",
+    group: "Partner",
+    summary: "Records one confirmed public repository snapshot anchored by Rivet.",
+  },
   "vellum.social.github.v1": {
     title: "GitHub identity",
     group: "Social",

@@ -9,6 +9,7 @@ import {
   githubContributionSchema,
   githubIdentitySchema,
   klaveroqMilestoneSettlementSchema,
+  rivetRepositoryBackupSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,
@@ -50,6 +51,7 @@ describe("public Claim Cell renderers", () => {
       [ckboostQuestSchema, "Share project details"],
       [crowdcellCampaignFundedSchema, "CKB Builders Toolkit"],
       [klaveroqMilestoneSettlementSchema, "Milestone 2 settled"],
+      [rivetRepositoryBackupSchema, "vellum-builder/portable-reputation"],
       [githubIdentitySchema, "@vellum-builder"],
       [discordIdentitySchema, "vellum-builder"],
       [telegramIdentitySchema, "@vellum_builder"],
@@ -108,6 +110,24 @@ describe("public Claim Cell renderers", () => {
     );
     expect(html).not.toContain("amount");
     expect(html).not.toContain("proof contents");
+  });
+
+  test("renders a Rivet backup receipt without recovery material", () => {
+    const payload = rivetRepositoryBackupSchema.example;
+    const html = renderToStaticMarkup(
+      <ClaimPayloadRenderer claim={claim(rivetRepositoryBackupSchema.hash, payload)} />,
+    );
+
+    expect(html).toContain(payload.repository);
+    expect(html).toContain(payload.github_repository_id);
+    expect(html).toContain(payload.github_user_id);
+    expect(html).toContain(`${payload.commit_count}`);
+    expect(html).toContain(
+      `href="https://testnet.explorer.nervos.org/transaction/${payload.snapshot_tx_hash}"`,
+    );
+    expect(html).not.toContain("ipfs");
+    expect(html).not.toContain("encryption");
+    expect(html).not.toContain("recovery");
   });
 
   test("scores, validates, and renders the published CKBoost sample claim", () => {
