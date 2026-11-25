@@ -14,7 +14,7 @@ export type GrantStage = {
   }[];
 };
 
-export const GRANT_RECORD_UPDATED_AT = "2026-11-21";
+export const GRANT_RECORD_UPDATED_AT = "2026-11-25";
 export const GRANT_TOTAL_USD = 7_000;
 export const GRANT_TRANCHE_USD = 1_750;
 
@@ -115,7 +115,7 @@ export const GRANT_STAGES: readonly GrantStage[] = [
     allocationUsd: GRANT_TRANCHE_USD,
     paymentState: "Released after delivery review and approval",
     summary:
-      "The governance reference and demo, wallet issuance UI, and production domains are shipped. Final review and production cleanup remain.",
+      "The governance reference and demo, wallet issuance UI, production domains, transparency record, and final production cleanup are shipped. Final delivery review and approval remain.",
     evidence: [
       {
         label: "Current milestone",

@@ -19,7 +19,7 @@ describe("grant transparency page", () => {
     expect(html).toContain("$7,000");
     expect(html).toContain("$5,250");
     expect(html).toContain("3 of 4");
-    expect(html).toContain('<time dateTime="2026-11-21">November 21, 2026</time>');
+    expect(html).toContain('<time dateTime="2026-11-25">November 25, 2026</time>');
     expect(html).toContain("64.37% approval");
     expect(html).toContain("242,742,014 CKB");
     expect(html).toContain("Milestone 2");
