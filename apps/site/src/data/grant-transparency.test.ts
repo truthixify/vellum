@@ -47,5 +47,10 @@ describe("grant transparency record", () => {
       );
     }
     expect(paymentTransactions.size).toBe(RECORDED_PAYMENT_COUNT);
+
+    const finalStage = GRANT_STAGES.at(-1);
+    expect(finalStage?.status).toBe("In progress");
+    expect(finalStage?.summary).toContain("final production cleanup are shipped");
+    expect(finalStage?.summary).toContain("Final delivery review and approval remain");
   });
 });
