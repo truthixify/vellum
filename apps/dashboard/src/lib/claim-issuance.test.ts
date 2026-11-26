@@ -56,6 +56,9 @@ describe("claim issuance forms", () => {
     expect(
       registeredSchemaIssuerRecognition(ckboostIssuer, "klaveroq.milestone-settlement.v1"),
     ).toBe("unconfigured");
+    expect(registeredSchemaIssuerRecognition(ckboostIssuer, "kweela.level-achieved.v1")).toBe(
+      "unconfigured",
+    );
   });
 
   test("coerces every registered example through its exact parser", () => {

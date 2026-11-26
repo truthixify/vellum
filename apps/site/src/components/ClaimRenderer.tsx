@@ -8,6 +8,7 @@ import {
   githubContributionSchema,
   githubIdentitySchema,
   klaveroqMilestoneSettlementSchema,
+  kweelaLevelAchievedSchema,
   parseBlueskyClaimPayload,
   parseCkboostQuestClaimPayload,
   parseCrowdcellCampaignFundedClaimPayload,
@@ -16,6 +17,7 @@ import {
   parseGithubClaimPayload,
   parseGithubContributionClaimPayload,
   parseKlaveroqMilestoneSettlementClaimPayload,
+  parseKweelaLevelAchievedClaimPayload,
   parseTelegramClaimPayload,
   parseTelegramCommunityClaimPayload,
   telegramCommunitySchema,
@@ -26,6 +28,7 @@ import { ProviderMark, type VerificationProvider } from "@vellum/ui";
 import {
   AlertCircle,
   ArrowUpRight,
+  BadgeCheck,
   Braces,
   CircleDollarSign,
   Handshake,
@@ -522,6 +525,37 @@ function renderKlaveroqMilestoneSettlementClaim(
   );
 }
 
+function renderKweelaLevelAchievedClaim(
+  payload: ReturnType<typeof parseKweelaLevelAchievedClaimPayload>,
+) {
+  return (
+    <ClaimFrame
+      mark={<BadgeCheck size={18} aria-hidden="true" />}
+      schemaId={kweelaLevelAchievedSchema.id}
+      title={`Level ${payload.level} achieved`}
+      description="Kweela level achievement recorded by the issuer."
+      profileUrl={`https://kweela.com/${encodeURIComponent(payload.profile_slug)}`}
+      profileLabel="Kweela profile"
+    >
+      <ClaimFacts
+        facts={[
+          { label: "Achieved", value: formatTimestamp(payload.achieved_at) },
+          { label: "Level policy", value: payload.level_policy_version },
+          { label: "Profile", value: `@${payload.profile_slug}` },
+        ]}
+      />
+      <ul className="claim-renderer__records">
+        <li>
+          <span>
+            <strong>Kweela account</strong>
+            <small>Account ID {payload.account_id}</small>
+          </span>
+        </li>
+      </ul>
+    </ClaimFrame>
+  );
+}
+
 function ArtifactRow({ artifact }: { artifact: GithubContributionArtifact }) {
   return (
     <li>
@@ -685,6 +719,11 @@ const registrations = [
     klaveroqMilestoneSettlementSchema,
     parseKlaveroqMilestoneSettlementClaimPayload,
     renderKlaveroqMilestoneSettlementClaim,
+  ),
+  defineClaimRenderer(
+    kweelaLevelAchievedSchema,
+    parseKweelaLevelAchievedClaimPayload,
+    renderKweelaLevelAchievedClaim,
   ),
   defineClaimRenderer(githubIdentitySchema, parseGithubClaimPayload, renderGithubIdentityClaim),
   defineClaimRenderer(discordIdentitySchema, parseDiscordClaimPayload, renderDiscordIdentityClaim),

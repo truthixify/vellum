@@ -1,0 +1,47 @@
+{
+  "encoding": "dag-cbor",
+  "name": "kweela.level-achieved.v1",
+  "payload": {
+    "additionalProperties": false,
+    "constraints": [
+      "account_id and level identify one non-repeatable Kweela level achievement",
+      "level is a historical non-decreasing achievement under level_policy_version",
+      "profile_slug identifies the public Kweela profile at issuance",
+      "achieved_at is the authoritative Kweela API achievement timestamp"
+    ],
+    "properties": {
+      "account_id": {
+        "maxLength": 36,
+        "minLength": 36,
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        "type": "string"
+      },
+      "achieved_at": {
+        "format": "unix-time-seconds",
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "level": {
+        "maximum": 4294967295,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "level_policy_version": {
+        "maxLength": 64,
+        "minLength": 1,
+        "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$",
+        "type": "string"
+      },
+      "profile_slug": {
+        "maxLength": 64,
+        "minLength": 1,
+        "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$",
+        "type": "string"
+      }
+    },
+    "required": ["account_id", "profile_slug", "level", "level_policy_version", "achieved_at"],
+    "type": "object"
+  },
+  "version": 1
+}

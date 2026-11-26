@@ -66,6 +66,11 @@ const SCHEMA_PRESENTATION: Record<VellumSchemaId, SchemaPresentation> = {
     group: "Partner",
     summary: "Records one settled marketplace milestone without exposing private work details.",
   },
+  "kweela.level-achieved.v1": {
+    title: "Kweela level achievement",
+    group: "Partner",
+    summary: "Records a durable Kweela level without exposing mutable activity metrics.",
+  },
   "vellum.social.github.v1": {
     title: "GitHub identity",
     group: "Social",

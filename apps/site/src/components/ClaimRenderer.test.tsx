@@ -9,6 +9,7 @@ import {
   githubContributionSchema,
   githubIdentitySchema,
   klaveroqMilestoneSettlementSchema,
+  kweelaLevelAchievedSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,
@@ -50,6 +51,7 @@ describe("public Claim Cell renderers", () => {
       [ckboostQuestSchema, "Share project details"],
       [crowdcellCampaignFundedSchema, "CKB Builders Toolkit"],
       [klaveroqMilestoneSettlementSchema, "Milestone 2 settled"],
+      [kweelaLevelAchievedSchema, "Level 5 achieved"],
       [githubIdentitySchema, "@vellum-builder"],
       [discordIdentitySchema, "vellum-builder"],
       [telegramIdentitySchema, "@vellum_builder"],
@@ -108,6 +110,21 @@ describe("public Claim Cell renderers", () => {
     );
     expect(html).not.toContain("amount");
     expect(html).not.toContain("proof contents");
+  });
+
+  test("renders a Kweela level without mutable activity metrics", () => {
+    const payload = kweelaLevelAchievedSchema.example;
+    const html = renderToStaticMarkup(
+      <ClaimPayloadRenderer claim={claim(kweelaLevelAchievedSchema.hash, payload)} />,
+    );
+
+    expect(html).toContain("Level 5 achieved");
+    expect(html).toContain(`@${payload.profile_slug}`);
+    expect(html).toContain(payload.level_policy_version);
+    expect(html).toContain(payload.account_id);
+    expect(html).toContain(`href="https://kweela.com/${payload.profile_slug}"`);
+    expect(html.toLowerCase()).not.toContain("xp");
+    expect(html.toLowerCase()).not.toContain("reputation");
   });
 
   test("scores, validates, and renders the published CKBoost sample claim", () => {
