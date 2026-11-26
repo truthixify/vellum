@@ -136,7 +136,6 @@ export const kweelaLevelAchievedSchema = {
     profile_slug: "legacy",
     level: 5,
     level_policy_version: "kweela.levels.v1",
-    achieved_at: VERIFIED_AT,
   },
 } as const;
 

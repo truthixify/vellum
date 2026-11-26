@@ -6,8 +6,7 @@
     "constraints": [
       "account_id and level identify one non-repeatable Kweela level achievement",
       "level is a historical non-decreasing achievement under level_policy_version",
-      "profile_slug identifies the public Kweela profile at issuance",
-      "achieved_at is the authoritative Kweela API achievement timestamp"
+      "profile_slug identifies the public Kweela profile at issuance"
     ],
     "properties": {
       "account_id": {
@@ -15,12 +14,6 @@
         "minLength": 36,
         "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         "type": "string"
-      },
-      "achieved_at": {
-        "format": "unix-time-seconds",
-        "maximum": 9007199254740991,
-        "minimum": 1,
-        "type": "integer"
       },
       "level": {
         "maximum": 4294967295,
@@ -40,7 +33,7 @@
         "type": "string"
       }
     },
-    "required": ["account_id", "profile_slug", "level", "level_policy_version", "achieved_at"],
+    "required": ["account_id", "profile_slug", "level", "level_policy_version"],
     "type": "object"
   },
   "version": 1

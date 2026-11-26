@@ -539,7 +539,7 @@ function renderKweelaLevelAchievedClaim(
     >
       <ClaimFacts
         facts={[
-          { label: "Achieved", value: formatTimestamp(payload.achieved_at) },
+          { label: "Level", value: payload.level },
           { label: "Level policy", value: payload.level_policy_version },
           { label: "Profile", value: `@${payload.profile_slug}` },
         ]}

@@ -13,7 +13,6 @@ const payload: KweelaLevelAchievedClaimPayload = {
   profile_slug: "legacy",
   level: 5,
   level_policy_version: "kweela.levels.v1",
-  achieved_at: 2_000_000_000,
 };
 
 describe("kweela.level-achieved.v1", () => {
@@ -54,12 +53,9 @@ describe("kweela.level-achieved.v1", () => {
     expect(() => parseKweelaLevelAchievedClaimPayload({ ...payload, xp: 500 })).toThrow();
   });
 
-  test("rejects invalid levels and achievement timestamps", () => {
+  test("rejects invalid levels", () => {
     for (const level of [0, 1.5, 4_294_967_296]) {
       expect(() => parseKweelaLevelAchievedClaimPayload({ ...payload, level })).toThrow();
-    }
-    for (const achieved_at of [0, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
-      expect(() => parseKweelaLevelAchievedClaimPayload({ ...payload, achieved_at })).toThrow();
     }
   });
 });
