@@ -22,6 +22,13 @@ export {
   type KlaveroqMilestoneSettlementClaimPayload,
 } from "./klaveroq/milestone-settlement.v1.js";
 export {
+  KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_HASH,
+  KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_ID,
+  kweelaLevelAchievedClaimSchemaManifest,
+  parseKweelaLevelAchievedClaimPayload,
+  type KweelaLevelAchievedClaimPayload,
+} from "./kweela/level-achieved.v1.js";
+export {
   DEFAULT_AVATAR_BASE,
   PROFILE_SERVICE_KEY,
   PROFILE_SERVICE_TYPE,
@@ -45,6 +52,7 @@ export {
   githubContributionSchema,
   githubIdentitySchema,
   klaveroqMilestoneSettlementSchema,
+  kweelaLevelAchievedSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,

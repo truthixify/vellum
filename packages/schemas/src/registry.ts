@@ -36,6 +36,12 @@ import {
   parseKlaveroqMilestoneSettlementClaimPayload,
 } from "./klaveroq/milestone-settlement.v1.js";
 import {
+  KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_HASH,
+  KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_ID,
+  kweelaLevelAchievedClaimSchemaManifest,
+  parseKweelaLevelAchievedClaimPayload,
+} from "./kweela/level-achieved.v1.js";
+import {
   BLUESKY_CLAIM_SCHEMA_HASH,
   BLUESKY_CLAIM_SCHEMA_ID,
   blueskyClaimSchemaManifest,
@@ -115,6 +121,21 @@ export const klaveroqMilestoneSettlementSchema = {
     approval_method: "client",
     settled_at: VERIFIED_AT,
     settlement_tx_hash: `0x${"44".repeat(32)}`,
+  },
+} as const;
+
+export const kweelaLevelAchievedSchema = {
+  id: KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_ID,
+  hash: KWEELA_LEVEL_ACHIEVED_CLAIM_SCHEMA_HASH,
+  manifest: kweelaLevelAchievedClaimSchemaManifest,
+  parse: parseKweelaLevelAchievedClaimPayload,
+  specification: "docs/schemas/kweela.level-achieved.v1.md",
+  manifestFile: "docs/schemas/manifests/kweela.level-achieved.v1.json",
+  example: {
+    account_id: "123e4567-e89b-12d3-a456-426614174000",
+    profile_slug: "legacy",
+    level: 5,
+    level_policy_version: "kweela.levels.v1",
   },
 } as const;
 
@@ -264,6 +285,7 @@ export const vellumSchemaRegistry = {
   [ckboostQuestSchema.id]: ckboostQuestSchema,
   [crowdcellCampaignFundedSchema.id]: crowdcellCampaignFundedSchema,
   [klaveroqMilestoneSettlementSchema.id]: klaveroqMilestoneSettlementSchema,
+  [kweelaLevelAchievedSchema.id]: kweelaLevelAchievedSchema,
   [githubIdentitySchema.id]: githubIdentitySchema,
   [githubContributionSchema.id]: githubContributionSchema,
   [discordIdentitySchema.id]: discordIdentitySchema,
