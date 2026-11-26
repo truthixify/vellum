@@ -7,8 +7,8 @@ import { getVellumSchemaDefinition, vellumSchemaRegistry } from "./registry";
 describe("Vellum schema registry", () => {
   test("indexes every published schema by its immutable ID", () => {
     const definitions = Object.values(vellumSchemaRegistry);
-    expect(definitions).toHaveLength(10);
-    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(10);
+    expect(definitions).toHaveLength(11);
+    expect(new Set(definitions.map((definition) => definition.id)).size).toBe(11);
 
     for (const definition of definitions) {
       expect(getVellumSchemaDefinition(definition.id)).toBe(definition);

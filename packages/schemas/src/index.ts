@@ -22,6 +22,13 @@ export {
   type KlaveroqMilestoneSettlementClaimPayload,
 } from "./klaveroq/milestone-settlement.v1.js";
 export {
+  RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_HASH,
+  RIVET_REPOSITORY_BACKUP_CLAIM_SCHEMA_ID,
+  parseRivetRepositoryBackupClaimPayload,
+  rivetRepositoryBackupClaimSchemaManifest,
+  type RivetRepositoryBackupClaimPayload,
+} from "./rivet/repository-backup.v1.js";
+export {
   DEFAULT_AVATAR_BASE,
   PROFILE_SERVICE_KEY,
   PROFILE_SERVICE_TYPE,
@@ -45,6 +52,7 @@ export {
   githubContributionSchema,
   githubIdentitySchema,
   klaveroqMilestoneSettlementSchema,
+  rivetRepositoryBackupSchema,
   telegramCommunitySchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,

@@ -9,7 +9,7 @@ export type ManifestFieldSchema = {
   required?: readonly string[];
   items?: ManifestFieldSchema;
   enum?: readonly string[];
-  const?: string;
+  const?: string | number;
   format?: string;
   template?: string;
   pattern?: string;
@@ -65,6 +65,11 @@ const SCHEMA_PRESENTATION: Record<VellumSchemaId, SchemaPresentation> = {
     title: "Klaveroq milestone settlement",
     group: "Partner",
     summary: "Records one settled marketplace milestone without exposing private work details.",
+  },
+  "rivet.repository-backup.v1": {
+    title: "Rivet repository backup",
+    group: "Partner",
+    summary: "Records one confirmed public repository snapshot anchored by Rivet.",
   },
   "vellum.social.github.v1": {
     title: "GitHub identity",
@@ -143,7 +148,7 @@ export function schemaPayloadDefinition(definition: VellumSchemaDefinition): Man
 }
 
 export function createEmptyClaimDraft(schema: ManifestFieldSchema): ClaimFormDraft {
-  if (schema.const !== undefined) return schema.const;
+  if (schema.const !== undefined) return String(schema.const);
   if (schema.type === "object") {
     return Object.fromEntries(
       Object.entries(schema.properties ?? {}).map(([key, child]) => [
@@ -181,7 +186,9 @@ export function createExampleClaimDraft(
   if (schema.format === "unix-time-seconds" && typeof value === "number") {
     return toDateTimeInput(value);
   }
-  if (value === undefined || value === null) return schema.const ?? "";
+  if (value === undefined || value === null) {
+    return schema.const === undefined ? "" : String(schema.const);
+  }
   return String(value);
 }
 

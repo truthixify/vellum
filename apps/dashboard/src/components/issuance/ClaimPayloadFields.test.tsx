@@ -24,3 +24,22 @@ test("renders integer identifiers as exact text instead of number steppers", () 
   expect(markup).toContain('value="9000000001"');
   expect(markup).not.toContain('type="number"');
 });
+
+test("renders numeric schema constants as read-only text", () => {
+  const markup = renderToStaticMarkup(
+    <ClaimPayloadFields
+      schema={{
+        type: "object",
+        properties: { anchor_version: { const: 2, type: "integer" } },
+        required: ["anchor_version"],
+      }}
+      value={{ anchor_version: "2" }}
+      errors={{}}
+      onChange={() => undefined}
+    />,
+  );
+
+  expect(markup).toContain('id="claim-anchor_version"');
+  expect(markup).toContain('value="2"');
+  expect(markup).toContain('readOnly=""');
+});
