@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ccc } from "@ckb-ccc/core";
 import {
   githubIdentitySchema,
+  rivetRepositoryBackupSchema,
   telegramIdentitySchema,
   vellumSchemaRegistry,
 } from "@vellum/schemas";
@@ -70,6 +71,19 @@ describe("claim issuance forms", () => {
         payload: definition.example,
       });
     }
+  });
+
+  test("represents numeric schema constants as draft text", () => {
+    const schema = schemaPayloadDefinition(rivetRepositoryBackupSchema);
+    const emptyDraft = createEmptyClaimDraft(schema) as Record<string, string>;
+    const exampleDraft = createExampleClaimDraft(schema, {
+      ...rivetRepositoryBackupSchema.example,
+      anchor_version: undefined,
+    }) as Record<string, string>;
+
+    expect(emptyDraft.anchor_version).toBe("2");
+    expect(exampleDraft.anchor_version).toBe("2");
+    expect(parseRegisteredClaimDraft(rivetRepositoryBackupSchema, emptyDraft).ok).toBeFalse();
   });
 
   test("reports field errors before schema-level validation", () => {

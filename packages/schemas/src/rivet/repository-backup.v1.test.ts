@@ -29,10 +29,12 @@ describe("rivet.repository-backup.v1", () => {
   });
 
   test("rejects malformed stable identifiers, repository names, and extra data", () => {
-    for (const github_repository_id of ["0", "01", "-1", "1".repeat(31)]) {
-      expect(() =>
-        parseRivetRepositoryBackupClaimPayload({ ...payload, github_repository_id }),
-      ).toThrow();
+    for (const field of ["github_user_id", "github_repository_id"] as const) {
+      for (const identifier of ["0", "01", "-1", "1".repeat(31)]) {
+        expect(() =>
+          parseRivetRepositoryBackupClaimPayload({ ...payload, [field]: identifier }),
+        ).toThrow();
+      }
     }
     for (const repository of ["owner", "/repo", "owner/", "owner/repo/name", "owner/repo name"]) {
       expect(() => parseRivetRepositoryBackupClaimPayload({ ...payload, repository })).toThrow();
@@ -60,6 +62,8 @@ describe("rivet.repository-backup.v1", () => {
     for (const commit_count of [0, 4_294_967_296, 1.5]) {
       expect(() => parseRivetRepositoryBackupClaimPayload({ ...payload, commit_count })).toThrow();
     }
-    expect(() => parseRivetRepositoryBackupClaimPayload({ ...payload, backed_up_at: 0 })).toThrow();
+    for (const backed_up_at of [0, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => parseRivetRepositoryBackupClaimPayload({ ...payload, backed_up_at })).toThrow();
+    }
   });
 });
